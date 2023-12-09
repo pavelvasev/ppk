@@ -1,0 +1,26 @@
+{
+  "name": "ppk",
+  "exports": {
+    ".": "./client-api/js/client-api.js",
+    "./*": "./client-api/js/*"
+  },
+  "version": "1.0.0",
+  "description": "Как посылать кванты",
+  "type": "module",
+  "main": "main/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "glob": "isaacs/node-glob",
+    "mime": "^3.0.0",
+    "node-fetch": "^3.3.0",
+    "socks-proxy-agent": "^8.0.1",
+    "ws": "^8.13.0"
+  },
+  "optionalDependencies": {
+    "bufferutil": "^4.0.7"
+  }
+}

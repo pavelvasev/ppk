@@ -1,0 +1,25 @@
+#!/usr/bin/env node
+
+//import { URL } from 'url'; // in Browser, the URL in native accessible on window
+import * as path from 'path';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+import * as fs from 'node:fs';
+import process from 'node:process';
+import * as querystring from 'node:querystring'
+let verbose = process.env.VERBOSE;
+
+/////////////////////////////////////
+import {ListManager} from "./lm.js"
+let lm = new ListManager()
+/////////////////////////////////////
+
+let user_script = process.argv[2]
+if (user_script) {
+	console.log("importing",user_script)
+	import(user_script).then( modul => {
+	})
+}
+

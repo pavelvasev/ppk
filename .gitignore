@@ -1,0 +1,7 @@
+node_modules
+data
+*.png
+log
+*.log
+three-software-renderer
+__pycache__

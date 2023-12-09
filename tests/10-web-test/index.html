@@ -1,0 +1,18 @@
+<!doctype html>
+<script type="module">
+  import * as PPK from '../../client-api/repr-ws-client-api.js';
+  PPK.connect('web').then( rapi => {
+  let cnt=0
+  setInterval( () => {
+    console.log('sending',cnt)
+    //rapi.msg( {label:'a',cnt:cnt++,bloba: new Int32Array(10000) } )
+    rapi.msg( {label:'a',cnt:cnt++ } )
+  }, 1000)
+
+  rapi.query( 'b' ).done( msg => {
+    console.log('query got',msg)
+  })  
+  })
+
+  
+</script>

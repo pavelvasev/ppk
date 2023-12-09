@@ -1,0 +1,9 @@
+#!/bin/bash -ex
+
+#srun -n 1 -t 30 --mem-per-cpu=32000 --gres=gpu -p debug ./run-pr.sh&
+srun -p debug -n 1 -t 40 --gres=gpu:k40m:1 --mem-per-cpu=22000 --pty bash
+#srun -p v100 -n 1 -t 40 --gres=gpu:v100:1 --mem-per-cpu=32000 --pty ./run-pr-gpu-x4.sh &
+#sleep 1
+
+#squeue -a -u $USER -o "${SQUEUE_FORMAT:-%.9i %.5P %.8j %.8u %.20S %.4T %.9M %.9l %.5D %R}"
+

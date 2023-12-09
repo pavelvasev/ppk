@@ -1,0 +1,36 @@
+{
+  "type": "module",
+  "name": "three-software-renderer",
+  "version": "1.2.0",
+  "description": "Universal Three.js in-memory renderer",
+  "main": "index.js",
+  "scripts": {
+    "example": "node examples/render-to-png.js",
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/avgp/three-software-renderer.git"
+  },
+  "keywords": [
+    "three.js",
+    "webgl",
+    "node",
+    "browser"
+  ],
+  "author": "Martin Naumann",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/avgp/three-software-renderer/issues"
+  },
+  "homepage": "https://github.com/avgp/three-software-renderer#readme",
+  "devDependencies": {
+    "pngjs": "^3.4.0",
+    "three": "^0.112.1",
+    "node-fetch": "^3.3.0"    
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=10.0.0"
+  }
+}

@@ -1,0 +1,67 @@
+/////////////////////////////////////////////////// axes
+
+// axes box рисует оси и подписи заданного размера
+// size - размер
+// пример: axes_box size=10;
+
+coview-record title="Просмотр PPK" type="show-ppk" cat_id="process"
+
+feature "ppk-connect" {
+  root: object url = "ws://127.0.0.1:12000" id="show-ppk" {
+    let rapi_module = (import_js (resolve_url "/client-api/repr-ws-client-api.js"))
+    m-eval {: id=@root.id rapi_url=@root.url rapi_module=@rapi_module output_cell=(param @root "output") | 
+      rapi_module.connect(id,rapi_url).then(rapi => {
+        output_cell.set( rapi )
+      })
+    :}
+  }
+}
+
+feature "ppk-query" {
+  root: object "test" {
+    m-eval {: ppk=@root.input crit=@root.0 output_cell=(param @root "output") obj=@root |
+      //if (obj.unsub)
+      ppk.query( crit ).done( msg => {
+        output_cell.set( msg )
+      })
+    :}
+  }
+}
+
+feature "show-ppk" {
+  root: visual_process 
+  title="Просмотр PPK"
+  url = "ws://127.0.0.1:12000"
+  
+  ~have-scene2d
+  status="connecting"
+  time_used=0
+  scene2d={
+    text @root.status style="color:lime;"
+  }
+
+  ~have-scene-env
+  scene_env={ |area|
+  
+    ppk: ppk-connect url=@root.url
+    reaction @ppk.output {: o st=(param @root "status") | console.log('o=',o); st.set( o ? "connected" : "not connected") :}
+    
+    q1: ppk-query "exec-request" input=@ppk.output
+    //console-log "see exec-request" @q1.output
+    reaction @q1.output {: msg pts=@tasks_pts |
+      console.log("see msg",msg)
+      let a = pts.params.positions || [];
+      let r = 10;
+      a.push( Math.random()*r,Math.random()*r,Math.random()*r )
+      pts.setParam( "positions",a.slice(0) )
+    :}
+  }
+  {
+    gui {
+      gui-tab "main" {
+        gui-slot @root "url" gui={ |in out| gui-string @in @out }
+      }
+    }
+    tasks_pts: cv_points
+  }
+}
