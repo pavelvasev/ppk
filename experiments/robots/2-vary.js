@@ -62,6 +62,9 @@ function main( rapi, worker_ids ) {
     let pr = pass_robot( rapi, "pass1", worker_ids, 1000 )
 
     let save = write_fs_robot( rapi,"save1", worker_ids )
+
+    let pr2 = pass_each_robot( rapi, "pass2", worker_ids, 250 )
+    let intersave = write_fs_robot( rapi,"save2", worker_ids,"stepping" )
     //let pr = pass_robot( rapi, "pass1", worker_ids, 1000 )
     //let pr2 = pass_robot( rapi, "pass2", worker_ids, 1000 )
     //let pr3 = pass_robot( rapi, "pass3", worker_ids, 1000 )
@@ -72,6 +75,9 @@ function main( rapi, worker_ids ) {
     create_port_link( rapi, r1.output, pr.input )
     create_port_link( rapi, pr.output, r1.input )
     create_port_link( rapi, pr.finish, save.input )
+
+    create_port_link( rapi, r1.output, pr2.input )
+    create_port_link( rapi, pr2.output, intersave.input )
     /*
     create_port_link( rapi, pr.output, pr2.input )
     create_port_link( rapi, pr2.output, pr3.input )
@@ -271,12 +277,12 @@ function pass_each_robot( rapi, id, workers,N ) {
   let count = workers.length  
   let r = workers.map( (x,index) => start_pass_each_robot( rapi,x,
        { index, id:`${id}/${index}`,
-         input_port,output_port,count,finish_port,
+         input_port,output_port,count,
          N
          //f:rapi.compile_js(f)
        }))
 
-  let robot = { input: input_port, output: output_port, finish: finish_port }
+  let robot = { input: input_port, output: output_port }
 
   return robot
 }
@@ -295,9 +301,11 @@ function start_pass_each_robot( rapi, runner_id, args ) {
     let counter = 0;
     function tick() {
       in_data.next().then( val => {
-        //console.log("pass-robot. N=",N)
-        if (counter % N == 0) 
+        //console.log("pass-each-robot. N=",N,"counter=",counter)
+        if (counter % N == 0) {
+          //console.log("submiting")
           out.submit( val )
+        }
 
         counter++
         
@@ -411,10 +419,12 @@ function start_write_fs_robot( rapi, runner_id, args ) {
 
       function tick() {
         in_data.next().then( val => {
+          //console.log("tick next SAVA")
 
           rapi.get_one_payload( val.payload_info[0] ).then( data => {
 
              let fname = `${prefix}_${index}_${counter}.txt`
+             //console.log("got payload,saving to ",fname)
              // todo мб лучше писать через потоки
              let txt = ""           
              for (let i=0; i<data.length; i++)
@@ -422,6 +432,7 @@ function start_write_fs_robot( rapi, runner_id, args ) {
              const promise = fsp.writeFile(fname, txt);
 
              out.submit( fname )
+             counter++
 
           }).then( tick )
         })
