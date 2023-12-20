@@ -1,5 +1,5 @@
 /*
-   версия 5
+   версия 6
    упрощенный солвер, см README.md
    убрано
    executing_requests

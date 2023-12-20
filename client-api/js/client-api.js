@@ -222,7 +222,7 @@ export {compute_need_id};
 
 // sender - идентификатор клиента. по уму это client_id. ну пока так
 export function connect( sender, connection_options={}, verbose=false ) {
-  //console.log("connect called",connection_options)
+  console.log("connect called",connection_options)
 
   if (typeof(connection_options) == "string")
      connection_options = { url: connection_options }

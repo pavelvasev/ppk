@@ -96,6 +96,10 @@ class PayloadApi {
 
   get_one_payload (payload_record) {
 
+    //console.log("get_one_payload called: payload_record=",payload_record)
+    //console.error("get_one_payload called: payload_record=",payload_record)
+    //console.trace()
+
     if (!payload_record.url) {
       console.error('get_one_payload: record have no url! record=',payload_record)
       return Promise.resolve(null)

@@ -34,6 +34,8 @@ sleep 0.5
 # ну и пушу уж докучи
 "$DIR/pusha.sh" &
 
+"$DIR/repr-ws.sh" &
+
 #sleep 0.5
 ###### дальнейшее - для визуальной отладки
 #"$DIR/services/korzinka/korzinka-cmd.js" runner-info,runner-finished,runner-started,exec-request,task-resolved &

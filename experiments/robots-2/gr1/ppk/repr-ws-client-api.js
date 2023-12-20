@@ -48,7 +48,7 @@ class ReprWsClientApi {
        let data = event.data
        let json = JSON.parse(data)
        if (json.query_reply) {
-         //json.m.timestamp ||= this.server_t0 + performance.now() // но может это и не здесь надо..
+         json.m.timestamp ||= this.server_t0 + performance.now() // но может это и не здесь надо..
          let cb=  this.query_dic[json.query_reply]
          if (cb) 
             cb( json.m ) 
@@ -68,7 +68,7 @@ class ReprWsClientApi {
   }
 
   query_counter=0
-  query_dic = {} // todo Map
+  query_dic = {}
   query( crit, opts, arg ) {
     let qid = `q_${this.query_counter++}`
     //console.log("client sending ")

@@ -84,8 +84,10 @@ function main( rapi, worker_ids ) {
     LIB.create_port_link( rapi, pr.output, r1.input )
     LIB.create_port_link( rapi, pr.finish, save.input )
 
-    LIB.create_port_link( rapi, r1.output, pr2.input )
+    LIB.create_port_link( rapi, r1.output, pr2.input ) 
     LIB.create_port_link( rapi, pr2.output, intersave.input )
+    // вопрос а почему не портится запись??? я думаю она портится.. ибо рассинхрон с основным счетным циклом же..
+
     /*
     create_port_link( rapi, pr.output, pr2.input )
     create_port_link( rapi, pr2.output, pr3.input )

@@ -1,0 +1,16 @@
+{
+  "name": "myapp",
+  "version": "1.0.0",
+  "description": "* Исходный код проекта находится в файле main.cl * Веб-страница записана в файл index.html",
+  "main": "build/main.cl.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "clon && npx vite build"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "dom.cl": "github:pavelvasev/dom.cl",
+    "lib3d.cl": "github:pavelvasev/lib3d.cl"
+  }
+}

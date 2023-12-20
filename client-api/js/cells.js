@@ -82,7 +82,7 @@ export class WritingCell {
  				rec.value.action( {label:this.label, value:this.value} )
  		})
  	})
-  }	
+  }
   submit( value ) {
   	this.is_set = true
   	this.value = value
