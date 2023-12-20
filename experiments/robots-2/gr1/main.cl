@@ -83,21 +83,31 @@ process "main" {
 
     //btn: dom.element "button" "Visualize!" {: console.log("clicked") :}
     cb: dom.checkbox "lines visible"
-    scale: dom.input "range" input_value=1 min=1 max=10000
-    output_space: dom.element "div" style="border: 1px solid grey; flex: 1;" {
-      dom.element "span" (+ "version: " @ds.counter) style="position: absolute;"
-    }
 
-    func "mk_scale" {: s | // масштаб по y..
-       return [ 1, 1.0 / s, 1]
+    scale_y: dom.input "range" input_value=1 min=1 max=10000
+    scale_x: dom.input "range" input_value=1 min=1 max=100
+
+    output_space: dom.element "div" style="border: 1px solid grey; flex: 1;" {      
+      dom.element "div" style="position: absolute;" {
+        dom.column {
+          dom.element "span" (+ "scale_y: " @scale_y.interactive_value)
+          dom.element "span" (+ "scale_x: " @scale_x.interactive_value)
+          dom.element "span" (+ "version: " @ds.counter)
+        }
+      }
+    }
+      
+
+    func "mk_scale" {: sx sy | // масштаб по y..
+       return [ 1.0 / sx, 1.0 / sy, 1]
     :}
 
     s: lib3d.scene {
       lib3d.point_light    
       p1: lib3d.points color=[1,0,1] 
-              positions=@b1.output scale=(mk_scale @scale.interactive_value)
+              positions=@b1.output scale=(mk_scale @scale_x.interactive_value @scale_y.interactive_value)
       lib3d.lines color=[1,1,1] strip=true
-              positions=@b1.output scale=(mk_scale @scale.value) visible=@cb.value
+              positions=@b1.output scale=(mk_scale @scale_x.value @scale_y.value) visible=@cb.value
       big_grid range=[0,0,300,50] step=[10,10]
     }
 
