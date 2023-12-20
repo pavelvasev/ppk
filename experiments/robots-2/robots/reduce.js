@@ -1,4 +1,5 @@
 ////////////////////////////// reduce
+
 // возвращает массив, в котором только каждая N-я точка (т.о. сокращает в N раз)
 export function robot( rapi, id, workers,N, start_index=0 ) {
   let input_port = workers.map( (x,index) => rapi.open_cell( `${id}/input/${index}` ) )

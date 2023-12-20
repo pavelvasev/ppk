@@ -42,7 +42,7 @@ os.spawn "npx" "--yes" "vite" "--open" stdio="inherit"
 
 print "entering wait state"
 import std="std"
-react (os.watch "..") { val |
+react (os.watch ".") { val |
      print "watch reaction! " @val
      if (apply {: return val.filename.endsWith(".cl") :}) {
        print "watch reaction - recompile! " @val
