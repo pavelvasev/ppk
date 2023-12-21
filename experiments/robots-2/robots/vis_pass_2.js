@@ -59,6 +59,9 @@ function start_pass_each_robot( rapi, runner_id, args ) {
       in_data.next().then( val => {
         //console.log("pass-each-robot. N=",N,"counter=",counter)
         console.log("vis-pass-2 robot see input data id=",id)
+
+        //if (required > 0) required--
+        //if (required == 1 && counter%3 == 0) {
         if (required > 0 && counter%3 == 0) {
           console.log("vis-pass-2 robot enters required space. id=",id,"required=",required,"sending data to out_vis",out_vis.id)
           required--
@@ -77,7 +80,8 @@ function start_pass_each_robot( rapi, runner_id, args ) {
     function tack() {
       in_control.next().then( val => {
         console.log("vis-pass-2 robot see in-control. id=",id, "will wait for next data!")
-        required++        
+        //required = 2
+        required++
         tack()       
       })
     }    
