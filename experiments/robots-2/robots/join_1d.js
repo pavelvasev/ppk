@@ -1,15 +1,16 @@
 ////////////////////////////// join 1d
 // это 1-тактный алгоритм. еще надо сделать вариант попарный пирамидальный
+// todo еще над сдвиги сделать. чтобы крайние значения не брать в join.
 
 // возвращает массив равный объединению всех массивов
-export function robot( rapi, id, workers,N, start_index=0 ) {
+export function robot( rapi, id, workers ) {
   let input_port = workers.map( (x,index) => rapi.open_cell( `${id}/input/${index}` ) )
   let output_port = [ rapi.open_cell( `${id}/output/0` ) ]
   
   let count = workers.length  
-  let r = start_robot( rapi,x,
-       { index, id:`${id}/${index}`,
-         input_port,output_port,count,start_index,N
+  let r = start_robot( rapi,workers[0],
+       { 
+         input_port,output_port,count
          //f:rapi.compile_js(f)
        })
 
@@ -20,7 +21,7 @@ export function robot( rapi, id, workers,N, start_index=0 ) {
 
 function start_robot( rapi, runner_id, args ) {
   return rapi.exec( rapi.js( (args) => {
-    console.log("hello robot reduce. args=",args)
+    console.log("hello join-1d robot. args=",args)
 
     let {input_port, output_port, start_index, index, id, count, N} = args
 
@@ -36,8 +37,8 @@ function start_robot( rapi, runner_id, args ) {
     function tick() {
       let p_vals = in_data.map( x => x.next() )
       Promise.all( p_vals ).then( vals => {
-
-        let p_datas = vals.map( v => rapi.get_one_payload( val.payload_info[0] ) )
+        console.log("join 1-d all vals here! joining")
+        let p_datas = vals.map( v => rapi.get_one_payload( v.payload_info[0] ) )
 
         return Promise.all( p_datas ).then( datas => {
             let result_len2 = datas.reduce( (acc,data) => acc + data.length,0)
@@ -55,8 +56,7 @@ function start_robot( rapi, runner_id, args ) {
 
             // публикуем результат
             return rapi.submit_payload_inmem( result ).then( pi => {
-              out.submit( {payload_info:pi} ) // пересылаем          
-              
+              out.submit( {payload_info:[pi]} ) // выдаем
             })
 
           })

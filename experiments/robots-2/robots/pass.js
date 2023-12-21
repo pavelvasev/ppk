@@ -22,7 +22,7 @@ export function robot( rapi, id, workers,N ) {
 // finish - канал остановки
 function start_robot_2( rapi, runner_id, args ) {
   return rapi.exec( rapi.js( (args) => {
-    console.log("hello robot v2. args=",args)
+    console.log("hello pass robot. args=",args)
 
     let {input_port, output_port, finish_port, index, id, count, N} = args
 

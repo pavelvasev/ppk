@@ -1,4 +1,5 @@
 #!/usr/bin/env -S node
+// 6-sepa-comp счет с встроенным представителем визуализации
 // 5-sepa-comp только счет + sepa-vis печать
 // 4-sepa разделяем на счет и на визуализацию
 // 3-vary рефакторинг
@@ -25,6 +26,9 @@ import * as STENCIL_1D from "./robots/stencil_1d.js"
 import * as PRINT from "./robots/print.js"
 
 import * as VIS from "./robots/vis_pass.js"
+import * as VIS2 from "./robots/vis_pass_2.js"
+import * as JOIN_1D from "./robots/join_1d.js"
+import * as CONT from "./robots/continue.js"
 
 //let S = new STARTER.Slurm( "u1321@umt.imm.uran.ru" )
 let S = new STARTER.Local()
@@ -85,17 +89,33 @@ function compute1( rapi,worker_ids, n, vis_robot ) {
   return {output: r1.output, final: pr.finish}
 }
 
-// робот - 
-// встроенный представитель визуализации
-function vis1( rapi,worker_ids, n ) {
+// робот - встроенный представитель визуализации
+function vis1( rapi,worker_ids ) {
+  let visr = VIS2.robot( rapi, "vis1", worker_ids )
+
+  let joinr = JOIN_1D.robot( rapi, "j1d", worker_ids )
+
+  LIB.create_port_link( rapi, visr.side_output, joinr.input )
+
+  // теперь надо что когда joinr выдал свой результат, чтобы
+  // был тыркнут порт main_continue   
+
+  let cont = CONT.robot( rapi, "cont", worker_ids )
+  LIB.create_port_link( rapi, visr.input, cont.input )
+  LIB.create_port_link( rapi, cont.output, visr.main_continue )
+  //rapi.create_link( joinr.output[0].id, visr2.control[0].id )
+  // можем так. тк.. там 1-размерные
+  LIB.create_port_link( rapi, joinr.output, cont.control )
+
+  return visr
 }
 
 ////////////////////////////////
 //import * as F from "./f.js"
 
-function main( rapi, worker_ids ) {
+function main( rapi, worker_ids ) {  
 
-  let visr = VIS.robot( rapi, "vis1", worker_ids)
+  let visr = vis1( rapi, worker_ids )
 
   let c1 = compute1( rapi, worker_ids, 1001*1000, visr)
 

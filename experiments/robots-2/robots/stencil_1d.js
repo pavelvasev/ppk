@@ -20,7 +20,7 @@ export function robot( rapi, id, workers,f ) {
 // todo канал остановки добавить
 function start_robot_1( rapi, runner_id, args ) {
   return rapi.exec( rapi.js( (args) => {
-    console.log("hello robot v1. args=",args)
+    console.log("hello stencil-1d robot. args=",args)
 
     let {input_port, output_port, index, id, count} = args
 
