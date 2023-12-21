@@ -26,7 +26,7 @@ import * as STENCIL_1D from "./robots/stencil_1d.js"
 import * as PRINT from "./robots/print.js"
 
 import * as VIS from "./robots/vis_pass.js"
-import * as VIS2 from "./robots/vis_pass_2.js"
+import * as VIS3 from "./robots/vis_pass_3.js"
 import * as JOIN_1D from "./robots/join_1d.js"
 import * as CONT from "./robots/continue.js"
 
@@ -91,7 +91,7 @@ function compute1( rapi,worker_ids, n, vis_robot ) {
 
 // робот - встроенный представитель визуализации
 function vis1( rapi,worker_ids ) {
-  let visr = VIS2.robot( rapi, "vis1", worker_ids )
+  let visr = VIS3.robot( rapi, "vis1", worker_ids )
 
   let joinr = JOIN_1D.robot( rapi, "j1d", worker_ids )
 
