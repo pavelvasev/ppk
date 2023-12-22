@@ -2,7 +2,7 @@ import * as LIB from "./lib.js"
 
 ////////////////////////////// vis_pass2
 // асинхронная визуализация
-// рандеву
+// рандеву. команду принимает 1 робот, и назначает остальным итерацию.
 
 export function robot( rapi, id, workers ) {
   let N =1
@@ -29,7 +29,7 @@ export function robot( rapi, id, workers ) {
   LIB.create_port_link( rapi, continue_port, output_port )
   
   let count = workers.length  
-  let r = workers.map( (x,index) => start_pass_each_robot( rapi,x,
+  let r = workers.map( (x,index) => start_robot( rapi,x,
        { index, id:`${id}/${index}`,
          input_port,output_port,count,
          control_port,vis_port, randevu_port,
@@ -43,9 +43,9 @@ export function robot( rapi, id, workers ) {
   return robot
 }
 
-function start_pass_each_robot( rapi, runner_id, args ) {
+function start_robot( rapi, runner_id, args ) {
   return rapi.exec( rapi.js( (args) => {
-    console.log("hello vis_pass_2 robot. args=",args)
+    //console.log("hello vis_pass_3 robot. args=",args)
 
     let {input_port, output_port, control_port, randevu_port, vis_port, index, id, count, N} = args
 
@@ -62,13 +62,13 @@ function start_pass_each_robot( rapi, runner_id, args ) {
     let counter = 0;
     function tick() {
       in_data.next().then( val => {
-        //console.log("pass-each-robot. N=",N,"counter=",counter)
-        console.log("vis-pass-2 robot see input data id=",id)
+        //console.log("vis-pass. iter counter=",counter)
+        //console.log("vis-pass-2 robot see input data id=",id)
 
         //if (required > 0) required--
         //if (required == 1 && counter%3 == 0) {
         if (required == counter) {
-          console.log("vis-pass-2 robot enters required space. id=",id,"required=",required,"sending data to out_vis",out_vis.id)          
+          //console.log("vis-pass robot enters required space. id=",id,"required=",required,"sending data to out_vis",out_vis.id)          
           required = -1
           out_vis.submit( val )
           // теперь задача подграфа уже высылать данные дальше
@@ -84,10 +84,12 @@ function start_pass_each_robot( rapi, runner_id, args ) {
     let required = -1
     function tack() {
       in_control.next().then( val => {
-        console.log("vis-pass-2 robot see in-control. id=",id)
+        //console.log("vis-pass-3 robot see in-control. id=",id,"sending randevu=",required)
         //required = 2
-        required = counter + 5
-        console.log("sending randevu=",required)
+
+        // выяснилось что на сдвиге +2 оно зависает. а на +3 нет.
+        required = counter + 3
+        
         out_randevu.submit( required )
         tack()       
       })
@@ -95,7 +97,7 @@ function start_pass_each_robot( rapi, runner_id, args ) {
 
     function tuck() {
       in_randevu.next().then( val => {
-        console.log("vis-pass-2 robot see in-randeuv. id=",id,"randevu=",val)
+        //console.log("vis-pass-3 robot see in-randeuv. id=",id,"randevu=",val)
         //required = 2
         required = val        
         tuck()       
