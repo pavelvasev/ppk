@@ -11,8 +11,8 @@ process "data_source" {
 
   apply {:
     ppk_api.connect().then( (rapi) => {
-        let data_port_id = "vis1/vis/0(cell)"
-        let control_port_id = "vis1/control/0(cell)"
+        let data_port_id = "j1d/output/0(cell)"
+        let control_port_id = "vis1/control(cell)"
 
         function tick() {
           rapi.msg( {label: control_port_id, value: 1})                
