@@ -1,5 +1,5 @@
 #!/usr/bin/env -S node
-// 7-comp разные эксперименты
+// 7-comp разные эксперименты - счет без полной синхронизации. рабочий.
 // 6-comp счет с встроенным представителем визуализации. Первая прекрасно работающая версия получилось это.
 // 5-sepa-comp только счет + sepa-vis печать
 // 4-sepa разделяем на счет и на визуализацию
@@ -128,7 +128,7 @@ function main( rapi, worker_ids ) {
 
   let visr = vis1( rapi, worker_ids )
 
-  let c1 = compute1( rapi, worker_ids, 1001*1000*10, visr)
+  let c1 = compute1( rapi, worker_ids, 1001, visr)
 
   console.log("compute ports are ",c1)
   console.log("visr.control is",visr.control,"visr.vis is",visr.vis)

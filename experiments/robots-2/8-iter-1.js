@@ -41,35 +41,15 @@ let sys = Promise.resolve( true ) // пока тянет
 
 sys.then( info => PPK.connect("test",info,true) ).then( rapi => {
   
-    console.log("rapi connected, waiting workers");
-    rapi.wait_workers( P ).then( (workers) => {
-      console.log("found workers", workers);
-      main( rapi, workers.map( w => w.id ) )
-    });
+     main( rapi )
+    //console.log("rapi connected, waiting workers");
+    
+    //rapi.wait_workers( P ).then( (workers) => {
+      //console.log("found workers", workers);
+    //main( rapi, workers.map( w => w.id ) )
+    //});
   
 })
-
-function vis1( rapi, workers, data_port, control_port,prefix ) {
-  //PRINT.robot( rapi, "print1", workers, ports )
-
-  let dport = rapi.read_cell( data_port )
-  let cport = rapi.create_cell( control_port )
-
-  let cnt = 0
-  function tick() {
-    cport.submit(1) // запрос
-    console.log('submitted to ',control_port)
-    dport.next().then( val => {      
-      console.log("got data",prefix, cnt++,val)
-
-      rapi.get_payloads( val.payload_info ).then( datas => {
-       console.log(datas)
-       tick()
-      })
-    })
-  }
-  tick()
-}
 
 ////////////////////////////////
 //import * as F from "./f.js"
@@ -80,32 +60,15 @@ function range(n) {
   return arr
 }
 
-function main( rapi, worker_ids ) {
-  //console.log("ok sending gr")
- 
-  //rapi.msg({label:"gr",type:"gr"})
-  
- // rapi.shared("gr_view").submit({type:"gr",id:"gr1id",params:{sx: 10, sy: 10}})
-//  rapi.shared("gr_view").submit({type:"gr",id:"gr2id"})
-//  rapi.shared("gr_view").subscribe( vals => console.log("S=",vals))
+function main( rapi ) {
 
-//  rapi.create_cell("gr").submit( {type:"gr",id:"gr1id"} )
-//  rapi.create_cell("gr").submit( {type:"gr",id:"gr2id"} )
-
-  //let rbt = MERGE.robot( rapi, "merge1", worker_ids )
-  
-//  let gr1id = rapi.create_cell("gr1id/data")
- // let gr1id_p = rapi.create_cell("gr1id/params")
-  //gr1id_p.submit({sx: 10, sy: 10})
-
-  // почему-то это проще чем робот
-  // + робот нагрузит воркера
   let data_port = range(1).map( x => rapi.read_cell(`pass1/iter/${x}`,{limit:1}) )
   //let data_port = rangerapi.read_cell(`pass1/iter/0`,{limit:1})
 
   let counter = 0
   let t0
   let iter0
+  let first_time = true
   function tick() {
     //console.log("tick wait", data_port[0].id ,data_port.length)
     let proms = data_port.map( x => x.next() )
@@ -114,22 +77,14 @@ function main( rapi, worker_ids ) {
     
     Promise.all( proms ).then( vals => {
       let ground = vals[0] // нормализуем    
-      
-      t0 ||= performance.now()
-      iter0 ||= ground
-      let t1 = performance.now()
 
-      //for (let i=0; i<vals.length; i++) vals[i] = vals[i] - ground      
-      //console.log(vals.join(" "))
-      
-      /*
-      if (counter++ % 30 == 0) {
-        gr1id.submit(vals)
-        gr1id_p.submit({title:counter})
+      if (first_time) {      
+        t0 = performance.now()
+        iter0 = ground
       }
-      */
+      let t1 = performance.now()
       
-      if (t1 > t0)
+      if (t1 > t0+1000)
          console.log( "FPS=",1000 * (ground-iter0) / (t1 - t0),"t1=",t1 )
          //console.log( "node 0 iter=",ground,"iter0=",iter0,"FPS=",1000 * (ground-iter0) / (t1 - t0),"t1=",t1 )
       

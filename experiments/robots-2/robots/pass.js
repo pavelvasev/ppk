@@ -35,6 +35,7 @@ function start_robot_2( rapi, runner_id, args ) {
     let f = args.f
     
     let counter = 0;
+    let t0 = performance.now()
     function tick() {
       //console.log("pass begin")
       in_data.next().then( val => {
@@ -49,8 +50,14 @@ function start_robot_2( rapi, runner_id, args ) {
         //Promise.resolve(true).then( () => out.submit( val ))
         // необходимо небольшое замедление ноды потому что иначе 
         // она перестает получать сообщения по вебсокетам, и tcp сокеты не открываются
-        if (counter % 1024*64 == 0)
-           setTimeout( () => out.submit( val ), 0 )
+        let t1 = performance.now()
+        //if (counter % 1024*64 == 0)
+        // но оказалось что надо не итерации отмерять а время.. а то мб итераций то 
+        // и не много а занятость большая сплошная
+        if (t1 - t0 > 3000) {
+           setTimeout( () => out.submit( val ), 1 )
+           t0 = t1
+        }
         else 
            out.submit( val ) // пересылаем
         tick()
