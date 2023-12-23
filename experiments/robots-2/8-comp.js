@@ -34,6 +34,7 @@ import * as CONT from "./robots/continue.js"
 import * as MERGE from "./robots/merge.js"
 
 import * as REDUCE_L from "./robots/reduce_linear.js"
+import * as REDUCE_P from "./robots/reduce_par.js"
 import * as MAP from "./robots/map.js"
 import * as MAP2 from "./robots/map_2.js"
 
@@ -100,7 +101,7 @@ function compute1( rapi,worker_ids, n, vis_robot ) {
   //let j1 = LIB.create_port_join( rapi, pr.output, merge1.output )
   //LIB.create_port_link( rapi, j1.output, r1.input )
 
-  let merge1 = REDUCE_L.robot( rapi,"iters", worker_ids,(vals,counter) => counter )
+  let merge1 = REDUCE_P.robot( rapi,"iters", worker_ids,(vals,counter) => counter )
   LIB.create_port_link( rapi, pr.iterations, merge1.input )
 
   let sync = MAP2.robot( rapi,"sync", worker_ids, (vals) => vals[0] )
