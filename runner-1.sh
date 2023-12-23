@@ -8,6 +8,6 @@ DIR=$(dirname $(readlink -f "$0"))
 
 env
 
-#VERBOSE=1 
+#VERBOSE=1
 "$DIR/services/runner3/runner3.js" >$LOGDIR/runner-$RUNNER_ID.log 2>$LOGDIR/runner-$RUNNER_ID.err.log
 

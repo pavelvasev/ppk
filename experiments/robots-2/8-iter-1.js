@@ -39,7 +39,7 @@ console.log({DN})
 
 let sys = Promise.resolve( true ) // пока тянет
 
-sys.then( info => PPK.connect("test",info) ).then( rapi => {
+sys.then( info => PPK.connect("test",info,true) ).then( rapi => {
   
     console.log("rapi connected, waiting workers");
     rapi.wait_workers( P ).then( (workers) => {
@@ -81,11 +81,11 @@ function range(n) {
 }
 
 function main( rapi, worker_ids ) {
-  console.log("ok sending gr")
+  //console.log("ok sending gr")
  
   //rapi.msg({label:"gr",type:"gr"})
   
-  rapi.shared("gr_view").submit({type:"gr",id:"gr1id",params:{sx: 10, sy: 10}})
+ // rapi.shared("gr_view").submit({type:"gr",id:"gr1id",params:{sx: 10, sy: 10}})
 //  rapi.shared("gr_view").submit({type:"gr",id:"gr2id"})
 //  rapi.shared("gr_view").subscribe( vals => console.log("S=",vals))
 
@@ -94,8 +94,8 @@ function main( rapi, worker_ids ) {
 
   //let rbt = MERGE.robot( rapi, "merge1", worker_ids )
   
-  let gr1id = rapi.create_cell("gr1id/data")
-  let gr1id_p = rapi.create_cell("gr1id/params")
+//  let gr1id = rapi.create_cell("gr1id/data")
+ // let gr1id_p = rapi.create_cell("gr1id/params")
   //gr1id_p.submit({sx: 10, sy: 10})
 
   // почему-то это проще чем робот
@@ -107,7 +107,10 @@ function main( rapi, worker_ids ) {
   let t0
   let iter0
   function tick() {
+    //console.log("tick wait", data_port[0].id ,data_port.length)
     let proms = data_port.map( x => x.next() )
+
+    //proms[0].then( x => console.log(333))
     
     Promise.all( proms ).then( vals => {
       let ground = vals[0] // нормализуем    

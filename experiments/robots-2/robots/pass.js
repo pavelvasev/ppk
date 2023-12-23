@@ -36,19 +36,26 @@ function start_robot_2( rapi, runner_id, args ) {
     
     let counter = 0;
     function tick() {
+      //console.log("pass begin")
       in_data.next().then( val => {
         counter++        
 
-        //console.log("pass-robot. N=",N)
+        //console.log("pass tick. N=",N)
         if (N-- <= 0) {
           finish.submit( val )
           return // остановка. todo: read_сell надо остановить
         }
 
-        out.submit( val ) // пересылаем
+        //Promise.resolve(true).then( () => out.submit( val ))
+        // необходимо небольшое замедление ноды потому что иначе 
+        // она перестает получать сообщения по вебсокетам, и tcp сокеты не открываются
+        if (counter % 1024*64 == 0)
+           setTimeout( () => out.submit( val ), 0 )
+        else 
+           out.submit( val ) // пересылаем
         tick()
 
-        //console.log("iter submit counter",counter)
+        //console.log("iter submit counter",counter,"iter=",iter.id)
         iter.submit( counter ) // выдаем итерации
       })
     }

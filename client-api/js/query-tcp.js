@@ -47,6 +47,8 @@ export default function init( rapi ) {
             }
           }
           //f( msg.m, arg )
+          // попытка ввести промисов.
+          //Promise.resolve(true).then( () => f(msg))
           f( msg )
         }
     }
@@ -143,7 +145,8 @@ export default function init( rapi ) {
                 return rapi.submit_direct_query_reply( rarg.query_id,msg )
               }
 
-              //if (rapi.verbose) console.log('query: sending msg label',msg.label,'to',rarg.results_url, 'rarg=',rarg,'packet=',packet)
+              //if (rapi.verbose) 
+                // console.log('query: sending msg label',msg.label,'to',rarg.results_url, 'rarg=',rarg)
               //msg = {...msg}
               //delete msg['label']
               //console.log("sending msg=",msg)
@@ -231,23 +234,39 @@ let last_message_buf
 // посылает сообщение по указанному url
 function fetch_packet( target_url, query_id, msg ) {
   //console.log("fetch_packet",{target_url, query_id, msg})
+
   if (console.verbose)
       console.verbose("fetch_packet",{target_url, query_id, msg})
 
-  let client = clients.get( target_url.url )  
+  let client = clients.get( target_url.url )
+
+  //console.log("fetch client found=",!!client)
+
   if (!client) {
-    //console.error("creating client. target_url=",target_url)
+    // console.error("creating client. target_url=",target_url)
     client = new net.Socket()
     clients.set( target_url.url,client )
 
+    //setTimeout( () => console.log("."), 100 )
+
     client.opened = create_promise()
     client.on('ready', () => {
+      //if (console.verbose)
       //console.error("created client. target_url=",target_url,"me=",client.address())
       client.opened.resolve()
     });
     client.on('error', (err) => {
-      console.log("query-tcp: outgoing socket error!",err,"me=",client.address())
+      console.error("query-tcp: outgoing socket error!",err,"me=",client.address())
     });
+    client.on('close', (err) => {
+      console.error("query-tcp: outgoing socket close!",err,"me=",client.address())
+    });
+    client.on('timeout', (err) => {
+      console.error("query-tcp: outgoing socket timeout!",err,"me=",client.address())
+    });
+    client.on('end', (err) => {
+      console.error("query-tcp: outgoing socket end!",err,"me=",client.address())
+    });    
     client.connect( {host:target_url.host, port: target_url.port, keepAlive: true} )
     client.setKeepAlive( true )
   }
@@ -300,7 +319,7 @@ function fetch_packet( target_url, query_id, msg ) {
   bufferIntAttach.writeUInt32BE( attach ? attach.length : 0 )
 
   return client.opened.then( () => {
-    //console.log("fetch-packet to",target_url,"me=",client.address(),"msg=",msg)  
+    // console.log("fetch-packet ACTUAL to",target_url,"me=",client.address(),"msg=",msg)  
     //client.cork() // на удивление добавка corn-uncork снижает скорость в 2 раза вычислений
     client.write( bufferInt )
     client.write( bufferIntAttach )

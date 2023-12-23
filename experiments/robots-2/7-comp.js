@@ -137,6 +137,13 @@ function main( rapi, worker_ids ) {
 
   console.time("compute")
 
+/*
+  let test_cell = rapi.create_cell("pass1/iter/0")
+  setInterval(() => {
+    test_cell.submit(555)
+  }, 1000)
+*/  
+
   // печать результата
   rapi.read_cell( c1.final[0] ).next().then( value => {
     console.timeEnd("compute")
