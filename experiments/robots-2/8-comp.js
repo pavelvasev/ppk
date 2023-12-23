@@ -44,7 +44,8 @@ let DEBUG_WORKERS= process.env.DEBUG ? true : false
 
 let P = process.env.P ? parseInt(process.env.P) : 10
 let DN = process.env.DN ? parseInt(process.env.DN) : 1000
-console.log({DN})
+let iters = process.env.ITERS ? parseInt(process.env.ITERS) : 1000*3
+console.log({DN,P,iters})
 
 if (DN % P != 0) {
   console.error(`DN % P != 0 = ${DN % P}. DN=${DN} P=${P}`)
@@ -145,7 +146,7 @@ function main( rapi, worker_ids ) {
 
   let visr = vis1( rapi, worker_ids )
 
-  let iters = 1001*3;
+  //let iters = 1001*3;
   let c1 = compute1( rapi, worker_ids, iters, visr)
 
   console.log("compute ports are ",c1)
