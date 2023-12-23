@@ -1,5 +1,7 @@
 #!/usr/bin/env -S node
-// 6-sepa-comp счет с встроенным представителем визуализации. Первая прекрасно работающая версия получилось это. Ей соответствует gr1.
+// 8-comp счет с синхронизацией
+// 7-comp разные эксперименты
+// 6-comp счет с встроенным представителем визуализации. Первая прекрасно работающая версия получилось это.
 // 5-sepa-comp только счет + sepa-vis печать
 // 4-sepa разделяем на счет и на визуализацию
 // 3-vary рефакторинг
@@ -27,16 +29,26 @@ import * as PRINT from "./robots/print.js"
 
 import * as VIS from "./robots/vis_pass.js"
 import * as VIS3 from "./robots/vis_pass_3.js"
-import * as JOIN_1D from "./robots/join_1d.js"
+import * as JOIN_1D from "./robots/join_1d_masked.js"
 import * as CONT from "./robots/continue.js"
+import * as MERGE from "./robots/merge.js"
+
+import * as REDUCE_L from "./robots/reduce_linear.js"
+import * as MAP from "./robots/map.js"
+import * as MAP2 from "./robots/map_2.js"
 
 //let S = new STARTER.Slurm( "u1321@umt.imm.uran.ru" )
 let S = new STARTER.Local()
 let DEBUG_WORKERS= process.env.DEBUG ? true : false
 
-let P = 4
+let P = process.env.P ? parseInt(process.env.P) : 10
 let DN = process.env.DN ? parseInt(process.env.DN) : 1000
 console.log({DN})
+
+if (DN % P != 0) {
+  console.error(`DN % P != 0 = ${DN % P}. DN=${DN} P=${P}`)
+  process.exit(1)
+}
 
 let sys = S.start().then( (info) => {
 
@@ -79,14 +91,31 @@ function compute1( rapi,worker_ids, n, vis_robot ) {
   */
   LIB.create_port_link( rapi, r1.output, vis_robot.input )
   LIB.create_port_link( rapi, vis_robot.output, pr.input )
-  LIB.create_port_link( rapi, pr.output, r1.input )
+  //LIB.create_port_link( rapi, pr.output, r1.input )
+
+  // публикация номеров итераций
+
+  //let merge1 = MERGE.robot( rapi,"iters", worker_ids )
+  //LIB.create_port_link( rapi, pr.iterations, merge1.input )
+  let merge1 = REDUCE_L.robot( rapi,"iters", worker_ids,(vals,counter) => vals )
+  LIB.create_port_link( rapi, pr.iterations, merge1.input )
+
+  // синхронизация кольца
+  // перспектива
+  //let j1 = LIB.create_port_join( rapi, pr.output, merge1.output )
+  //LIB.create_port_link( rapi, j1.output, r1.input )
+
+  let sync = MAP2.robot( rapi,"sync", worker_ids, (vals) => vals[0] )
+  LIB.create_port_link( rapi, pr.output, sync.input ) 
+  LIB.create_port_link( rapi, merge1.output, sync.input2, true ) 
+  LIB.create_port_link( rapi, sync.output, r1.input, true ) 
 
   Promise.resolve( rapi.submit_payload_inmem( data ) ).then( pi => {
     // начальные данные  
     r1.input.forEach( input => rapi.create_cell( input.id ).submit( {left:0, right:0, payload_info: [pi] } ) )
   })
 
-  return {output: r1.output, final: pr.finish}
+  return {output: r1.output, final: pr.finish, iters: merge1.output}
 }
 
 // робот - встроенный представитель визуализации
@@ -117,9 +146,9 @@ function main( rapi, worker_ids ) {
 
   let visr = vis1( rapi, worker_ids )
 
-  let c1 = compute1( rapi, worker_ids, 1001*1000, visr)
+  let c1 = compute1( rapi, worker_ids, 1001*1000*10, visr)
 
-  console.log("output is",c1.output,"final is",c1.final)
+  console.log("compute ports are ",c1)
   console.log("visr.control is",visr.control,"visr.vis is",visr.vis)
 
   // vis1( rapi, worker_ids, output[0], "part-0" )

@@ -262,6 +262,7 @@ export class ClientApi {
         return p
       },
       submit: (arg) => { // F-MAIN-SHARED-SETS 
+        // мы просто для удобства это здесь разместили. так это к реакциям не относится.
         // размещает не функцию но значение
         kvant.value.arg = arg
         let p = new Promise( (resolve,reject) => {

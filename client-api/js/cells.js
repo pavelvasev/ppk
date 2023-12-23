@@ -20,9 +20,9 @@ export class Cells {
   	return new WritingCell( this.rapi, id )
   }
 
-  read_cell(id) {
+  read_cell(id, opts={}) {
     if (id.id && id.cell) id = id.id // встроенный адаптер
-  	return new ReadingCell( this.rapi, id )
+  	return new ReadingCell( this.rapi, id, opts.limit, opts.overwrite )
   }
 
   open_cell( id ) {
@@ -86,9 +86,10 @@ export class WritingCell {
   submit( value ) {
   	this.is_set = true
   	this.value = value
+    //console.log("submitting to cell",{label:this.label, value})
     if (console.verbose)
         console.verbose("submitting to cell",{label:this.label, value})
-  	this.rapi.msg( {label:this.label, value})
+  	return this.rapi.msg( {label:this.label, value})
   }
   to_record() {
     return { cell: true, id: this.id }
@@ -126,7 +127,7 @@ export class ReadingCell {
     return { cell: true, id: this.id }
   }
 
-  constructor( rapi, id) {
+  constructor( rapi, id, queue_limit) {
     this.cell = true // надо для preprocess_args / exec
  	this.rapi = rapi
  	this.id = id
@@ -137,13 +138,21 @@ export class ReadingCell {
 
  	this.unvisited_values = []
  	this.pending_promises = []
+  //this.queue_limit = queue_limit
+  //this.overwrite = overwrite
 
  	this.query.done( (msg) => {
  		if (this.pending_promises.length > 0) {
  			let p = this.pending_promises.shift(); // todo optimize pop?
  			p.resolve( msg.value )
  		} else {
- 			this.unvisited_values.push( msg.value )
+      if (queue_limit) {
+        // удаляем ячейки пока не будет места
+        while (this.unvisited_values.length > queue_limit-1) 
+          this.unvisited_values.shift()
+      }
+      else  // безлимитный режим
+ 			  this.unvisited_values.push( msg.value )
  		}
  	})
   }

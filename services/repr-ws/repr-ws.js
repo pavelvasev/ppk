@@ -23,49 +23,58 @@ import * as PPK from "ppk"
 import WebSocket from 'ws';
 import { WebSocketServer } from 'ws';
 
-PPK.prefix_console_log( () => ["[repr-ws]"] )
+PPK.prefix_console_log( () => ["[repr-ws]",performance.now()] )
+
+let verbose=true
 
 export class RepresenterWS {
-  constructor( port, verbose )
+  constructor( port )
   {
+    // сначала соединиться с главным, потом предоставлять сервисы
+    PPK.connect("repr-ws").then(rapi => {
 
-    let wss = new WebSocketServer({
-      host: "0.0.0.0",
-      port: port,
-      perMessageDeflate: false,
-      skipUTF8Validation: true,
-      maxPayload: 200*1024*1024
-    })
-    // https://github.com/websockets/ws/blob/HEAD/doc/ws.md#websocketbinarytype
-    
-    wss.on('listening', () => {
-      console.log('repr-ws server started at',wss.address())
-    })
-
-    wss.on('connection', (ws) => {
-      // todo можно указать урль мейна
-      PPK.connect("repr-ws").then(rapi => {
-        this.on_client_connection( rapi, wss, ws, verbose ) 
+      let wss = new WebSocketServer({
+        host: "0.0.0.0",
+        port: port,
+        perMessageDeflate: false,
+        skipUTF8Validation: true,
+        maxPayload: 200*1024*1024
       })
-    });
+      // https://github.com/websockets/ws/blob/HEAD/doc/ws.md#websocketbinarytype
+      
+      wss.on('listening', () => {
+        console.log('repr-ws server started at',wss.address())
+      })
+
+      wss.on('connection', (ws) => {
+        // todo можно указать урль мейна      
+          this.on_client_connection( rapi, wss, ws, verbose ) 
+        
+      });
+    })
   }
 
   on_client_connection( rapi, wss, ws, verbose ) 
   {
     function send2client( json ) {
-      //console.log("send to client",json)
+      if (verbose)
+          console.log("send to client",json)
       ws.send( JSON.stringify(json) )
     }
 
     let queries_r = []
+    let shared_r = []
     
     ws.on('message', (data) => {
       // веб-клиент прислал сообщение
       let msg = JSON.parse( data )
-      //console.log("msg from client",msg)
+
+      if (verbose)
+          console.log("msg from client",msg)
       // если это query - транслируем его в сеть, ответы возвращаем клиенту
       if (msg.query) {
-        //console.log('ws see query, invoking:',msg.crit)
+        if (verbose)
+            console.log('ws see query, invoking:',msg.crit)
         let k = rapi.query( msg.crit, msg.opts, msg.arg )
 
         k.done( (foundmsg) => {
@@ -74,13 +83,14 @@ export class RepresenterWS {
           if (foundmsg?.value?.payload_info && foundmsg.value.payload_info.length > 0)
           {
             //console.log("data required. it has payload: ", val.payload_info[0])
-            rapi.get_one_payload( foundmsg.value.payload_info[0] ).then( data => {
+            rapi.get_payloads( foundmsg.value.payload_info ).then( datas => {
               //console.log("ok it loaded. re-submitting!")
-              var array = Array.from(data);
-              foundmsg.value.payload = [ array ]
+              //var array = Array.from(data);
+              foundmsg.value.payload = datas.map( x => Array.from(x))
               delete foundmsg.value['payload_info']
               // итого мы сделали копию. и только после этого передали управление.              
               // todo - посылать двоично (ввести на канале автомат)
+              // т.е. идет сообщение и за ним К пейлоадов
               send2client( {query_reply: msg.query, m: foundmsg} )
             })
           } else 
@@ -89,9 +99,22 @@ export class RepresenterWS {
         })
         
         queries_r.push( k )
-      } else {
+      } else
+      if (msg.shared) {
+        if (verbose)
+            console.log('ws see shared, invoking:',msg.crit)
+        let k = rapi.shared( msg.crit, msg.opts )
+
+        k.subscribe( (values) => {
+          send2client( {shared_reply: msg.shared, m: values} )          
+        })
+        
+        shared_r.push( k )
+      }
+      else {
         // если это не query - просто передаем в сеть.
-        //console.log("forwarding to rapi")
+        if (verbose)
+            console.log("forwarding to rapi")
         rapi.msg( msg )
       }
     })
@@ -105,7 +128,12 @@ export class RepresenterWS {
         k.delete() // уберем реакции доставок явно..
       }
 
-      rapi.exit()
+      for (let k of shared_r) {
+        //console.log("k=",k)
+        k.delete() // уберем реакции доставок явно..
+      }
+
+      //rapi.exit() выходить не будем - там другие соединения придут
     })
   }
 }

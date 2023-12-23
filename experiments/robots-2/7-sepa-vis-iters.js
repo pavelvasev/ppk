@@ -24,12 +24,14 @@ import * as REDUCE from "./robots/reduce.js"
 import * as WRITE_FS from "./robots/write_fs.js"
 import * as STENCIL_1D from "./robots/stencil_1d.js"
 import * as PRINT from "./robots/print.js"
+import * as MERGE from "./robots/merge.js"
 
 //let S = new STARTER.Slurm( "u1321@umt.imm.uran.ru" )
 let S = new STARTER.Local()
 let DEBUG_WORKERS= process.env.DEBUG ? true : false
 
-let P = 4
+//let P = 10
+let P = process.env.P ? parseInt(process.env.P) : 10
 let DN = process.env.DN ? parseInt(process.env.DN) : 1000
 console.log({DN})
 
@@ -58,8 +60,8 @@ function vis1( rapi, workers, data_port, control_port,prefix ) {
     dport.next().then( val => {      
       console.log("got data",prefix, cnt++,val)
 
-      rapi.get_one_payload( val.payload_info[0] ).then( data => {
-       console.log(data)
+      rapi.get_payloads( val.payload_info ).then( datas => {
+       console.log(datas)
        tick()
       })
     })
@@ -70,29 +72,33 @@ function vis1( rapi, workers, data_port, control_port,prefix ) {
 ////////////////////////////////
 //import * as F from "./f.js"
 
+function range(n) {
+  let arr = []
+  for (let i=0; i<n; i++) arr.push(i)
+  return arr
+}
+
 function main( rapi, worker_ids ) {
 
-  let data_port = rapi.open_cell("j1d/output/0")
-  let control_port = rapi.open_cell("vis1/control")
+  //let rbt = MERGE.robot( rapi, "merge1", worker_ids )
 
-  //console.log("output is",output,"final is",final)
-  console.log({data_port,control_port})
-
-  vis1( rapi, worker_ids, data_port, control_port, "part-0" )
-
-  console.time("compute")
-
-  // печать результата
-  /*
-  rapi.read_cell( final[0] ).next().then( value => {
-    console.timeEnd("compute")
-    console.log("finished",value)      
-    rapi.get_one_payload( value.payload_info[0] ).then( data => {
-       console.log(data)
-    })
+  // почему-то это проще чем робот
+  // + робот нагрузит воркера
+  let data_port = range(P).map( x => rapi.read_cell(`pass1/iter/${x}`) )
   
-  })
-*/
+
+
+  function tick() {
+    let proms = data_port.map( x => x.next() )
+    Promise.all( proms ).then( vals => {
+      let ground = vals[0] // нормализуем
+      for (let i=0; i<vals.length; i++) vals[i] = vals[i] - ground    
+      console.log(vals.join(" "))
+      tick()
+    })
+  }
+  
+  tick()
 
   
 

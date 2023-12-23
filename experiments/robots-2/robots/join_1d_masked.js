@@ -1,5 +1,13 @@
 ////////////////////////////// join 1d
 // это 1-тактный алгоритм. еще надо сделать вариант попарный пирамидальный
+// masked = с цветами
+
+// F-COLOR-PARTS добавить число с номером процесса. ну 2х байт хватит наверное.
+// хотя формально проще это закодировать.. но ладно, пока чем проще тем лучше
+// плюс это особый информационный канал. т.о. есть канал таких значений, есть сяких..
+// т.о. просто мы добавляем еще один канал. а так выходит что у нас сигнал многоспектральный
+// и в этом нет ничего плохого. может там еще производную считают
+// (но тогда надо все каналы будет собирать.. а не ток 1 массив.. ы!)
 
 // возвращает массив равный объединению всех массивов
 export function robot( rapi, id, workers ) {
@@ -32,11 +40,12 @@ function start_robot( rapi, runner_id, args ) {
     let counter = 0;
     let result_len = -1
     let result
+    let result_uid // F-COLORED-PARTS указываем номер участка
 
     function tick() {
       let p_vals = in_data.map( x => x.next() )
       Promise.all( p_vals ).then( vals => {
-        console.log("join 1-d all vals here! joining")
+        //console.log("join 1-d all vals here! joining")
         let p_datas = vals.map( v => rapi.get_one_payload( v.payload_info[0] ) )
 
         return Promise.all( p_datas ).then( datas => {
@@ -45,17 +54,29 @@ function start_robot( rapi, runner_id, args ) {
               result_len = result_len2
               // создаём массив для результатов
               result = new Float32Array( result_len )
+              result_uid = new Uint16Array( result_len )
             }
 
             // копируем
             for (let i=0,pos = 0; i<datas.length; i++) {
+
+                /*
+                let data_arr = datas[i]
+                let data_len = data_arr.length;
+                for (let k=0; k<data_len; k++,pos++ ) {
+                  result[pos] = data_arr[k]
+                  result_uid[pos] = i
+                }
+                */
                 result.set( datas[i], pos )
-                pos += datas[i].length
+                let next_pos = pos + datas[i].length
+                result_uid.fill( i, pos, next_pos )
+                pos = next_pos
             }
 
             // публикуем результат
-            return rapi.submit_payload_inmem( result ).then( pi => {
-              out.submit( {payload_info:[pi]} ) // выдаем
+            return rapi.submit_payload_inmem( [result,result_uid] ).then( pi => {
+              out.submit( {payload_info:pi} ) // выдаем
             })
 
           })

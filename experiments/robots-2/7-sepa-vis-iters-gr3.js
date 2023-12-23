@@ -1,4 +1,5 @@
 #!/usr/bin/env -S node
+// gr - визуализация номеров итераций первая неправильная версия
 // 6 - визуализация для 6-comp
 // 5-sepa-comp только счет + sepa-vis печать
 // 4-sepa разделяем на счет и на визуализацию
@@ -24,12 +25,14 @@ import * as REDUCE from "./robots/reduce.js"
 import * as WRITE_FS from "./robots/write_fs.js"
 import * as STENCIL_1D from "./robots/stencil_1d.js"
 import * as PRINT from "./robots/print.js"
+import * as MERGE from "./robots/merge.js"
 
 //let S = new STARTER.Slurm( "u1321@umt.imm.uran.ru" )
 let S = new STARTER.Local()
 let DEBUG_WORKERS= process.env.DEBUG ? true : false
 
-let P = 4
+//let P = 10
+let P = process.env.P ? parseInt(process.env.P) : 10
 let DN = process.env.DN ? parseInt(process.env.DN) : 1000
 console.log({DN})
 
@@ -58,8 +61,8 @@ function vis1( rapi, workers, data_port, control_port,prefix ) {
     dport.next().then( val => {      
       console.log("got data",prefix, cnt++,val)
 
-      rapi.get_one_payload( val.payload_info[0] ).then( data => {
-       console.log(data)
+      rapi.get_payloads( val.payload_info ).then( datas => {
+       console.log(datas)
        tick()
       })
     })
@@ -70,29 +73,54 @@ function vis1( rapi, workers, data_port, control_port,prefix ) {
 ////////////////////////////////
 //import * as F from "./f.js"
 
+function range(n) {
+  let arr = []
+  for (let i=0; i<n; i++) arr.push(i)
+  return arr
+}
+
 function main( rapi, worker_ids ) {
-
-  let data_port = rapi.open_cell("j1d/output/0")
-  let control_port = rapi.open_cell("vis1/control")
-
-  //console.log("output is",output,"final is",final)
-  console.log({data_port,control_port})
-
-  vis1( rapi, worker_ids, data_port, control_port, "part-0" )
-
-  console.time("compute")
-
-  // печать результата
-  /*
-  rapi.read_cell( final[0] ).next().then( value => {
-    console.timeEnd("compute")
-    console.log("finished",value)      
-    rapi.get_one_payload( value.payload_info[0] ).then( data => {
-       console.log(data)
-    })
+  console.log("ok sending gr")
+ 
+  //rapi.msg({label:"gr",type:"gr"})
   
-  })
-*/
+  rapi.shared("gr_view").submit({type:"gr",id:"gr1id",params:{sx: 10, sy: 10}})
+//  rapi.shared("gr_view").submit({type:"gr",id:"gr2id"})
+//  rapi.shared("gr_view").subscribe( vals => console.log("S=",vals))
+
+//  rapi.create_cell("gr").submit( {type:"gr",id:"gr1id"} )
+//  rapi.create_cell("gr").submit( {type:"gr",id:"gr2id"} )
+
+  //let rbt = MERGE.robot( rapi, "merge1", worker_ids )
+  
+  let gr1id = rapi.create_cell("gr1id/data")
+  let gr1id_p = rapi.create_cell("gr1id/params")
+  //gr1id_p.submit({sx: 10, sy: 10})
+
+  // почему-то это проще чем робот
+  // + робот нагрузит воркера
+  let data_port = range(P).map( x => rapi.read_cell(`pass1/iter/${x}`,{limit:1}) )
+
+  let counter = 0
+  function tick() {
+    let proms = data_port.map( x => x.next() )
+    
+    Promise.all( proms ).then( vals => {
+      
+      let ground = vals[0] // нормализуем
+      for (let i=0; i<vals.length; i++) vals[i] = vals[i] - ground
+      
+      console.log(vals.join(" "))
+      
+      if (counter++ % 30 == 0) {
+        gr1id.submit(vals)
+        gr1id_p.submit({title:counter})
+      }
+      tick()
+    })
+  }
+  
+  tick()
 
   
 

@@ -152,7 +152,7 @@ function start_local_pusha_server( payload_api, port=11000,host='0.0.0.0',allow_
     
 
     function process_incoming( request, response ) {
-      console.log("--------> inmem-pusha request, url=",request.url)
+      //console.log("--------> inmem-pusha request, url=",request.url)
 
       var urla = url.parse(request.url,true);
 
@@ -194,13 +194,13 @@ function start_local_pusha_server( payload_api, port=11000,host='0.0.0.0',allow_
 
         // We replaced all the event handlers with a simple call to readStream.pipe()
         let streaming_key = `inmem-pusha stream-out: ${urla.pathname}-${process.env.PPK_PUBLIC_ADDR}->${request.socket.remoteAddress} (${bytes_count} bytes)`
-        console.time(streaming_key)
+        //console.time(streaming_key)
         // ну тут мы сильно тоже считаем что pp это typed-array
         response.end( Buffer.from(pp.buffer) );
         //console.log("local-pusha: streaming out",urla.pathname,filePath,"bytes:",stat.size,"to",request.socket.remoteAddress)
 
         response.on('finish',() => {
-          console.timeEnd(streaming_key)
+          //console.timeEnd(streaming_key)
         })
 
       } catch (err) {

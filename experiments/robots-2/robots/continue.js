@@ -17,7 +17,7 @@ export function robot( rapi, id, workers ) {
   let control_port = [rapi.open_cell( `${id}/control` )]
   
   let count = workers.length  
-  let r = workers.map( (x,index) => start_pass_each_robot( rapi,x,
+  let r = workers.map( (x,index) => start_robot( rapi,x,
        { index, id:`${id}/${index}`,
          input_port,output_port,count,
          control_port,
@@ -31,7 +31,7 @@ export function robot( rapi, id, workers ) {
   return robot
 }
 
-function start_pass_each_robot( rapi, runner_id, args ) {
+function start_robot( rapi, runner_id, args ) {
   return rapi.exec( rapi.js( (args) => {
     console.log("hello continue robot. args=",args)
 
@@ -56,7 +56,7 @@ function start_pass_each_robot( rapi, runner_id, args ) {
     
     function tack() {
       in_control.next().then( val => {
-        console.log("contiue robot see in-control. id=",id)
+        //console.log("contiue robot see in-control. id=",id)
         if (counter == 0) {
           console.error("still was no input values!!!!!")
         } else

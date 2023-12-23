@@ -1,8 +1,10 @@
 import * as LIB from "./lib.js"
 
-////////////////////////////// vis_pass2
+////////////////////////////// vis_pass3
 // асинхронная визуализация
 // рандеву. команду принимает 1 робот, и назначает остальным итерацию.
+
+let verbose=false
 
 export function robot( rapi, id, workers ) {
   let N =1
@@ -32,7 +34,7 @@ export function robot( rapi, id, workers ) {
   let r = workers.map( (x,index) => start_robot( rapi,x,
        { index, id:`${id}/${index}`,
          input_port,output_port,count,
-         control_port,vis_port, randevu_port,
+         control_port,vis_port, randevu_port,verbose,
          N
          //f:rapi.compile_js(f)
        }))
@@ -45,9 +47,9 @@ export function robot( rapi, id, workers ) {
 
 function start_robot( rapi, runner_id, args ) {
   return rapi.exec( rapi.js( (args) => {
-    //console.log("hello vis_pass_3 robot. args=",args)
+    console.log("hello vis_pass_3 robot. args=",args)
 
-    let {input_port, output_port, control_port, randevu_port, vis_port, index, id, count, N} = args
+    let {verbose,input_port, output_port, control_port, randevu_port, vis_port, index, id, count, N} = args
 
     let in_data = rapi.read_cell( input_port[index] )
     let out = rapi.create_cell( output_port[index] )
@@ -63,12 +65,14 @@ function start_robot( rapi, runner_id, args ) {
     function tick() {
       in_data.next().then( val => {
         //console.log("vis-pass. iter counter=",counter)
-        //console.log("vis-pass-2 robot see input data id=",id)
+        if (verbose)
+            console.log("vis-pass robot see input data id=",id,"iter counter=",counter)
 
         //if (required > 0) required--
         //if (required == 1 && counter%3 == 0) {
         if (required == counter) {
-          //console.log("vis-pass robot enters required space. id=",id,"required=",required,"sending data to out_vis",out_vis.id)          
+          if (verbose)
+              console.log("vis-pass robot enters required space. id=",id,"required=",required,"sending data to out_vis",out_vis.id)          
           required = -1
           out_vis.submit( val )
           // теперь задача подграфа уже высылать данные дальше
@@ -84,11 +88,17 @@ function start_robot( rapi, runner_id, args ) {
     let required = -1
     function tack() {
       in_control.next().then( val => {
-        //console.log("vis-pass-3 robot see in-control. id=",id,"sending randevu=",required)
         //required = 2
 
         // выяснилось что на сдвиге +2 оно зависает. а на +3 нет.
+        // на +3 при 10 воркерах тоже.. там похоже гусеница получается..
+        // без синхронизации это виснет. и надо увеличивать окно.
         required = counter + 3
+        // да похоже так и есть.. тонкое местечко..
+
+        if (verbose)
+            console.log("vis-pass robot see in-control. id=",id,"sending randevu=",required)
+
         
         out_randevu.submit( required )
         tack()       
@@ -97,7 +107,8 @@ function start_robot( rapi, runner_id, args ) {
 
     function tuck() {
       in_randevu.next().then( val => {
-        //console.log("vis-pass-3 robot see in-randeuv. id=",id,"randevu=",val)
+        if (verbose)
+            console.log("vis-pass-3 robot see in-randeuv. id=",id,"randevu=",val)
         //required = 2
         required = val        
         tuck()       

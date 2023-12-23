@@ -29,7 +29,8 @@ import * as PRINT from "./robots/print.js"
 let S = new STARTER.Local()
 let DEBUG_WORKERS= process.env.DEBUG ? true : false
 
-let P = 4
+//let P = 10
+let P = process.env.P ? parseInt(process.env.P) : 10
 let DN = process.env.DN ? parseInt(process.env.DN) : 1000
 console.log({DN})
 
@@ -58,8 +59,8 @@ function vis1( rapi, workers, data_port, control_port,prefix ) {
     dport.next().then( val => {      
       console.log("got data",prefix, cnt++,val)
 
-      rapi.get_one_payload( val.payload_info[0] ).then( data => {
-       console.log(data)
+      rapi.get_payloads( val.payload_info ).then( datas => {
+       console.log(datas)
        tick()
       })
     })
