@@ -93,17 +93,15 @@ function compute1( rapi,worker_ids, n, vis_robot ) {
   LIB.create_port_link( rapi, vis_robot.output, pr.input )
   //LIB.create_port_link( rapi, pr.output, r1.input )
 
-  // публикация номеров итераций
 
-  //let merge1 = MERGE.robot( rapi,"iters", worker_ids )
-  //LIB.create_port_link( rapi, pr.iterations, merge1.input )
-  let merge1 = REDUCE_L.robot( rapi,"iters", worker_ids,(vals,counter) => vals )
-  LIB.create_port_link( rapi, pr.iterations, merge1.input )
 
   // синхронизация кольца
   // перспектива
   //let j1 = LIB.create_port_join( rapi, pr.output, merge1.output )
   //LIB.create_port_link( rapi, j1.output, r1.input )
+
+  let merge1 = REDUCE_L.robot( rapi,"iters", worker_ids,(vals,counter) => counter )
+  LIB.create_port_link( rapi, pr.iterations, merge1.input )
 
   let sync = MAP2.robot( rapi,"sync", worker_ids, (vals) => vals[0] )
   LIB.create_port_link( rapi, pr.output, sync.input ) 

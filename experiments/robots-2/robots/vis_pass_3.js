@@ -49,6 +49,8 @@ function start_robot( rapi, runner_id, args ) {
   return rapi.exec( rapi.js( (args) => {
     console.log("hello vis_pass_3 robot. args=",args)
 
+    let SHIFT_AHEAD = 110
+
     let {verbose,input_port, output_port, control_port, randevu_port, vis_port, index, id, count, N} = args
 
     let in_data = rapi.read_cell( input_port[index] )
@@ -93,7 +95,7 @@ function start_robot( rapi, runner_id, args ) {
         // выяснилось что на сдвиге +2 оно зависает. а на +3 нет.
         // на +3 при 10 воркерах тоже.. там похоже гусеница получается..
         // без синхронизации это виснет. и надо увеличивать окно.
-        required = counter + 3
+        required = counter + SHIFT_AHEAD
         // да похоже так и есть.. тонкое местечко..
 
         if (verbose)

@@ -143,11 +143,11 @@ class PayloadApi {
 */    
 
     //console.error('get-one-payload',payload_record.url )
-    console.time(`get-one-payload:${payload_record.url}` )
+    // console.time(`get-one-payload:${payload_record.url}` )
     return fetch( payload_record.url ).then( response => {
       return response.arrayBuffer()
     }).then( ab => {
-      console.timeEnd(`get-one-payload:${payload_record.url}` )
+      // console.timeEnd(`get-one-payload:${payload_record.url}` )
       //console.error('get-one-payload',payload_record.url,'loaded, bytes len=',ab.byteLength )
       // https://gist.github.com/jonathanlurie/04fa6343e64f750d03072ac92584b5df
       var context = typeof window === "undefined" ? global : window;

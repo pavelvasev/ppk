@@ -89,15 +89,15 @@ function compute1( rapi,worker_ids, n, vis_robot ) {
   LIB.create_port_link( rapi, pr.output, r1.input )
 
   // публикация номеров итераций
-  let merge1 = MERGE.robot( rapi,"iters", worker_ids )
-  LIB.create_port_link( rapi, pr.iterations, merge1.input )
+  //let merge1 = MERGE.robot( rapi,"iters", worker_ids )
+  //LIB.create_port_link( rapi, pr.iterations, merge1.input )
 
   Promise.resolve( rapi.submit_payload_inmem( data ) ).then( pi => {
     // начальные данные  
     r1.input.forEach( input => rapi.create_cell( input.id ).submit( {left:0, right:0, payload_info: [pi] } ) )
   })
 
-  return {output: r1.output, final: pr.finish, iters: merge1.output}
+  return {output: r1.output, final: pr.finish } //, iters: merge1.output}
 }
 
 // робот - встроенный представитель визуализации
