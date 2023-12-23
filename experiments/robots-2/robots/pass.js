@@ -55,7 +55,7 @@ function start_robot_2( rapi, runner_id, args ) {
         // но оказалось что надо не итерации отмерять а время.. а то мб итераций то 
         // и не много а занятость большая сплошная
         if (t1 - t0 > 3000) {
-           setTimeout( () => out.submit( val ), 1 )
+           setTimeout( () => out.submit( val ), 2 )
            t0 = t1
         }
         else 
@@ -63,7 +63,7 @@ function start_robot_2( rapi, runner_id, args ) {
         tick()
 
         //console.log("iter submit counter",counter,"iter=",iter.id)
-        iter.submit( counter ) // выдаем итерации
+        iter.submit( counter ) // выдаем итерации - однако, дорого - на каждом шаге..
       })
     }
 

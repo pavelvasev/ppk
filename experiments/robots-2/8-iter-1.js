@@ -72,15 +72,15 @@ function main( rapi ) {
   function tick() {
     //console.log("tick wait", data_port[0].id ,data_port.length)
     let proms = data_port.map( x => x.next() )
-
-    //proms[0].then( x => console.log(333))
-    
+    //proms[0].then( x => console.log(333))    
     Promise.all( proms ).then( vals => {
+      //console.log("tack")
       let ground = vals[0] // нормализуем    
 
-      if (first_time) {      
+      if (first_time) {
         t0 = performance.now()
         iter0 = ground
+        first_time = false
       }
       let t1 = performance.now()
       

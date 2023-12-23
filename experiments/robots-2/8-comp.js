@@ -145,19 +145,25 @@ function main( rapi, worker_ids ) {
 
   let visr = vis1( rapi, worker_ids )
 
-  let c1 = compute1( rapi, worker_ids, 1001*1000*10, visr)
+  let iters = 1001*3;
+  let c1 = compute1( rapi, worker_ids, iters, visr)
 
   console.log("compute ports are ",c1)
-  console.log("visr.control is",visr.control,"visr.vis is",visr.vis)
+  //console.log("visr.control is",visr.control,"visr.vis is",visr.vis)
 
   // vis1( rapi, worker_ids, output[0], "part-0" )
 
   console.time("compute")
 
   // печать результата
+  let t0 = performance.now()
   rapi.read_cell( c1.final[0] ).next().then( value => {
+    let tdiff = performance.now()-t0
     console.timeEnd("compute")
     console.log("finished",value)
+    let fps = 1000*iters / tdiff
+    console.error("P=",P,"DN=",DN,"iters=",iters, "seconds=",tdiff / 1000, "final_fps=", fps, "fps_per_runner=",fps / P)
+    process.exit(0)
   /*  
     rapi.get_one_payload( value.payload_info[0] ).then( data => {
        console.log(data)
