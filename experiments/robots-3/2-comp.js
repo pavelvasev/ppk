@@ -24,8 +24,6 @@ import * as REDUCE_P from "./robots/reduce_par.js"
 import * as MAP from "./robots/map.js"
 import * as MAP2 from "./robots/map_2.js"
 
-//let S = new STARTER.Slurm( "u1321@umt.imm.uran.ru" )
-let S = new STARTER.Local()
 let DEBUG_WORKERS= process.env.DEBUG ? true : false
 
 let P = process.env.P ? parseInt(process.env.P) : 10
@@ -43,6 +41,10 @@ let iters = process.env.ITERS ? parseInt(process.env.ITERS) : iters_calc
 let sync_mode =  process.env.SYNC ? true : false
 console.log({DN,P,iters,sync_mode})
 
+let S = process.env.SLURM ? new STARTER.Slurm() : new STARTER.Local()
+//let S = new STARTER.Local()
+//let S = new STARTER.Slurm()
+
 //process.exit()
 
 if (DN % P != 0) {
@@ -54,7 +56,9 @@ let sys = S.start().then( (info) => {
 
   console.log("OK system started", info, S.url)
 
-  return S.start_workers( P,1,4*10*1000,1,'-t 40 --gres=gpu:v100:1 -p v100',DEBUG_WORKERS ).then( (statuses) => {
+  //return S.start_workers( 1,P,4*10*1000,1,'-t 40 --gres=gpu:v100:1 -p v100',DEBUG_WORKERS ).then( (statuses) => {
+  //return S.start_workers( P,1,4*1000,1,'-t 40',DEBUG_WORKERS ).then( (statuses) => {
+  return S.start_workers( 1,P,4*10*1000,1,'-t 40',DEBUG_WORKERS ).then( (statuses) => {
     console.log("workers started",statuses)
     return info
   }).catch( err => {
@@ -68,7 +72,7 @@ sys.then( info => PPK.connect("test",info) ).then( rapi => {
   
     console.log("rapi connected, waiting workers");
     rapi.wait_workers( P ).then( (workers) => {
-      console.log("found workers", workers);
+      console.log("found workers", workers, "passing to main");
       main( rapi, workers.map( w => w.id ) )
     });
   
@@ -143,7 +147,8 @@ function vis1( rapi,worker_ids ) {
 ////////////////////////////////
 //import * as F from "./f.js"
 
-function main( rapi, worker_ids ) {  
+function main( rapi, worker_ids ) {
+  console.log("main called")
 
   let visr = vis1( rapi, worker_ids )
 
@@ -155,6 +160,7 @@ function main( rapi, worker_ids ) {
 
   // vis1( rapi, worker_ids, output[0], "part-0" )
 
+  console.log("robots spawned. waiting finish")
   console.time("compute")
 
   // печать результата

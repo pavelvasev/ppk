@@ -1,6 +1,8 @@
 /* 
 */
 
+import { SocksClient } from 'socks';
+
 export default function init( rapi ) {
 
   // вот странное. тут мы вводим патч. а далее - не вводим.
@@ -233,7 +235,7 @@ let last_message_buf
 
 // посылает сообщение по указанному url
 function fetch_packet( target_url, query_id, msg ) {
-  //console.log("fetch_packet",{target_url, query_id, msg})
+  console.log("fetch_packet",{target_url, query_id, msg})
 
   if (console.verbose)
       console.verbose("fetch_packet",{target_url, query_id, msg})
@@ -243,32 +245,69 @@ function fetch_packet( target_url, query_id, msg ) {
   //console.log("fetch client found=",!!client)
 
   if (!client) {
-    // console.error("creating client. target_url=",target_url)
-    client = new net.Socket()
-    clients.set( target_url.url,client )
 
-    //setTimeout( () => console.log("."), 100 )
+    // F-SOCKS
+    let proxy_fn = global.proxy_fn
+    if (proxy_fn) {
+      let socks_addr = proxy_fn( target_url.url );
+      if (socks_addr) {
+        let [host,port] = socks_addr.split("://")[1].split(":")        
+        // https://www.npmjs.com/package/socks
+        const options = {
+          proxy: {
+            host, // ipv4 or ipv6 or hostname
+            port,
+            type: 5 // Proxy version (4 or 5)
+          },
 
-    client.opened = create_promise()
-    client.on('ready', () => {
-      //if (console.verbose)
-      //console.error("created client. target_url=",target_url,"me=",client.address())
-      client.opened.resolve()
-    });
-    client.on('error', (err) => {
-      console.error("query-tcp: outgoing socket error!",err,"me=",client.address())
-    });
-    client.on('close', (err) => {
-      console.error("query-tcp: outgoing socket close!",err,"me=",client.address())
-    });
-    client.on('timeout', (err) => {
-      console.error("query-tcp: outgoing socket timeout!",err,"me=",client.address())
-    });
-    client.on('end', (err) => {
-      console.error("query-tcp: outgoing socket end!",err,"me=",client.address())
-    });    
-    client.connect( {host:target_url.host, port: target_url.port, keepAlive: true} )
-    client.setKeepAlive( true )
+          command: 'connect', // SOCKS command (createConnection factory function only supports the connect command)
+
+          destination: {
+            host: target_url.host, // github.com (hostname lookups are supported with SOCKS v4a and 5)
+            port: target_url.port
+          }
+        };
+        client = {}
+        client.opened = create_promise()
+        SocksClient.createConnection(options).then( info => {
+          client.opened.resolve( info.socket )
+        }).catch( err => {
+          console.error("socks connect error! options=",options)
+        })        
+        clients.set( target_url.url,client )
+      }
+      
+    }
+
+    // socks не воспользовались - создаем обычный клиент
+    if (!client) {
+      // console.error("creating client. target_url=",target_url)
+      client = new net.Socket()
+      clients.set( target_url.url,client )
+
+      //setTimeout( () => console.log("."), 100 )
+
+      client.opened = create_promise()
+      client.on('ready', () => {
+        //if (console.verbose)
+        //console.error("created client. target_url=",target_url,"me=",client.address())
+        client.opened.resolve(client)
+      });
+      client.on('error', (err) => {
+        console.error("query-tcp: outgoing socket error!",err,"me=",client.address())
+      });
+      client.on('close', (err) => {
+        console.error("query-tcp: outgoing socket close!",err,"me=",client.address())
+      });
+      client.on('timeout', (err) => {
+        console.error("query-tcp: outgoing socket timeout!",err,"me=",client.address())
+      });
+      client.on('end', (err) => {
+        console.error("query-tcp: outgoing socket end!",err,"me=",client.address())
+      });
+      client.connect( {host:target_url.host, port: target_url.port, keepAlive: true} )
+      client.setKeepAlive( true )
+    }
   }
 
   // F-MSG-ATTACH
@@ -318,15 +357,15 @@ function fetch_packet( target_url, query_id, msg ) {
 
   bufferIntAttach.writeUInt32BE( attach ? attach.length : 0 )
 
-  return client.opened.then( () => {
+  return client.opened.then( (socket) => {
     // console.log("fetch-packet ACTUAL to",target_url,"me=",client.address(),"msg=",msg)  
     //client.cork() // на удивление добавка corn-uncork снижает скорость в 2 раза вычислений
-    client.write( bufferInt )
-    client.write( bufferIntAttach )
+    socket.write( bufferInt )
+    socket.write( bufferIntAttach )
     //client.write( buf )
     //if (attach)
       //client.write( Buffer.from( attach.buffer ) )
-    client.write( attach )
+    socket.write( attach )
     //client.uncork()
     // непонятно как лучше, 1м врайтом или несколькими
     // один зато ясно что слать.. но как оно там внутрях?
@@ -407,13 +446,15 @@ function start_message_server( client_id, message_arrived,port=0,host='0.0.0.0',
     return new Promise( (resolve, reject) => {
 
       server.on("listening",() => {
-        //console.log('incoming msg tcp server started at:', server.address());
+        if (console.verbose)
+            if (console.verbose)('incoming msg tcp server started at:', server.address());
         //console.log('http server started: http://%s:%s', server.address().address, server.address().port);
         //server.address().address
         let adr = process.env['PPK_PUBLIC_ADDR'] || '127.0.0.1'
         let url = `tcp://${adr}:${server.address().port}`
         let my_endpoint_url = {host:adr, port: server.address().port, url, client_id }
-        //console.log({my_endpoint_url})
+        if (console.verbose)
+            if (console.verbose)({my_endpoint_url})
         resolve( {server,my_endpoint_url} )
       });
 
