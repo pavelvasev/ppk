@@ -33,7 +33,8 @@ DIR=$(dirname $(readlink -f "$0"))
 # кстати идея.. если пуша запустилась то уменьшить NWORKERS на 1?..
 #sleep 1
 for i in $(seq $NWORKERS); do
-    VERBOSE=true RUNNER_ID=$SLURM_JOBID-$SLURMD_NODENAME-$i "$DIR/../../runner-1.sh" &
+    #VERBOSE=true
+    RUNNER_ID=$SLURM_JOBID-$SLURMD_NODENAME-$i "$DIR/../../runner-1.sh" &
     #>$LOGDIR/$RUNNER_ID.log 2>$LOGDIR/$RUNNER_ID.err.log &
 done
 
