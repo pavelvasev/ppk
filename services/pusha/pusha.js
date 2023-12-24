@@ -91,7 +91,11 @@ console.log( "config.dir=",config.dir, "resolved to",path.resolve(config.dir) );
 
 if (!fs.existsSync(config.dir)) {
   console.log("config.dir not exist! making:",config.dir);
-  fs.mkdirSync(config.dir);
+  try {
+    fs.mkdirSync(config.dir);
+  } catch( err ) {
+    console.error( err )
+  }
   //process.exit(1);
 }
 if (!fs.statSync(config.dir).isDirectory())

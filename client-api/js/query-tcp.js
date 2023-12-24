@@ -251,7 +251,7 @@ function fetch_packet( target_url, query_id, msg ) {
     if (proxy_fn) {
       let socks_addr = proxy_fn( target_url.url );
       if (socks_addr) {
-        console.log("socks_addr mode, creating socks proxy conn! socks_addr=",socks_addr)
+        //console.log("socks_addr mode, creating socks proxy conn! target_url.url=",target_url.url,"socks_addr=",socks_addr)
         let [host,port] = socks_addr.split("://")[1].split(":")        
         // https://www.npmjs.com/package/socks
         const options = {

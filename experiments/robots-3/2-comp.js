@@ -3,7 +3,8 @@
 // 1-comp-sync = 8-comp из robots-2 с флагом нужна ли синхронизация
 
 import * as PPK from "ppk"
-import * as STARTER from "ppk/starter.js"
+import * as SLURM from "ppk/slurm.js"
+import * as LOCAL from "ppk/local.js"
 
 import * as LIB from "./robots/lib.js"
 import * as PASS from "./robots/pass.js"
@@ -26,7 +27,10 @@ import * as MAP2 from "./robots/map_2.js"
 
 let DEBUG_WORKERS= process.env.DEBUG ? true : false
 
+// число процессов
 let P = process.env.P ? parseInt(process.env.P) : 10
+// число процессов в 1 job-е (слурм запускаем job-ами)
+let JP = process.env.JP ? parseInt(process.env.JP) : 1
 let DN = process.env.DN ? parseInt(process.env.DN) : 1000*1000
 
 let plained_seconds = 20 // время работы "планируемое"
@@ -39,9 +43,13 @@ let iters_calc = Math.max( 5, Math.round( plained_seconds * CP * 1000000 / DN ) 
 
 let iters = process.env.ITERS ? parseInt(process.env.ITERS) : iters_calc
 let sync_mode =  process.env.SYNC ? true : false
-console.log({DN,P,iters,sync_mode})
 
-let S = process.env.SLURM ? new STARTER.Slurm() : new STARTER.Local()
+// сколько памяти надо 1 процессу
+let MEM_PER_PROCESS = 200 + Math.ceil( ((DN / P) *4 *2) / (1024*1024) )
+
+console.log({DN,P,iters,sync_mode,MEM_PER_PROCESS})
+
+let S = process.env.SLURM ? new SLURM.Starter() : new LOCAL.Starter()
 //let S = new STARTER.Local()
 //let S = new STARTER.Slurm()
 
@@ -52,13 +60,18 @@ if (DN % P != 0) {
   process.exit(1)
 }
 
+if (P % JP != 0) {
+  console.error(`P % JP != 0 = ${P % JP}. JP=${JP} P=${P}`)
+  process.exit(1)
+}
+
 let sys = S.start().then( (info) => {
 
   console.log("OK system started", info, S.url)
 
   //return S.start_workers( 1,P,4*10*1000,1,'-t 40 --gres=gpu:v100:1 -p v100',DEBUG_WORKERS ).then( (statuses) => {
   //return S.start_workers( P,1,4*1000,1,'-t 40',DEBUG_WORKERS ).then( (statuses) => {
-  return S.start_workers( 1,P,4*10*1000,1,'-t 40',DEBUG_WORKERS ).then( (statuses) => {
+  return S.start_workers( P/JP,JP,JP*MEM_PER_PROCESS,1,'-t 40',DEBUG_WORKERS ).then( (statuses) => {
     console.log("workers started",statuses)
     return info
   }).catch( err => {
@@ -171,7 +184,7 @@ function main( rapi, worker_ids ) {
     console.log("finished",value)
     let fps = 1000*iters / tdiff
     let mps = fps * DN / 1000000
-    console.error("P=",P,"DN=",DN,"iters=",iters, "seconds=",tdiff / 1000, "fps=",fps,"mps=", mps, "mps_per_runner=",mps / P)
+    console.error("P=",P,"DN=",DN,"JP=",JP,"iters=",iters, "seconds=",tdiff / 1000, "fps=",fps,"mps=", mps, "mps_per_runner=",mps / P)
     process.exit(0)
   /*  
     rapi.get_one_payload( value.payload_info[0] ).then( data => {
