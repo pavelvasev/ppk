@@ -251,12 +251,13 @@ function fetch_packet( target_url, query_id, msg ) {
     if (proxy_fn) {
       let socks_addr = proxy_fn( target_url.url );
       if (socks_addr) {
+        console.log("socks_addr mode, creating socks proxy conn! socks_addr=",socks_addr)
         let [host,port] = socks_addr.split("://")[1].split(":")        
         // https://www.npmjs.com/package/socks
         const options = {
           proxy: {
             host, // ipv4 or ipv6 or hostname
-            port,
+            port:parseInt(port),
             type: 5 // Proxy version (4 or 5)
           },
 
@@ -270,9 +271,10 @@ function fetch_packet( target_url, query_id, msg ) {
         client = {}
         client.opened = create_promise()
         SocksClient.createConnection(options).then( info => {
+          console.log("socks connected!",info)
           client.opened.resolve( info.socket )
         }).catch( err => {
-          console.error("socks connect error! options=",options)
+          console.error("socks connect error! options=",options,"err=",err)
         })        
         clients.set( target_url.url,client )
       }
