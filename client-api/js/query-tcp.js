@@ -235,7 +235,7 @@ let last_message_buf
 
 // посылает сообщение по указанному url
 function fetch_packet( target_url, query_id, msg ) {
-  console.log("fetch_packet",{target_url, query_id, msg})
+  //console.log("fetch_packet",{target_url, query_id, msg})
 
   if (console.verbose)
       console.verbose("fetch_packet",{target_url, query_id, msg})
@@ -267,11 +267,12 @@ function fetch_packet( target_url, query_id, msg ) {
             host: target_url.host, // github.com (hostname lookups are supported with SOCKS v4a and 5)
             port: target_url.port
           }
+          // , set_tcp_nodelay ? https://www.npmjs.com/package/socks#new-socksclientoptions
         };
         client = {}
         client.opened = create_promise()
         SocksClient.createConnection(options).then( info => {
-          console.log("socks connected!",info)
+          //console.log("socks connected!",options)
           client.opened.resolve( info.socket )
         }).catch( err => {
           console.error("socks connect error! options=",options,"err=",err)
@@ -361,7 +362,7 @@ function fetch_packet( target_url, query_id, msg ) {
 
   return client.opened.then( (socket) => {
     // console.log("fetch-packet ACTUAL to",target_url,"me=",client.address(),"msg=",msg)  
-    //client.cork() // на удивление добавка corn-uncork снижает скорость в 2 раза вычислений
+    //client.cork() // на удивление добавка cork-uncork снижает скорость в 2 раза вычислений
     socket.write( bufferInt )
     socket.write( bufferIntAttach )
     //client.write( buf )
@@ -372,6 +373,7 @@ function fetch_packet( target_url, query_id, msg ) {
     // непонятно как лучше, 1м врайтом или несколькими
     // один зато ясно что слать.. но как оно там внутрях?
     // но один - это доп аллокация..
+    // todo померять. с учетом tcp no-delay
     //client.write( Buffer.concat( [bufferInt,bufferIntAttach,buf]) )
   })
 }
