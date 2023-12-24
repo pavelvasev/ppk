@@ -37,7 +37,7 @@ function start_robot_1( rapi, runner_id, args ) {
       //console.log( "wait" )
       Promise.all( [in_data.next(), left ? left.next() : null, right ? right.next() : null] ).then( vals => {
         //console.log("ready!")
-        console.log("stencil-1d tick data! ",counter++)
+        //console.log("stencil-1d tick data! ",counter++)
         let [me,left_info,right_info] = vals
         rapi.get_one_payload( me.payload_info[0] ).then( data => {
           //console.log("payload!")
