@@ -85,7 +85,7 @@ function main( rapi ) {
       let t1 = performance.now()
       
       if (t1 > t0+1000)
-         console.log( "FPS=",1000 * (ground-iter0) / (t1 - t0),"t1=",t1 )
+         console.log( "FPS=",1000 * (ground-iter0) / (t1 - t0),"t1=",t1,"iter=",ground )
          //console.log( "node 0 iter=",ground,"iter0=",iter0,"FPS=",1000 * (ground-iter0) / (t1 - t0),"t1=",t1 )
       
       tick()

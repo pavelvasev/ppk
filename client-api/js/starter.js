@@ -8,8 +8,7 @@ import * as fs from 'node:fs'; // https://nodejs.org/api/fs.html
 /* нижеследующее выглядит ортогональным вполне.
    ибо можно и находясь на кластере, запустить в указанном месте (или на хосте)
    центральный сервис, а затем обычными slurm-командами запускать воркеров..
-   с этим надо подразобраться. но и пока так для осмысления норм ))
-   
+   с этим надо подразобраться. но и пока так для осмысления норм ))   
 */
 
 const LOGDIR = "./log"; // todo сделать получше + рассинхрон с sh-скриптами (там тоже логдир)
@@ -18,12 +17,19 @@ if (!fs.existsSync(dir)){
 	fs.mkdirSync(dir);
 }
 
+/*
+  ppk_public_addr - айпи адрес хоста в локальной сети машины
+  ppk_path - каталог системы доступный на всех узлах и хосте
+  ssh_endpoint - как подключаться к хосту
+*/
+
 export class Slurm {
-  constructor( ssh_endpoint="u1321@umt.imm.uran.ru", options={} )
+	 // все параметры сделаны в опциях чтобы их проще было подать из настроек из внешнего файла и тп
+  constructor( options={} )
   {
 
-  	this.ssh_endpoint = ssh_endpoint
-  	this.ppk_path = options.ppk_path || "/home/u1321/_scratch2/ppk/k4/"
+  	this.ssh_endpoint = options.ssh_endpoint ||= "u1321@umt.imm.uran.ru"
+  	this.ppk_path = options.ppk_path || "/home/u1321/_scratch2/ppk/"
   	this.ppk_public_addr = options.ppk_public_addr || "172.16.33.3"
 
   	this.started_prgs = []
