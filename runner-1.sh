@@ -5,7 +5,7 @@ export NODE_NO_WARNINGS=1
 
 DIR=$(dirname $(readlink -f "$0"))
 
-if [ "$NOLOG" == "1" ]; then
+if [ "$WORKER_NO_LOG" == "1" ]; then
    # мб из занулить тогда уж, эти логи?
   "$DIR/services/runner3/runner3.js"
 else

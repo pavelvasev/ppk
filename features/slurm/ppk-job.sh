@@ -34,7 +34,7 @@ DIR=$(dirname $(readlink -f "$0"))
 #sleep 1
 for i in $(seq $NWORKERS); do
     #VERBOSE=true
-    NOLOG=1 RUNNER_ID=$SLURM_JOBID-$SLURMD_NODENAME-$SLURM_LOCALID-$i "$DIR/../../runner-1.sh" &
+    WORKER_NO_LOG=1 RUNNER_ID=$SLURM_JOBID-$SLURMD_NODENAME-$SLURM_LOCALID-$i "$DIR/../../runner-1.sh" &
     #>$LOGDIR/$RUNNER_ID.log 2>$LOGDIR/$RUNNER_ID.err.log &
 done
 
