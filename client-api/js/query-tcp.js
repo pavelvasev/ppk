@@ -313,10 +313,10 @@ function fetch_packet( target_url, query_id, msg ) {
       });
       client.on('end', (err) => {
         console.error("query-tcp: outgoing socket end!",err,"me=",client.address())
-      });      
-      //client.setNoDelay( tcp_nodelay_mode )
-      //client.setKeepAlive( true )
+      });
       client.connect( {host:target_url.host, port: target_url.port, keepAlive: true, noDelay: tcp_nodelay_mode} )
+      client.setNoDelay( tcp_nodelay_mode )
+      client.setKeepAlive( true )
     }
   }
 
@@ -414,7 +414,7 @@ function create_promise() {
 function start_message_server( client_id, message_arrived,port=0,host='0.0.0.0',allow_find_free_port=true) {
 //  function start_message_server( message_arrived,port=11000,host='127.0.0.1',allow_find_free_port=true) {
 
-    const server = net.createServer({highWaterMark:1024*1024});
+    const server = net.createServer({highWaterMark:1024*1024, noDelay: tcp_nodelay_mode});
     //const server = net.createServer();
 
     /* внимание важная засада. если создать сервер, а потом закрыть, но к нему были соединения
