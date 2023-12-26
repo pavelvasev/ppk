@@ -537,7 +537,8 @@ function make_consumer( process_incoming, cli_addr) {
            bstart += 8
            //buf = buf.subarray( 8 )
 
-            if (len > 2 ** 18) {
+            //if (len > 2 ** 18) {
+           if (len > 1024*1024) {
               console.log("query-tcp: parsed len is strange",len)
               console.error("query-tcp: parsed len is strange",len)
               throw new Error('Max json length exceeded');

@@ -190,7 +190,7 @@ export class Starter {
   start(ppk_wait_runners='') {
   	let prgpath = `ssh`
 
-  	let args = ["-t","-t","-D","15000","-R","15001", "-L","10000:127.0.0.1:10000",
+  	let args = ["-t","-t","-D","15000","-R","15001", "-L","10000:127.0.0.1:10000","-L","12000:127.0.0.1:12000",
   		          "-L","3333:127.0.0.1:3333",this.ssh_endpoint,
   		          `cd ${this.ppk_path}; PPK_WAIT_RUNNERS=${ppk_wait_runners} PPK_PUBLIC_ADDR=${this.ppk_public_addr} PPK_SOCKS_LOCK=socks5://${this.ppk_public_addr}:15001 ./all-main-services.sh`]
   	//let prgpath = `ssh -t -t -L 8000:localhost:8000 -L 12000:localhost:12000 -L 3333:localhost:3333 ${this.ssh_endpoint} "cd ${this.ppk_path}; ./all-main-services.sh"`

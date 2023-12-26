@@ -127,6 +127,10 @@ export class ReadingCell {
     return { cell: true, id: this.id }
   }
 
+  stop() {
+    this.query.delete()
+  }
+
   constructor( rapi, id, queue_limit) {
     this.cell = true // надо для preprocess_args / exec
  	this.rapi = rapi

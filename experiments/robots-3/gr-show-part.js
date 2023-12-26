@@ -21,7 +21,7 @@ import * as STARTER from "ppk/starter.js"
 import * as LIB from "./robots/lib.js"
 import * as PASS from "./robots/pass.js"
 import * as PASS_EACH from "./robots/pass_each.js"
-import * as REDUCE from "./robots/reduce.js"
+//import * as REDUCE from "./robots/reduce.js"
 import * as WRITE_FS from "./robots/write_fs.js"
 import * as STENCIL_1D from "./robots/stencil_1d.js"
 import * as PRINT from "./robots/print.js"
@@ -39,12 +39,8 @@ console.log({DN})
 let sys = Promise.resolve( true ) // пока тянет
 
 sys.then( info => PPK.connect("test",info) ).then( rapi => {
-  
-    console.log("rapi connected, waiting workers");
-    rapi.wait_workers( P ).then( (workers) => {
-      console.log("found workers", workers);
-      main( rapi, workers.map( w => w.id ) )
-    });
+
+    main( rapi )
   
 })
 
@@ -83,8 +79,28 @@ function main( rapi, worker_ids ) {
   console.log("ok sending gr")
  
   //rapi.msg({label:"gr",type:"gr"})
+
+  let input = []
+  for (let i=0; i<P; i++) input.push( ["process "+i,i] )
+  rapi.shared("gr_view").submit({type:"combobox",id:"s1",params:{input}})
+
+  let cb = rapi.read_cell("s1/index")
+  let selected_process = 0
+  function read_cb() {    
+    cb.next().then( dat => {
+      console.log("cb dat=",dat)
+      selected_process = dat
+      data_cell.stop()
+      let subj = `pass1/output/${selected_process}`
+      console.log("subscribing to subj",subj)
+      data_cell = rapi.read_cell(subj,{limit:1})
+      read_cb()
+      tick()
+    })
+  }
+  read_cb()
   
-  rapi.shared("gr_view").submit({type:"gr",id:"gr1id",params:{sx: 10, sy: 10}})
+  rapi.shared("gr_view").submit({type:"gr",id:"gr1id",params:{sx: 50, sy: 7000}})
 //  rapi.shared("gr_view").submit({type:"gr",id:"gr2id"})
 //  rapi.shared("gr_view").subscribe( vals => console.log("S=",vals))
 
@@ -96,32 +112,27 @@ function main( rapi, worker_ids ) {
   let gr1id = rapi.create_cell("gr1id/data")
   let gr1id_p = rapi.create_cell("gr1id/params")
   //gr1id_p.submit({sx: 10, sy: 10})
-
-  // почему-то это проще чем робот
-  // + робот нагрузит воркера
-  let data_port = range(P).map( x => rapi.read_cell(`pass1/iter/${x}`,{limit:1}) )
+  
+  let data_cell = rapi.read_cell(`pass1/output/${selected_process}`,{limit:1})
 
   let counter = 0
   function tick() {
-    let proms = data_port.map( x => x.next() )
-    
-    Promise.all( proms ).then( vals => {
-      
-      let ground = vals[0] // нормализуем
-      for (let i=0; i<vals.length; i++) vals[i] = vals[i] - ground
-      
-      console.log(vals.join(" "))
-      
+
+    data_cell.next().then( block => {
+      //console.log("b=",block)
       if (counter++ % 30 == 0) {
-        gr1id.submit(vals)
-        gr1id_p.submit({title:counter})
-      }
-      tick()
+      rapi.get_payload( block.payload_info[0] ).then( data => {
+        console.log("data len=",data.length,"data_cell.id=",data_cell.id)
+        data = Array.from(data)
+        gr1id.submit(data)
+        gr1id_p.submit({title:`process ${selected_process} ${counter}`})
+        tick()
+      }) } else tick()
+      
     })
   }
-  
+
   tick()
 
-  
 
 }

@@ -25,7 +25,7 @@ import { WebSocketServer } from 'ws';
 
 PPK.prefix_console_log( () => ["[repr-ws]",performance.now()] )
 
-let verbose=true
+let verbose=false
 
 export class RepresenterWS {
   constructor( port )

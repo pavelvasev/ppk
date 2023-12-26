@@ -55,6 +55,22 @@ process "simple_data_source" {
   :} @rapi @data_port_id
 }
 
+process "simple_data_target" {
+
+  in {
+    c_rapi: cell
+    data_port_id: cell
+    input: channel
+  }
+
+  counter: cell 0
+
+  react @input {: iv |
+    let rapi = c_rapi.get()
+    rapi.msg( {label: data_port_id.get(), value: iv} )
+    :}  
+}
+
 //print "env ch = " @env.children
 
 /*
@@ -200,7 +216,7 @@ process "subgr" { // тут пока все вместе только для у�
       }
 
       func "mk_scale2" {: sx sy | // масштаб по y..
-       return [ sx, sy, 1]
+       return [ 1 / sx, 1 / sy, 1]
       :}
 
 
@@ -211,21 +227,64 @@ process "subgr" { // тут пока все вместе только для у�
           dom.element "strong" @cell_id
           dom.element "span" @title
           dom.element "span" ("scale y =" + @sy)
-          scale_y: dom.input "range" input_value=@sy min=1 max=100
+          scale_y: dom.input "range" input_value=@sy min=1 max=10000
           dom.element "span" ("scale x =" + @sx)
           scale_x: dom.input "range" input_value=@sx min=1 max=100
           bind @scale_x.interactive_value @sx    
           bind @scale_y.interactive_value @sy
         }
-      }  
+      }
 }
 
+mixin "tree_node"
+process "do_combobox" {
+  in {
+    cell_id: cell
+    input: cell
+    input_index: cell
+    title: cell ""
+  }
+
+  index: cell
+  simple_data_target @rapi ( + @cell_id "/index(cell)") input=@index
+  
+  gui_items := {
+    dom.element "span" @title
+    ds: dom.select input=@input input_index=@input_index
+    bind @ds.index @index
+  }
+}
+
+mixin "tree_node"
+process "do_text" { // тут пока все вместе только для упрощения. а так источник и график конечно разделить
+  in {
+    cell_id: cell
+    title: cell ""
+  }
+
+  src: simple_data_source @rapi (+ @cell_id "/data(cell)")
+  bind @src.output @title
+  
+  gui_items := {
+    dom.element "span" @title
+  }
+}
+
+
 env: node {
-  repeater @shared_view { sv |
+  repeater input=(read @shared_view | filter {: val | return val.type == "gr" :}) { sv |
     init_params := (get @sv "params")
     //print "init_params=" @init_params
     s: subgr (get @sv "id") **init_params
     subgr_shadow @s
+  }
+  repeater input=(read @shared_view | filter {: val | return val.type == "combobox" :}) { sv |
+    init_params := (get @sv "params")
+    do_combobox (get @sv "id") **init_params
+  }
+  repeater input=(read @shared_view | filter {: val | return val.type == "text" :}) { sv |
+    init_params := (get @sv "params")
+    do_text (get @sv "id") **init_params
   }
 }
 

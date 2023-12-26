@@ -21,7 +21,7 @@ import * as STARTER from "ppk/starter.js"
 import * as LIB from "./robots/lib.js"
 import * as PASS from "./robots/pass.js"
 import * as PASS_EACH from "./robots/pass_each.js"
-import * as REDUCE from "./robots/reduce.js"
+//import * as REDUCE from "./robots/reduce.js"
 import * as WRITE_FS from "./robots/write_fs.js"
 import * as STENCIL_1D from "./robots/stencil_1d.js"
 import * as PRINT from "./robots/print.js"
@@ -39,12 +39,8 @@ console.log({DN})
 let sys = Promise.resolve( true ) // пока тянет
 
 sys.then( info => PPK.connect("test",info) ).then( rapi => {
-  
-    console.log("rapi connected, waiting workers");
-    rapi.wait_workers( P ).then( (workers) => {
-      console.log("found workers", workers);
-      main( rapi, workers.map( w => w.id ) )
-    });
+
+    main( rapi )
   
 })
 
@@ -84,7 +80,9 @@ function main( rapi, worker_ids ) {
  
   //rapi.msg({label:"gr",type:"gr"})
   
-  rapi.shared("gr_view").submit({type:"gr",id:"gr1id",params:{sx: 10, sy: 10}})
+  rapi.shared("gr_view").submit({type:"combobox",id:"s1",params:{input:[["mode 0",0],["mode 1",1]]}})
+  
+  rapi.shared("gr_view").submit({type:"gr",id:"gr1id",params:{sx: 0.1, sy: 10}})
 //  rapi.shared("gr_view").submit({type:"gr",id:"gr2id"})
 //  rapi.shared("gr_view").subscribe( vals => console.log("S=",vals))
 
@@ -93,35 +91,28 @@ function main( rapi, worker_ids ) {
 
   //let rbt = MERGE.robot( rapi, "merge1", worker_ids )
   
+  let cb = rapi.read_cell("s1/index")
+  let mode = 0
+  function read_cb() {    
+    cb.next().then( dat => {
+      console.log("cb dat=",dat)
+      mode = dat
+      read_cb()
+    })
+  }
+  read_cb()
+  
   let gr1id = rapi.create_cell("gr1id/data")
   let gr1id_p = rapi.create_cell("gr1id/params")
   //gr1id_p.submit({sx: 10, sy: 10})
-
-  // почему-то это проще чем робот
-  // + робот нагрузит воркера
-  let data_port = range(P).map( x => rapi.read_cell(`pass1/iter/${x}`,{limit:1}) )
-
+  
+  let data = new Array(30*1000)
   let counter = 0
-  function tick() {
-    let proms = data_port.map( x => x.next() )
-    
-    Promise.all( proms ).then( vals => {
-      
-      let ground = vals[0] // нормализуем
-      for (let i=0; i<vals.length; i++) vals[i] = vals[i] - ground
-      
-      console.log(vals.join(" "))
-      
-      if (counter++ % 30 == 0) {
-        gr1id.submit(vals)
-        gr1id_p.submit({title:counter})
-      }
-      tick()
-    })
-  }
-  
-  tick()
+  setInterval( () => {
+    for (let i=0;i<data.length; i++) data[i] = mode == 0 ? Math.random() : 1
+    gr1id.submit(data)
+    gr1id_p.submit({title:counter++})    
+  },100)
 
-  
 
 }
