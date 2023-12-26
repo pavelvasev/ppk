@@ -1,4 +1,4 @@
-// редукция значений каналов. линейная тупорогая.
+// редукция значений каналов. линейная.
 
 export function robot( rapi, id, workers, f ) {
   let input_port = workers.map( (x,index) => rapi.open_cell( `${id}/input/${index}` ) )

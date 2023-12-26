@@ -44,13 +44,13 @@ function start_robot( rapi, runner_id, args ) {
 
     function tick() {
       let p_vals = in_data.map( x => x.next() )
-      Promise.all( p_vals ).then( vals => {        
+      Promise.all( p_vals ).then( vals => {
         //console.log("pppassing",vals,counter)
         let result = f( vals, counter )
         //console.log("result=",result)
         counter++
         out.submit( result )
-      }).then( tick ) // all vals             
+      }).then( tick ) // all vals
     }
 
     tick()

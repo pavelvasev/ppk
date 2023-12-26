@@ -1,6 +1,6 @@
-// редукция значений
+// редукция значений - поточечная
 
-export function robot( rapi, id, workers,f,f_acc_init,f_acc_finish,border_size=1 ) {
+export function robot( rapi, id, workers,f,f_acc_init,f_acc_finish,border_size=0 ) {
   let input_port = workers.map( (x,index) => rapi.open_cell( `${id}/input/${index}` ) )
   let output_port = workers.map( (x,index) => rapi.open_cell( `${id}/output/${index}` ) )
 

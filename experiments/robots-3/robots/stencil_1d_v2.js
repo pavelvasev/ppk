@@ -51,7 +51,7 @@ function start_robot_1( rapi, runner_id, args ) {
           //console.log("my data is",data,"processing")
 
           //if (left_info) data[0] = left_info.right
-          if (right_info) data[ data.length-1 ] = right_info.left
+          //if (right_info) data[ data.length-1 ] = right_info.left
 
 /*        долгое:
           let k = data.length-1;        

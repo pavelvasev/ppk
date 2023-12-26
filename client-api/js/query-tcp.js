@@ -3,6 +3,7 @@
 
 import { SocksClient } from 'socks';
 
+// режим работы с tcp nodelay чтобы убрать задержку при отправке сообщений
 let tcp_nodelay_mode = true
 
 export default function init( rapi ) {

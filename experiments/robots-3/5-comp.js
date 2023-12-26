@@ -1,5 +1,5 @@
 #!/usr/bin/env -S node
-// 4-comp новое ожидание момента старта - от момента запуска роботов
+// 5-comp добавлена редукция данных для визуализации
 // 3-comp с роботом начальных данных.
 // 2-comp новый метод подсчета итераций. с "планированием времени"
 // 1-comp-sync = 8-comp из robots-2 с флагом нужна ли синхронизация
@@ -11,7 +11,7 @@ import * as LOCAL from "ppk/local.js"
 import * as LIB from "./robots/lib.js"
 import * as PASS from "./robots/pass.js"
 import * as PASS_EACH from "./robots/pass_each.js"
-//import * as REDUCE from "./robots/reduce.js"
+import * as DOWNSAMPLE from "./robots/downsample.js"
 import * as WRITE_FS from "./robots/write_fs.js"
 import * as STENCIL_1D from "./robots/stencil_1d_v2.js"
 import * as PRINT from "./robots/print.js"
@@ -151,9 +151,14 @@ function compute1( rapi,worker_ids, n, vis_robot,sync ) {
 function vis1( rapi,worker_ids ) {
   let visr = VIS3.robot( rapi, "vis1", worker_ids )
 
+  let target_points = 1000
+  let downsample_coef = Math.ceil( DN / target_points )
+  let downsample = DOWNSAMPLE.robot( rapi, "downsample1", worker_ids,downsample_coef )
+
   let joinr = JOIN_1D.robot( rapi, "j1d", worker_ids )
 
-  LIB.create_port_link( rapi, visr.side_output, joinr.input )
+  LIB.create_port_link( rapi, visr.side_output, downsample.input )
+  LIB.create_port_link( rapi, downsample.output, joinr.input )
 
   // теперь надо что когда joinr выдал свой результат, чтобы
   // был тыркнут порт main_continue   

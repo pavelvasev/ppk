@@ -1,6 +1,5 @@
-////////////////////////////// reduce
-
 // возвращает массив, в котором только каждая N-я точка (т.о. сокращает в N раз)
+
 export function robot( rapi, id, workers,N, start_index=0 ) {
   let input_port = workers.map( (x,index) => rapi.open_cell( `${id}/input/${index}` ) )
   let output_port = workers.map( (x,index) => rapi.open_cell( `${id}/output/${index}` ) )
@@ -19,7 +18,7 @@ export function robot( rapi, id, workers,N, start_index=0 ) {
 
 function start_reduce_robot( rapi, runner_id, args ) {
   return rapi.exec( rapi.js( (args) => {
-    console.log("hello robot reduce. args=",args)
+    console.log("hello downsample robot. args=",args)
 
     let {input_port, output_port, start_index, index, id, count, N} = args
 
@@ -35,6 +34,8 @@ function start_reduce_robot( rapi, runner_id, args ) {
     function tick() {
       in_data.next().then( val => {
 
+        //console.log("downsample tick. val=",val)
+
         rapi.get_one_payload( val.payload_info[0] ).then( data => {
 
           let result_len2 = Math.floor( (data.length-start_index)/N )
@@ -45,11 +46,15 @@ function start_reduce_robot( rapi, runner_id, args ) {
           }
 
           //console.log("pass-robot. N=",N)        
-          for (let j=start_index,i=0; j < val.length; j+= N, i++) {
+          for (let j=start_index,i=0; j < data.length; j+= N, i++) {
             result[i] = data[j]
-          }        
+          }
+          //console.log("downsampled src data= ",data)
+          //console.log("downsampled to ",result)
+
+          // утечка памяти..
           rapi.submit_payload_inmem( result ).then( pi => {
-            out.submit( {payload_info:pi} ) // пересылаем          
+            out.submit( {payload_info:[pi]} ) // пересылаем          
           })
 
         }).then( tick )        
