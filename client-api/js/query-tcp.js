@@ -300,6 +300,7 @@ function fetch_packet( target_url, query_id, msg ) {
       client.on('ready', () => {
         //if (console.verbose)
         //console.error("created client. target_url=",target_url,"me=",client.address())
+        //console.log("created client.",client)
         client.opened.resolve(client)
       });
       client.on('error', (err) => {
@@ -316,7 +317,7 @@ function fetch_packet( target_url, query_id, msg ) {
       });
       client.connect( {host:target_url.host, port: target_url.port, keepAlive: true, noDelay: tcp_nodelay_mode} )
       client.setNoDelay( tcp_nodelay_mode )
-      client.setKeepAlive( true )
+      client.setKeepAlive( true )      
     }
   }
 
