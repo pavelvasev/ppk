@@ -11,6 +11,7 @@ import {compute_need_id} from "ppk/api-lib.js"
 import * as PL from "../promises/lib.js"
 
 import * as CHILDPROCESS from "node:child_process"
+import * as OS from "node:os"
 
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -124,7 +125,9 @@ function process_one_job_loop( rapi, report, deployed_needs_dict, processor ) {
 
   let task_label = rapi.generate_uniq_query_id('task_label')
 
-  console.error("my pid=",process.pid)
+  // idea мб как-то попечатать cpu к которому есть affinity?
+  // ну или башем https://serverfault.com/questions/462454/on-linux-how-do-i-the-check-cpu-affinity-of-a-process-and-its-threads
+  console.error("my host=",OS.hostname(),"pid=",process.pid)
   console.log("starting local promises server")
   PL.promises_service_logic( rapi, task_label )
 
