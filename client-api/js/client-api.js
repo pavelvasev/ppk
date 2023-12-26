@@ -128,6 +128,17 @@ if (process.env["PPK_SOCKS_LOCK"]) {
   // СМ ТАКЖЕ starter.js там переопределяется для машины пользователя - global.proxy_fn
 }
 
+if (process.env["PPK_SOCKS_LOCK2"]) {
+  let PPK_SOCKS_LOCK2 = process.env["PPK_SOCKS_LOCK2"]
+  // proxy_fn - по target_url возвращает урль прокси, если он нужен для доступа к target_url из текущего местоположения
+  global.proxy_fn = (target_url) => {  
+      let addr = target_url.split("://")[1]
+      if (!addr.startsWith("127.0"))
+          return PPK_SOCKS_LOCK2 // доступ из УМТ к лок. машине..
+  }
+  // СМ ТАКЖЕ starter.js там переопределяется для машины пользователя - global.proxy_fn
+}
+
 let my_addr = process.env["PPK_PUBLIC_ADDR"] || "127.0.0.1"
 function get_agent_for( url, fetch_opts ) {
   let proxy_fn = global.proxy_fn // ужасный хак, но пока так

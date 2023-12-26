@@ -116,11 +116,16 @@ function main( rapi, worker_ids ) {
   let data_cell = rapi.read_cell(`pass1/output/${selected_process}`,{limit:1})
 
   let counter = 0
+  let tprev = performance.now()
   function tick() {
+  //console.log("tick")
 
     data_cell.next().then( block => {
       //console.log("b=",block)
-      if (counter++ % 30 == 0) {
+      let t = performance.now()
+      if (t - tprev > 100) {
+        tprev = t
+      console.log("downloading",block.payload_info[0])
       rapi.get_payload( block.payload_info[0] ).then( data => {
         console.log("data len=",data.length,"data_cell.id=",data_cell.id)
         data = Array.from(data)

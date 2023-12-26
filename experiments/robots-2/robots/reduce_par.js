@@ -15,7 +15,7 @@ function line( rapi, input_port, workers,f,output_port_prefix )
   for (let i=0; i<input_port.length; i+=K) {
     let output_cell = rapi.open_cell(`${output_port_prefix}/${i}`)
     let inp = input_port.slice(i,i+K) // входные каналы для этого участка
-    console.log("line: spawning par index=",i,"inp=",inp,"out=",output_cell.id)
+    //console.log("line: spawning par index=",i,"inp=",inp,"out=",output_cell.id)
     let r = start_robot( rapi,workers[i],
        { 
          input_port: inp,
