@@ -29,12 +29,13 @@ LOGDIR=./log
 mkdir -p $LOGDIR
 DIR=$(dirname $(readlink -f "$0"))
 
-"$DIR/../../pusha.sh" >$LOGDIR/pusha-$SLURM_JOBID-$SLURMD_NODENAME.log 2>$LOGDIR/pusha-$SLURM_JOBID-$SLURMD_NODENAME.err.log &
+# вроде бы как пуши больше не нужны...
+# "$DIR/../../pusha.sh" >$LOGDIR/pusha-$SLURM_JOBID-$SLURMD_NODENAME.log 2>$LOGDIR/pusha-$SLURM_JOBID-$SLURMD_NODENAME.err.log &
 # кстати идея.. если пуша запустилась то уменьшить NWORKERS на 1?..
 #sleep 1
 for i in $(seq $NWORKERS); do
     #VERBOSE=true
-    RUNNER_ID=$SLURM_JOBID-$SLURMD_NODENAME-$i "$DIR/../../runner-1.sh" &
+    RUNNER_ID=$SLURM_JOBID-$SLURMD_NODENAME-$SLURM_LOCALID-$i "$DIR/../../runner-1.sh" &
     #>$LOGDIR/$RUNNER_ID.log 2>$LOGDIR/$RUNNER_ID.err.log &
 done
 
