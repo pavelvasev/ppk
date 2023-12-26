@@ -19,11 +19,10 @@ export PPK_PUBLIC_ADDR=$(hostname -i)
 echo using ram limit per worker: $RAM_LIMIT
 echo using socks lock: $PPK_SOCKS_LOCK
 
-x=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits || echo 0) #
-export GPU_LIMIT=$(expr $x / $NWORKERS)
-echo using gpu limit $GPU_LIMIT
-#echo $PUSHA_PUB_URL
-#exit
+# вернуть когда вернусь к gpu:
+#x=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits || echo 0) #
+#export GPU_LIMIT=$(expr $x / $NWORKERS)
+#echo using gpu limit $GPU_LIMIT
 
 LOGDIR=./log
 mkdir -p $LOGDIR
@@ -35,7 +34,7 @@ DIR=$(dirname $(readlink -f "$0"))
 #sleep 1
 for i in $(seq $NWORKERS); do
     #VERBOSE=true
-    RUNNER_ID=$SLURM_JOBID-$SLURMD_NODENAME-$SLURM_LOCALID-$i "$DIR/../../runner-1.sh" &
+    NOLOG=1 RUNNER_ID=$SLURM_JOBID-$SLURMD_NODENAME-$SLURM_LOCALID-$i "$DIR/../../runner-1.sh" &
     #>$LOGDIR/$RUNNER_ID.log 2>$LOGDIR/$RUNNER_ID.err.log &
 done
 
