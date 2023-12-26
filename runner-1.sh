@@ -7,7 +7,8 @@ DIR=$(dirname $(readlink -f "$0"))
 
 if [ "$WORKER_NO_LOG" == "1" ]; then
    # мб из занулить тогда уж, эти логи?
-  "$DIR/services/runner3/runner3.js"
+   # stdout да а stderr пусть печатает..
+  "$DIR/services/runner3/runner3.js" >/dev/null
 else
   LOGDIR=./log
   mkdir -p $LOGDIR
