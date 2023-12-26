@@ -74,7 +74,8 @@ let sys = S.start().then( (info) => {
 
   //return S.start_workers( 1,P,4*10*1000,1,'-t 40 --gres=gpu:v100:1 -p v100',DEBUG_WORKERS ).then( (statuses) => {
   //return S.start_workers( P,1,4*1000,1,'-t 40',DEBUG_WORKERS ).then( (statuses) => {
-  return S.start_workers( P/JP,JP,JP*MEM_PER_PROCESS,1,'-t 40',DEBUG_WORKERS ).then( (statuses) => {
+  // гипертрединг: https://hpc.nmsu.edu/discovery/slurm/hyper-threading/
+  return S.start_workers( P/JP,JP,JP*MEM_PER_PROCESS,'-t 40' ).then( (statuses) => {
     //console.log("workers started",statuses)
     return info
   }).catch( err => {

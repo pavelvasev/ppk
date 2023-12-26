@@ -71,11 +71,11 @@ export class Starter {
     have_gpu - затребовать для job-ы gpu (одна штука, будет распределена на всех воркеров)
 	  slurm_opts - доп. параметры для слурм, например раздел указать
   */
-  start_workers( count, workers=1, memory=1000, have_gpu, slurm_opts='' ) {
+  start_workers( count, workers=1, memory=1000, slurm_opts='',hypertreading ) {
     let proms = []
     //for (let i=0; i<count; i++)
     //	  proms.push( this.start_workers_1( 1,workers,memory,have_gpu, slurm_opts))
-    proms.push( this.start_workers_1( count,workers,memory,have_gpu, slurm_opts))
+    proms.push( this.start_workers_1( count,workers,memory, slurm_opts, hypertreading))
     return Promise.allSettled( proms )
   }
   /*
@@ -91,10 +91,10 @@ export class Starter {
     count - сколько job-ов запустить. должно быть равно 1.
     workers - сколько worker-ов в одной job-е
     memory - сколько памяти на job-у
-    have_gpu - затребовать для job-ы gpu (одна штука, будет распределена на всех воркеров)
 	  slurm_opts - доп. параметры для слурм, например раздел указать
+	  hypertreading - надо ли гипертрединг. сделано последней опцией т.к. часто не надо считается
   */
-  start_workers_1( count, workers, memory, have_gpu, slurm_opts='' )
+  start_workers_1( count, workers, memory, slurm_opts='', hypertreading )
   {
   	let prgpath = `ssh`
 
@@ -120,13 +120,23 @@ export class Starter {
 		// а торможение вроде не снимается от доп. цпу..
 		// воообще убрал. теперь если надо - можно указывать --cpus-per-task= вручную да и все.
 
-  	let args = ["-t","-t",this.ssh_endpoint,
+  	let args = ["-t","-t",this.ssh_endpoint]
+
+    // https://hpc.nmsu.edu/discovery/slurm/hyper-threading/
+  	args.push( hypertreading ? 
+`cd ${this.ppk_path}/features/slurm; srun -n ${count} --mem-per-cpu=${per_worker_mem*2} --threads-per-core=2 --ntasks-per-core 2 --hint=multithread ${slurm_opts}` + 
+` --export="ALL,NWORKERS=${workers},RAM_LIMIT=${per_worker_mem},MOZG_URL=ws://${this.ppk_public_addr}:10000,` +
+`PPK_SOCKS_LOCK=socks5://${this.ppk_public_addr}:15001" ./ppk-job.sh`
+:  		
 `cd ${this.ppk_path}/features/slurm; srun -n ${count} --mem-per-cpu=${per_worker_mem} --cpus-per-task=${per_job_cpus} ${slurm_opts}` + 
 ` --export="ALL,NWORKERS=${workers},RAM_LIMIT=${per_worker_mem},MOZG_URL=ws://${this.ppk_public_addr}:10000,` +
-`PPK_SOCKS_LOCK=socks5://${this.ppk_public_addr}:15001" ./ppk-job.sh`]
+`PPK_SOCKS_LOCK=socks5://${this.ppk_public_addr}:15001" ./ppk-job.sh` 
+)
+
+
   	//let prgpath = `ssh -t -t -L 8000:localhost:8000 -L 12000:localhost:12000 -L 3333:localhost:3333 ${this.ssh_endpoint} "cd ${this.ppk_path}; ./all-main-services.sh"`
   	//let prgpath = path.resolve( __dirname, "../bin-umt/!all-services-with-tunnel.sh" )
-  	//console.log('Slurm: spawning job request',prgpath,args)
+  	console.log('Slurm: spawning job request:',args)
   	let prg = cp.spawn( prgpath, args,{detached:false,stdio: ['ignore','pipe','pipe']} )  	
   	this.started_prgs.push( prg )
 
