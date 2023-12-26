@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 # программа для запуска на узле.
 # запуск job-ы состоящей из 1 или более раннеров
 # параметры: 
@@ -16,6 +16,7 @@ export PPK_PUBLIC_ADDR=$(hostname -i)
 
 #export RAM_LIMIT=$SLURM_MEM_PER_CPU # в мегабайтах
 #export RAM_LIMIT=16000
+echo ppk-job.sh started.
 echo using ram limit per worker: $RAM_LIMIT
 echo using socks lock: $PPK_SOCKS_LOCK
 
@@ -38,6 +39,7 @@ for i in $(seq $NWORKERS); do
     #>$LOGDIR/$RUNNER_ID.log 2>$LOGDIR/$RUNNER_ID.err.log &
 done
 
-echo job-started $SLURM_JOBID-$SLURMD_NODENAME
+# внимание - фраза job-started это ключевое слово, которое slurm.js ожидает увидеть
+echo job-started $SLURM_JOBID-$SLURMD_NODENAME-$SLURM_LOCALID
 
 wait
