@@ -3,6 +3,8 @@
 
 import { SocksClient } from 'socks';
 
+let tcp_nodelay_mode = true
+
 export default function init( rapi ) {
 
   // вот странное. тут мы вводим патч. а далее - не вводим.
@@ -267,6 +269,8 @@ function fetch_packet( target_url, query_id, msg ) {
             host: target_url.host, // github.com (hostname lookups are supported with SOCKS v4a and 5)
             port: target_url.port
           }
+          ,
+          set_tcp_nodelay: tcp_nodelay_mode
           // , set_tcp_nodelay ? https://www.npmjs.com/package/socks#new-socksclientoptions
         };
         client = {}
@@ -288,6 +292,7 @@ function fetch_packet( target_url, query_id, msg ) {
       client = new net.Socket()
       clients.set( target_url.url,client )
 
+
       //setTimeout( () => console.log("."), 100 )
 
       client.opened = create_promise()
@@ -307,9 +312,10 @@ function fetch_packet( target_url, query_id, msg ) {
       });
       client.on('end', (err) => {
         console.error("query-tcp: outgoing socket end!",err,"me=",client.address())
-      });
-      client.connect( {host:target_url.host, port: target_url.port, keepAlive: true} )
-      client.setKeepAlive( true )
+      });      
+      //client.setNoDelay( tcp_nodelay_mode )
+      //client.setKeepAlive( true )
+      client.connect( {host:target_url.host, port: target_url.port, keepAlive: true, noDelay: tcp_nodelay_mode} )
     }
   }
 
@@ -354,21 +360,32 @@ function fetch_packet( target_url, query_id, msg ) {
 */  
 
   //let buf = Buffer.from( query_id )
+  /*
   let bufferInt = Buffer.allocUnsafe(4);
   bufferInt.writeUInt32BE( query_id )
   let bufferIntAttach = Buffer.allocUnsafe(4);
 
   bufferIntAttach.writeUInt32BE( attach ? attach.length : 0 )
+  */
+
+  let bufferInt = Buffer.allocUnsafe(8);
+  bufferInt.writeUInt32BE( query_id )
+  bufferInt.writeUInt32BE( attach ? attach.length : 0, 4 )
 
   return client.opened.then( (socket) => {
     // console.log("fetch-packet ACTUAL to",target_url,"me=",client.address(),"msg=",msg)  
     //client.cork() // на удивление добавка cork-uncork снижает скорость в 2 раза вычислений
-    socket.write( bufferInt )
-    socket.write( bufferIntAttach )
-    //client.write( buf )
-    //if (attach)
-      //client.write( Buffer.from( attach.buffer ) )
-    socket.write( attach )
+
+    if (tcp_nodelay_mode) {
+      socket.write( Buffer.concat( [bufferInt,attach]) )
+    } else {
+      socket.write( bufferInt )
+      //socket.write( bufferIntAttach )
+      //client.write( buf )
+      //if (attach)
+        //client.write( Buffer.from( attach.buffer ) )
+      socket.write( attach )
+    }
     //client.uncork()
     // непонятно как лучше, 1м врайтом или несколькими
     // один зато ясно что слать.. но как оно там внутрях?
