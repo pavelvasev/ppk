@@ -15,7 +15,9 @@ export function robot( rapi, id, workers,N ) {
          //f:rapi.compile_js(f)
        }))
 
-  let robot = { input: input_port, output: output_port, finish: finish_port, iterations:iteration_port }
+  let deployed = rapi.wait_all( r )  
+
+  let robot = { input: input_port, output: output_port, finish: finish_port, iterations:iteration_port, deployed }
 
   return robot
 }

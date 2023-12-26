@@ -1,4 +1,4 @@
-// преобразование значений блоков
+// преобразование значений блоков из двух каналов в один канал
 
 export function robot( rapi, id, workers,f ) {
   let input_port = workers.map( (x,index) => rapi.open_cell( `${id}/input/${index}` ) )
@@ -42,7 +42,7 @@ function start_robot_1( rapi, runner_id, args ) {
         if (result.then) {
           return result.then( data => {
             //console.log("map2 robot submitting output after promise")
-            return out.submit( acc )
+            return out.submit( data )
           })
         } else
         //console.log("map2 robot submitting output")

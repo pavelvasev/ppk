@@ -1,4 +1,4 @@
-// v0 - с увеличением буферов на размер границ (=1)
+// v2 - без увеличения буферов на границах.
 
 export function robot( rapi, id, workers,f ) {
   let input_port = workers.map( (x,index) => rapi.open_cell( `${id}/input/${index}` ) )
@@ -10,11 +10,16 @@ export function robot( rapi, id, workers,f ) {
          input_port,output_port,count,
          f:rapi.compile_js(f)
        }))
-  rapi.wait_all( r ).then( channels => {
+
+
+  let deployed = rapi.wait_all( r )
+  /*
+  deployed.then( channels => {
     console.log("stencil-1d robot ",id," ready. subrobot channels=",channels)
   })
+  */
 
-  let robot = { input: input_port, output: output_port }
+  let robot = { input: input_port, output: output_port, deployed }
 
   return robot
 }
@@ -45,29 +50,34 @@ function start_robot_1( rapi, runner_id, args ) {
           //console.log("payload!")
           //console.log("my data is",data,"processing")
 
-          if (left_info) data[0] = left_info.right
+          //if (left_info) data[0] = left_info.right
           if (right_info) data[ data.length-1 ] = right_info.left
 
-/*
+/*        долгое:
           let k = data.length-1;        
           for (let i=1; i<k; i++) {
             data[i] = f( data[i], data[i-1], data[i+1] )
           }
 */
 
-                    let k = data.length-1;
-          let p_left = data[0]
+          let k = data.length-1;
+          let p_left = left_info ? left_info.right : 0
           let p_my   = 0
-          let p_right = data[1]
+          let p_right = data[0]
           //let p_right = 0
           //let t1 = process.hrtime.bigint()
-          for (let i=1; i<k; i++) {
+          for (let i=0; i<k; i++) {
             p_my = p_right
             p_right = data[i+1]
             data[i] = f( p_my, p_left, p_right )
             //data[i] = (p_left + p_right)/2 + Math.random()
             p_left = p_my
           }
+
+          // последняя итерация
+          p_my = p_right
+          p_right = right_info ? right_info.left : 0
+          data[k] = f( p_my, p_left, p_right )
 
           //console.log("processed")
 
@@ -79,7 +89,7 @@ function start_robot_1( rapi, runner_id, args ) {
 
           rapi.submit_payload_inmem( data ).then( pi => {
             //console.log("payload-sent")
-            out.submit( { left: data[1], right: data[k-1], payload_info: [pi] })
+            out.submit( { left: data[0], right: data[k], payload_info: [pi] })
           })
           
         })
