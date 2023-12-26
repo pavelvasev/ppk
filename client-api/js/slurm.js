@@ -141,7 +141,7 @@ export class Starter {
 	    });
 	    prg.stderr.on('data', (data) => {
 	      let s = data.toString('utf8')
-	      console.log(`Slurm: stderr from job-request [jobid=${jobid}] >>> `,s)
+	      console.log(`Slurm starter: stderr from job-request [jobid=${jobid}] >>> `,s)
 	    })
 	    prg.stdout.on('data', (data) => {
 	      let s = data.toString('utf8')
