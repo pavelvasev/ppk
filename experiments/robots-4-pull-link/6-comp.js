@@ -117,7 +117,7 @@ function compute1( rapi,worker_ids, n, sync ) {
   // нач данные
   LINK.create( rapi, init.output, r1.input )
 
-  console.log( pr.iterations )
+  //console.log( pr.iterations )
 
   // кольцо
   /*
@@ -197,7 +197,8 @@ function main( rapi, worker_ids ) {
   let lp = LINK_PULL.create( rapi, c1.output, visr.input, worker_ids )
 
   //console.log("compute ports are ",c1)
-  console.log("vis link control is",lp.control)
+  console.log("vis control is",lp.control)
+  console.log("vis output is",visr.output)
 
   // vis1( rapi, worker_ids, output[0], "part-0" )
 

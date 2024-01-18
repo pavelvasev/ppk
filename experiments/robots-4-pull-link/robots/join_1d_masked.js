@@ -50,9 +50,10 @@ function start_robot( rapi, runner_id, args ) {
 
         return Promise.all( p_datas ).then( datas => {
             let result_len2 = datas.reduce( (acc,data) => acc + data.length,0)
+            // result_len2 - суммарный объем данных прочитанных сейчас
             if (result_len2 != result_len) {
               result_len = result_len2
-              // создаём массив для результатов
+              // создаём массив для результатов длины result_len
               result = new Float32Array( result_len )
               result_uid = new Uint16Array( result_len )
             }
