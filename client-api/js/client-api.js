@@ -296,10 +296,13 @@ export function prefix_console_log( fn ) {
 }
 
 export function mk_console_verbose( be_verbose ) {
-  if (be_verbose)
-  console.verbose = function() {
-      console.log.apply( console, arguments );
-  };
-  else
-  console.verbose = () => {}
+  if (be_verbose) {
+    console.verbose = function() {
+        console.log.apply( console, arguments );
+    };
+    console.log("console is verbose.")
+  }
+  else {
+    console.verbose = () => {}
+  }
 }

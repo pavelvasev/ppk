@@ -1,4 +1,5 @@
 #!/usr/bin/env -S node
+// 7-comp граф визуализации сделан что запускается внешним образом.
 // 6-comp сделана пулл-ссылка вместо vis-робота между выч графом и графом визуализации
 // 5-comp добавлена редукция данных для визуализации
 // 3-comp с роботом начальных данных.
@@ -18,8 +19,8 @@ import * as WRITE_FS from "./robots/write_fs.js"
 import * as STENCIL_1D from "./robots/stencil_1d_v2.js"
 import * as PRINT from "./robots/print.js"
 
-import * as VIS from "./robots/vis_pass.js"
-import * as VIS3 from "./robots/vis_pass_3.js"
+//import * as VIS from "./robots/vis_pass.js"
+//import * as VIS3 from "./robots/vis_pass_3.js"
 import * as JOIN_1D from "./robots/join_1d_masked.js"
 import * as CONT from "./robots/continue.js"
 import * as MERGE from "./robots/merge.js"
@@ -31,6 +32,8 @@ import * as MAP2 from "./robots/map_2.js"
 import * as INIT from "./robots/init.js"
 
 let DEBUG_WORKERS= process.env.DEBUG ? true : false
+
+//PPK.mk_console_verbose( process.env.VERBOSE )
 
 // число процессов
 let P = process.env.P ? parseInt(process.env.P) : 10
@@ -77,7 +80,7 @@ let sys = S.start().then( (info) => {
   //return S.start_workers( 1,P,4*10*1000,1,'-t 40 --gres=gpu:v100:1 -p v100',DEBUG_WORKERS ).then( (statuses) => {
   //return S.start_workers( P,1,4*1000,1,'-t 40',DEBUG_WORKERS ).then( (statuses) => {
   // гипертрединг: https://hpc.nmsu.edu/discovery/slurm/hyper-threading/
-  return S.start_workers( P/JP,JP,JP*MEM_PER_PROCESS,'-t 40' ).then( (statuses) => {
+  return S.start_workers( P/JP,JP,JP*MEM_PER_PROCESS,'-t 40', DEBUG_WORKERS ).then( (statuses) => {
     //console.log("workers started",statuses)
     return info
   }).catch( err => {
@@ -154,57 +157,30 @@ function compute1( rapi,worker_ids, n, sync ) {
   return {output: r1.output, final: pr.finish, deployed }
 }
 
-// робот - встроенный представитель визуализации
-// todo id это параметр вызова
-function vis1( rapi, worker_ids ) {
-  //let visr = VIS3.robot( rapi, "vis1", worker_ids )
-
-  let target_points = 1000
-  let downsample_coef = Math.ceil( DN / target_points )
-  let downsample = DOWNSAMPLE.robot( rapi, "downsample1", worker_ids,downsample_coef )
-
-  let joinr = JOIN_1D.robot( rapi, "j1d", worker_ids )
-
-  //LINK.create( rapi, visr.side_output, downsample.input )
-  LINK.create( rapi, downsample.output, joinr.input )
-
-  // теперь надо что когда joinr выдал свой результат, чтобы
-  // был тыркнут порт main_continue
-  /*
-
-  let cont = CONT.robot( rapi, "cont", worker_ids )
-  LINK.create( rapi, visr.input, cont.input )
-  LINK.create( rapi, cont.output, visr.main_continue )
-  //rapi.create_link( joinr.output[0].id, visr2.control[0].id )
-  // можем так. тк.. там 1-размерные
-  LINK.create( rapi, joinr.output, cont.control )
-  */
-
-  //return visr
-  return { input: downsample.input, output: joinr.output }
-}
-
 ////////////////////////////////
 //import * as F from "./f.js"
 
 function main( rapi, worker_ids ) {
   console.log("main called")
 
-  let visr = vis1( rapi, worker_ids )
+  //let visr = vis1( rapi, worker_ids )
 
   //let iters = 1001*3;
-  let c1 = compute1( rapi, worker_ids, iters, visr, sync_mode)
+  let c1 = compute1( rapi, worker_ids, iters, sync_mode)
 
-  let lp = LINK_PULL.create( rapi, c1.output, visr.input, worker_ids )
+  //let lp = LINK_PULL.create( rapi, c1.output, visr.input, worker_ids )
 
   //console.log("compute ports are ",c1)
-  console.log("vis control is",lp.control)
-  console.log("vis output is",visr.output)
+  //console.log("vis control is",lp.control)
+  //console.log("vis output is",visr.output)
 
   // vis1( rapi, worker_ids, output[0], "part-0" )
 
+  // публикуем информацию о выходном порту
+  rapi.shared("compute1/output").submit( c1.output )
+
   // ведем подсчет с момента когда роботы развернуты
-  Promise.all( [c1.deployed, visr.deployed] ).then( () => {
+  Promise.all( [c1.deployed] ).then( () => {
 
     console.log("robots spawned. waiting finish")
     console.time("compute")

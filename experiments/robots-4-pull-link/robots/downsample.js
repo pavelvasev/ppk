@@ -19,6 +19,7 @@ export function robot( rapi, id, workers,N, start_index=0 ) {
 function start_reduce_robot( rapi, runner_id, args ) {
   return rapi.exec( rapi.js( (args) => {
     console.log("hello downsample robot. args=",args)
+    //console.log("btw rapi=",rapi)
 
     let {input_port, output_port, start_index, index, id, count, N} = args
 
@@ -34,7 +35,7 @@ function start_reduce_robot( rapi, runner_id, args ) {
     function tick() {
       in_data.next().then( val => {
 
-        //console.log("downsample tick. val=",val)
+        console.log("downsample tick. val=",val)
 
         rapi.get_one_payload( val.payload_info[0] ).then( data => {
 
@@ -53,9 +54,13 @@ function start_reduce_robot( rapi, runner_id, args ) {
           //console.log("downsampled to ",result)
 
           // утечка памяти..
-          rapi.submit_payload_inmem( result ).then( pi => {
-            out.submit( {payload_info:[pi]} ) // пересылаем          
-          })
+          console.log("submitting to rapi:",rapi)
+          if (rapi) {
+            rapi.submit_payload_inmem( result ).then( pi => {
+              out.submit( {payload_info:[pi]} ) // пересылаем          
+            })
+          } else
+            console.error("warning: no rapi")
 
         }).then( tick )        
       })

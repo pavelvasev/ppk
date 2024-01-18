@@ -59,6 +59,8 @@ function start_robot( rapi, runner_id, args ) {
     let in_data = rapi.read_cell( input_port[index] )
     let out = rapi.create_cell( output_port[index] )
 
+    console.log("vis-pass-5: in_control: going read control. control_port=",control_port)
+
     let in_control = index == 0 ? rapi.read_cell( control_port[0] ) : null
     let out_randevu = index == 0 ? rapi.create_cell( randevu_port[0] ) : null
     let in_randevu = index > 0 ? rapi.read_cell( randevu_port[0] ) : null
@@ -89,6 +91,9 @@ function start_robot( rapi, runner_id, args ) {
     
     let required = -1
     function tack() {
+
+      console.log("vis-pass-5: in_control: reading next.")
+
       in_control.next().then( val => {
         //required = 2
 

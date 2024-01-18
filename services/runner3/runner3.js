@@ -329,10 +329,10 @@ function process_one_job( rapi, task, deployed_needs_dict, runner_id, processor 
       uhr_handler = (err) => {
         uhr_handler = () => {} // чтобы 2 раза не ходить..
         let error_msg = err?.message || err || 'unknown error during process_one_job'
-        console.log("runner: uhr-handler! error in function",err)
+        console.log("runner: uhr-handler! error in function. err=",err)
         //console.log('runner: sending runner-finished to ppk (with fail flag)',{id: task.id, runner_id, error_msg})
         console.log('runner: sending runner-finished to ppk (with fail flag). task=',JSON.stringify(task,null,"  ") )
-        console.error("runner: uhr-handler! error in function",err)
+        console.error("runner: uhr-handler! error in function. err=",err)
         console.error('runner: sending runner-finished to ppk (with fail flag). task=',JSON.stringify(task,null,"  ") )
         //console.error('runner: sending runner-finished to ppk (with fail flag)',{id: task.id, runner_id, error_msg})
         
@@ -582,7 +582,9 @@ class Processor {
     let f = null
     let rapi = this.rapi
     try {
+      //console.error('compile_js: args.text=',args.text)
       f = eval( args.text )
+      //console.error("compile success!")
     } catch (err) {
       console.error("JsEnv: error in js need:",args.text)
       throw err

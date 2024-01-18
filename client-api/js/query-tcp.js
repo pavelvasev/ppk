@@ -469,8 +469,9 @@ function start_message_server( client_id, message_arrived,port=0,host='0.0.0.0',
     return new Promise( (resolve, reject) => {
 
       server.on("listening",() => {
+        //console.log("SERVER LISTEN. if (console.verbose)=", console.verbose ? true : false)
         if (console.verbose)
-            if (console.verbose)('incoming msg tcp server started at:', server.address());
+            console.verbose('incoming msg tcp server started at:', server.address());
         //console.log('http server started: http://%s:%s', server.address().address, server.address().port);
         //server.address().address
         let adr = process.env['PPK_PUBLIC_ADDR'] || '127.0.0.1'

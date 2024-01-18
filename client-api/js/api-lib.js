@@ -38,7 +38,7 @@ export class ClientList {
   // rapi нужно кодам реакций поэтому передаем иво
   // idea вообще говоря мы можем собрать результаты реакций и вернуть их. и это может что-то дать полезное.
   msg( m, rapi ) {
-    //console.log("list msg: m=",m,"this.records=",[...this.records.keys()])
+    console.log("list msg submit: m=",m,"vals=",[...this.records.values()] );//,"this.records=",[...this.records.keys()])
     for (let reaction of this.records.values()) {
       //console.log("this reaction=",reaction)
       if (reaction.test) {
@@ -283,8 +283,12 @@ export class ClientApi {
   }
 
   // shared("list-name").submit(42)
+  // shared("list-name").subscribe( callback_on_change )
   // shared("list-name",{id:"my_id"}).submit(42)
   // shared("list-name",{id:"my_id"}).subscribe( callback_on_change )
+  // idea: а нельзя ли shared преобразовать в канал?
+  // или в пачку каналов - добавленное, удаленное, итоговое
+  // там кстати уже вон changed проглядывает - сделать такое же но для наших каналов
   shared( crit, opts={} ) {
     opts.reaction_id ||= opts.id
     let p = this.reaction( crit, opts )

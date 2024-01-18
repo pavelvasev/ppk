@@ -28,11 +28,19 @@ export class Cells {
 
   create_cell(id) {
     if (id.id && id.cell) id = id.id // встроенный адаптер
+    if (!(typeof(id) === "string")) {
+      console.error("create_cell: error! passed cell id must be string or cell. you passed:",typeof(id),"value=",id)
+      return null
+    }
   	return new WritingCell( this.rapi, id )
   }
 
   read_cell(id, opts={}) {
     if (id.id && id.cell) id = id.id // встроенный адаптер
+    if (!(typeof(id) === "string")) {
+      console.error("create_cell: error! passed cell id must be string or cell. you passed:",typeof(id),"value=",id)
+      return null
+    }
   	return new ReadingCell( this.rapi, id, opts.limit, opts.overwrite )
   }
 
@@ -61,10 +69,12 @@ export class Link {
     this.rapi = rapi
     this.src_id = src_id
     this.tgt_id = tgt_id
-    //console.log("HI FROM LINK", tgt_id)
+    //console.log("HI FROM LINK", {src_id,tgt_id})
 
     let f = ( msg, r_arg, local_rapi ) => {
       //console.log("RRRR args 1=",msg,"2=",r_arg)
+      //console.error("RRRR args 1=",msg,"2=",r_arg)
+      //console.trace()
       r_arg.output_cell ||= local_rapi.create_cell( r_arg.tgt_id )
       if (local_rapi.verbose)
          console.log("link: submitting to target channel ",r_arg.tgt_id,"msg=",msg)
@@ -72,6 +82,7 @@ export class Link {
       //local_rapi.msg( msg )
     }
 
+    // tgt_id здесь не надо преобразовывать, его create_cell обрабтает в реакции
     this.unsub = rapi.reaction( cell_label(src_id) ).action( f, {tgt_id} ).delete
   }
 }
@@ -88,9 +99,9 @@ export class WritingCell {
  	this.list.then( list => {
  		this.setted_unsub = list.setted.subscribe( (rec) => {
       // произошло добавление/установка в список нового слушателя
- 			//console.log("todo: submit to newcomer!",rec)
+ 			console.log("writing_cell: submit to newcomer!",rec)
  			if (this.is_set)
- 				rec.value.action( {label:this.label, value:this.value} )
+ 				rec.value.action( {label:this.label, value:this.value}, rec.value.arg, rapi )
  		})
  	})
   }
