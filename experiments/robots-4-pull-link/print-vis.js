@@ -27,7 +27,7 @@ PPK.mk_console_verbose( process.env.VERBOSE )
 
 //let P = 10
 let P = process.env.P ? parseInt(process.env.P) : 10
-let DN = process.env.DN ? parseInt(process.env.DN) : 1000
+let DN = process.env.DN ? parseInt(process.env.DN) : 1000000
 console.log({DN})
 
 let sys = Promise.resolve( true ) // пока тянет
@@ -117,7 +117,7 @@ function main_2( rapi, worker_ids, calc_output ) {
     // его кстати может обрабатывать и сам линк (своим каким-то роботом)
     control_cell.submit( 22 )
     data_port.next().then( value => {
-      console.log("data port got next... value=",value)
+      console.log("data port got next... value=",value,"from visr.output[0]=",visr.output[0])
 
       if (first_time) {
         t0 = performance.now()
@@ -131,7 +131,7 @@ function main_2( rapi, worker_ids, calc_output ) {
       counter++ 
 
       rapi.get_payload( value.payload_info[0] ).then( data => {
-        console.log("data=",data)        
+        console.log("data=",data)       
       }).then( tick )
     })
   }

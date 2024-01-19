@@ -47,8 +47,9 @@ function start_reduce_robot( rapi, runner_id, args ) {
           for (let j=start_index,i=0; j < data.length; j+= N, i++) {
             result[i] = data[j]
           }
+
           //console.log("downsampled src data= ",data)
-          //console.log("downsampled to ",result)
+          //console.log("downsampled to ",result,"N=",N,"start_index=",start_index)
 
           // утечка памяти..
           

@@ -59,7 +59,10 @@ function start_robot( rapi, runner_id, args ) {
     let in_data = rapi.read_cell( input_port[index] )
     let out = rapi.create_cell( output_port[index] )
 
-    console.log("vis-pass-5: in_control: going read control. control_port=",control_port)
+    if (index == 0)
+      console.log("vis-pass-5: in_control: going read control. control_port=",control_port)
+    else
+      console.log("vis-pass-5: in_control: will not read control, im more than 0")
 
     let in_control = index == 0 ? rapi.read_cell( control_port[0] ) : null
     let out_randevu = index == 0 ? rapi.create_cell( randevu_port[0] ) : null
@@ -71,8 +74,8 @@ function start_robot( rapi, runner_id, args ) {
     function tick() {
       in_data.next().then( val => {
         //console.log("vis-pass. iter counter=",counter)
-        if (verbose)
-            console.log("vis-pass robot see input data id=",id,"iter counter=",counter)
+        //if (verbose)
+          console.log("vis-pass robot see input data id=",id,"iter counter=",counter,"btw required=",required)
 
         //if (required > 0) required--
         //if (required == 1 && counter%3 == 0) {
@@ -95,6 +98,7 @@ function start_robot( rapi, runner_id, args ) {
       console.log("vis-pass-5: in_control: reading next.")
 
       in_control.next().then( val => {
+        //console.log("vis-pass-5: in_control: got next value.")
         //required = 2
 
         // выяснилось что на сдвиге +2 оно зависает. а на +3 нет.
@@ -103,9 +107,8 @@ function start_robot( rapi, runner_id, args ) {
         required = counter + SHIFT_AHEAD
         // да похоже так и есть.. тонкое местечко..
 
-        if (verbose)
-            console.log("vis-pass robot see in-control. id=",id,"sending randevu=",required)
-
+        //if (verbose)
+            console.log("vis-pass-5 robot see in-control. id=",id,"sending randevu=",required)
         
         out_randevu.submit( required )
         tack()       
@@ -115,7 +118,7 @@ function start_robot( rapi, runner_id, args ) {
     function tuck() {
       in_randevu.next().then( val => {
         if (verbose)
-            console.log("vis-pass-3 robot see in-randeuv. id=",id,"randevu=",val)
+            console.log("vis-pass-5 robot see in-randeuv. id=",id,"randevu=",val)
         //required = 2
         required = val        
         tuck()

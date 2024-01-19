@@ -99,7 +99,7 @@ export class WritingCell {
  	this.list.then( list => {
  		this.setted_unsub = list.setted.subscribe( (rec) => {
       // произошло добавление/установка в список нового слушателя
- 			console.log("writing_cell: submit to newcomer!",rec)
+ 			console.log("writing_cell: submit to newcomer!",rec, "value=",this.value,"id=",this.id)
  			if (this.is_set)
  				rec.value.action( {label:this.label, value:this.value}, rec.value.arg, rapi )
  		})
