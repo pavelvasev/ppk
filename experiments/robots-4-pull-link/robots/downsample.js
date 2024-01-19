@@ -7,8 +7,7 @@ export function robot( rapi, id, workers,N, start_index=0 ) {
   let count = workers.length  
   let r = workers.map( (x,index) => start_reduce_robot( rapi,x,
        { index, id:`${id}/${index}`,
-         input_port,output_port,count,start_index,N
-         //f:rapi.compile_js(f)
+         input_port,output_port,count,start_index,N         
        }))
 
   let robot = { input: input_port, output: output_port }
@@ -25,8 +24,6 @@ function start_reduce_robot( rapi, runner_id, args ) {
 
     let in_data = rapi.read_cell( input_port[index] )
     let out = rapi.create_cell( output_port[index] )
-
-    let f = args.f
     
     let counter = 0;
     let result_len = -1
@@ -54,13 +51,11 @@ function start_reduce_robot( rapi, runner_id, args ) {
           //console.log("downsampled to ",result)
 
           // утечка памяти..
-          console.log("submitting to rapi:",rapi)
-          if (rapi) {
+          
             rapi.submit_payload_inmem( result ).then( pi => {
               out.submit( {payload_info:[pi]} ) // пересылаем          
             })
-          } else
-            console.error("warning: no rapi")
+          
 
         }).then( tick )        
       })

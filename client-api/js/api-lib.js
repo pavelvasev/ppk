@@ -38,7 +38,7 @@ export class ClientList {
   // rapi нужно кодам реакций поэтому передаем иво
   // idea вообще говоря мы можем собрать результаты реакций и вернуть их. и это может что-то дать полезное.
   msg( m, rapi ) {
-    console.log("list msg submit: m=",m,"vals=",[...this.records.values()] );//,"this.records=",[...this.records.keys()])
+    //console.log("list msg submit: m=",m,"vals=",[...this.records.values()] );//,"this.records=",[...this.records.keys()])
     for (let reaction of this.records.values()) {
       //console.log("this reaction=",reaction)
       if (reaction.test) {
@@ -587,7 +587,10 @@ export class ClientApi {
   compile_js(code){ 
     let need_id 
     if (!code.need_id) {
-      code.need_id = `js-client-api:js:${this.operation_counter++}`      
+      // это мега баг: т.о. разные процессы клиентов начинают использовать одинаковые id      
+      // code.need_id = `js-client-api:js:${this.operation_counter++}`      
+      // это норм версия:
+      code.need_id = this.generate_uniq_query_id('compile-js')
     }
     need_id = code.need_id; // мб из arg брать. которые на самом деле - opts
 
@@ -608,7 +611,8 @@ export class ClientApi {
   js(code,arg={}){
     let need_id 
     if (!code.need_id) {
-      code.need_id = `js-client-api:js:${this.operation_counter++}`      
+      //code.need_id = `js-client-api:js:${this.operation_counter++}`      
+      code.need_id = this.generate_uniq_query_id('call-js')
     }
     need_id = code.need_id; // мб из arg брать. которые на самом деле - opts
 

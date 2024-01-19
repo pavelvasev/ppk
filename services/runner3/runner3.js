@@ -31,7 +31,7 @@ const verbose_level_2 = process.env.VERBOSE ? true : false;
 let counter=0;
 let global_queue_size = 0
 let main_tasks_solving = 0
-let uhr_handler = () => {}
+//let uhr_handler = () => {}
 
 import { TrackDeployedNeeds,DeployedNeeds } from "./runner-local-needs.js"
 
@@ -326,8 +326,8 @@ function process_one_job( rapi, task, deployed_needs_dict, runner_id, processor 
 
       let fn = ''
 
-      uhr_handler = (err) => {
-        uhr_handler = () => {} // чтобы 2 раза не ходить..
+      let uhr_handler = (err) => {
+        //uhr_handler = () => {} // чтобы 2 раза не ходить..
         let error_msg = err?.message || err || 'unknown error during process_one_job'
         console.log("runner: uhr-handler! error in function. err=",err)
         //console.log('runner: sending runner-finished to ppk (with fail flag)',{id: task.id, runner_id, error_msg})
@@ -464,7 +464,7 @@ function process_one_job( rapi, task, deployed_needs_dict, runner_id, processor 
           
           // получается таки что мы - начали процессы выгрузки и сообщили что job-resolve
           // и через это - побыстрее получим след. задачу
-          uhr_handler = () => {}
+          //uhr_handler = () => {}
 
           //console.log("flagging job as resolved")
           job_resolve() // после отправки runner-finished
