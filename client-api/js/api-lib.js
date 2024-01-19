@@ -200,8 +200,10 @@ export class ClientApi {
   msg( m, payload ) {
     if (payload) m.payload = payload // ну просто удобное апи
 
-    if (typeof(m.label) !== "string")
+    if (typeof(m.label) !== "string") {
        console.error("rapi::msg label is not string",m.label)
+       console.error("btw msg value is",m)
+    }
 
     let listp = this.get_list( m.label )
     return listp.then( list => {

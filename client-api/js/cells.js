@@ -59,8 +59,9 @@ export class Cells {
 
 }  
 
-function cell_label( cell_id ) {
-  return `${cell_id}(cell)`
+function cell_label( id ) {
+  if (id.id && id.cell) id = id.id
+  return `${id}(cell)`
 }
 
 // связь двух ячеек. можно было еще binding назвать.
@@ -81,6 +82,8 @@ export class Link {
       r_arg.output_cell.submit( msg.value )
       //local_rapi.msg( msg )
     }
+
+    //console.log("link: deploy-ing reaction to:",cell_label(src_id),"with tgt",tgt_id)
 
     // tgt_id здесь не надо преобразовывать, его create_cell обрабтает в реакции
     this.unsub = rapi.reaction( cell_label(src_id) ).action( f, {tgt_id} ).delete

@@ -47,6 +47,7 @@ process "simple_data_source" {
 
     rapi.query( data_port_id ).done( msg => {
       let arr = msg.value
+      //console.log(data_port_id,"=",counter.get())
       //console.log(data_port_id,"=",arr)
       output.submit( arr )
       //output_c2.submit( msg.value.payload[1] )
@@ -154,8 +155,12 @@ process "subgr" { // тут пока все вместе только для у�
 
       src: simple_data_source @rapi (+ @cell_id "/data(cell)")
       //print "src data=" @src.output
+
+      //react @src.output {: val | console.log(555,val ) :}
       
       param_src: simple_data_source @rapi (+ @cell_id "/params(cell)")
+
+      simple_data_target @rapi ( + @cell_id "/updated(cell)") input=@src.counter
 
       react @param_src.output {: params |
          //console.log("incoming params=",params)
@@ -180,8 +185,15 @@ process "subgr" { // тут пока все вместе только для у�
       :} @src.output
       */
 
-      datapos := apply {: vals |         
+      datapos := apply {: vals |
+        //console.log(333)
+
+        // случай когда присылают данные из канала вычислений
+        // хак.. надо внедрять внешний адаптер
+        if (vals.payload) vals = vals.payload[0]
+
         let mapped = vals.map( (val,index) => [index,val,0] ).flat(1)
+        //console.log({mapped})
         return mapped
       :} @src.output
 
@@ -226,9 +238,9 @@ process "subgr" { // тут пока все вместе только для у�
         dom.column style="background: rgb( 72 72 72 / 63% ); padding: 10px; border: 1px solid grey;" {
           dom.element "strong" @cell_id
           dom.element "span" @title
-          dom.element "span" ("scale y =" + @sy)
+          dom.element "span" ("div y =" + @sy)
           scale_y: dom.input "range" input_value=@sy min=1 max=10000
-          dom.element "span" ("scale x =" + @sx)
+          dom.element "span" ("div x =" + @sx)
           scale_x: dom.input "range" input_value=@sx min=1 max=100
           bind @scale_x.interactive_value @sx    
           bind @scale_y.interactive_value @sy
@@ -290,39 +302,6 @@ env: node {
 
 /////////////
 
-process "data_source" {
-
-  output: cell []
-  output_c2: cell []
-  counter: cell 0
-
-  apply {:
-    ppk_api.connect().then( (rapi) => {
-        let data_port_id = "j1d/output/0(cell)"
-        let control_port_id = "vis1/control(cell)"
-
-        function tick() {
-          rapi.msg( {label: control_port_id, value: 1})                
-        }
-        tick()
-
-        rapi.query( data_port_id ).done( msg => {
-          //console.log('query done: ',msg)
-          tick()
-
-          let arr = msg.value.payload[0]
-          output.submit( arr )
-          output_c2.submit( msg.value.payload[1] )
-
-          counter.submit( counter.get() + 1 )
-        })
-
-    })
-  :}
-}
-
-/////////////
-
 
 mixin "tree_node"
 process "big_grid" {
@@ -363,10 +342,11 @@ mixin "tree_node"
 process "main" {
   in { style: cell }
 
+/*
   ds: data_source
   gr_vals := @ds.output
   
-  //print "gr_vals=" @gr_vals
+  //  print "gr_vals=" @gr_vals
 
   datapos := apply {: vals | 
     return vals.map( (val,index) => [index,val,0] ).flat(1)
@@ -374,6 +354,7 @@ process "main" {
   b1: lib3d.buffer @datapos 3
 
   // F-COLORED-PARTS
+  
   gr_vals_c2 := @ds.output_c2
   colors := apply {: vals | 
     
@@ -385,41 +366,22 @@ process "main" {
     return mapped
     :} @gr_vals_c2
   b2: lib3d.buffer @colors 3  
+  */
 
   output := dom.column style=@style {
     dom.dark_theme
 
-    //btn: dom.element "button" "Visualize!" {: console.log("clicked") :}
-    cb: dom.checkbox "lines visible"
-
-    scale_y: dom.input "range" input_value=2000 min=1 max=10000
-    scale_x: dom.input "range" input_value=5 min=1 max=100
-
-    func "mk_scale" {: sx sy | // масштаб по y..
-       return [ 1.0 / sx, 1.0 / sy, 1]
-    :}    
-
-    output_space: dom.element "div" style="border: 1px solid grey; flex: 1;" {      
+    output_space: dom.element "div" style="border: 1px solid grey; flex: 1;" {
       dom.element "div" style="position: absolute;" {
         dom.column {
-          dom.element "span" (+ "scale_y: " @scale_y.interactive_value)
-          dom.element "span" (+ "scale_x: " @scale_x.interactive_value)
-          dom.element "span" (+ "version: " @ds.counter)
-
           parts.create (parts.get @env.children "gui_items")
         }
-      }
+      }      
     }
-
 
     s: lib3d.scene {
       lib3d.point_light    
-      p1: lib3d.points color=[1,1,1] 
-              positions=@b1.output 
-              colors=@b2.output 
-              scale=(mk_scale @scale_x.interactive_value @scale_y.interactive_value)
-      //lib3d.lines color=[1,1,1] strip=true
-      //        positions=@b1.output scale=(mk_scale @scale_x.value @scale_y.value) visible=@cb.value
+
       big_grid range=[0,0,300,50] step=[10,10]
 
       parts.create (parts.get @env.children "scene_items")

@@ -41,7 +41,7 @@ let P = process.env.P ? parseInt(process.env.P) : 10
 let JP = process.env.JP ? parseInt(process.env.JP) : 1
 let DN = process.env.DN ? parseInt(process.env.DN) : 1000*1000
 
-let plained_seconds = 20 // время работы "планируемое"
+let plained_seconds = process.env.SECONDS ? parseInt(process.env.SECONDS) : 20 // время работы "планируемое"
 //let CP = P == 1 ? 100 : P== 2 ? 150 : P==4 ? 200 : 500 // ожидаемая производительность
 //let CP = P <= 4 ? 250 : 500 // ожидаемая производительность
 let CP= P == 1 ? 100 : 500

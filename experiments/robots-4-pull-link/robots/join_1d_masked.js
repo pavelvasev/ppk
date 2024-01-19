@@ -28,7 +28,7 @@ export function robot( rapi, id, workers ) {
 
 function start_robot( rapi, runner_id, args ) {
   return rapi.exec( rapi.js( (args) => {
-    console.log("hello join-1d robot. args=",args)
+    console.log("hello join-1d-masked robot. args=",args)
 
     let {input_port, output_port, start_index, index, id, count, N} = args
 
@@ -75,8 +75,9 @@ function start_robot( rapi, runner_id, args ) {
                 pos = next_pos
             }
 
-            // публикуем результат
+            // публикуем результат            
             return rapi.submit_payload_inmem( [result,result_uid] ).then( pi => {
+              console.log("join-1d-masked: writing out:",out.id)
               out.submit( {payload_info:pi} ) // выдаем
             })
 

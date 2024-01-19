@@ -19,7 +19,7 @@
 import * as PPK from "ppk"
 import * as STARTER from "ppk/starter.js"
 
-import * as LIB from "./robots/lib.js"
+//import * as LIB from "./robots/lib.js"
 import * as PASS from "./robots/pass.js"
 import * as PASS_EACH from "./robots/pass_each.js"
 //import * as REDUCE from "./robots/reduce.js"
@@ -83,7 +83,7 @@ function main( rapi, worker_ids ) {
   
   rapi.shared("gr_view").submit({type:"combobox",id:"s1",params:{input:[["mode 0",0],["mode 1",1]]}})
   
-  rapi.shared("gr_view").submit({type:"gr",id:"gr1id",params:{sx: 0.1, sy: 10}})
+  rapi.shared("gr_view").submit({type:"gr",id:"gr2",params:{sx: 0.1, sy: 10}})
 //  rapi.shared("gr_view").submit({type:"gr",id:"gr2id"})
 //  rapi.shared("gr_view").subscribe( vals => console.log("S=",vals))
 
@@ -103,8 +103,8 @@ function main( rapi, worker_ids ) {
   }
   read_cb()
   
-  let gr1id = rapi.create_cell("gr1id/data")
-  let gr1id_p = rapi.create_cell("gr1id/params")
+  let gr1id = rapi.create_cell("gr2/data")
+  let gr1id_p = rapi.create_cell("gr2/params")
   //gr1id_p.submit({sx: 10, sy: 10})
   
   let data = new Array(30*1000)
