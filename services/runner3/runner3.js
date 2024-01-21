@@ -87,6 +87,8 @@ function restart_connection() {
         return `fps: ${ report_time.tick() }`
       }, dn, processor )
 
+      //start_processes( rapi )
+
       rapi.ws.on('close', () => {
         console.log('ws on close: scheduling reconnection')
         setTimeout( restart_connection, 500 )
@@ -102,6 +104,25 @@ function restart_connection() {
     console.log("c3: scheduling restart_connection 2000")    
     setTimeout( restart_connection, 2000 )
   }
+}
+
+
+function monitor_processes( rapi, this_worker_id ) {
+
+/*
+  function start_process( record ) 
+  {
+  }
+
+
+  let list = rapi.shared_list_reader(this_worker_id)
+  list.changed.subscribe( values => {
+    values.map( start_process )
+  })
+  list.added.subscribe( x => start_process( x.value ) )
+  list.removed.subscribe( x => stop_process( x.value ) )
+*/
+  
 }
 
 class ReportTime {
@@ -262,6 +283,8 @@ function process_one_job_loop( rapi, report, deployed_needs_dict, processor ) {
       // F-RUNNERS-LIST
       rapi.shared("runners-list").submit( { id: task_label } )
   })
+
+  monitor_processes( rapi, task_label )
 
 }
 
@@ -519,7 +542,7 @@ class Processor {
       console.error("Processor: failed to find need for code :",record.code)
       return null
     }
-    if (typeof(need_func) === "object") {      
+    if (typeof(need_func) === "object") {
       record.arg = {...record.arg, ...need_func.arg }
       record.code = need_func.code
       return this.need( record )
@@ -547,7 +570,7 @@ class Processor {
         p_args.push( p_value )
       }
       else { // константа
-        p_args.push( r )        
+        p_args.push( r )
       }
       p_names.push( name )
     }

@@ -8,16 +8,22 @@ export class ClientList {
     this.records = new Map( entries )
      //this.ondelete = () => {}
 
-    this.changed  = CL2.create_channel() 
-    this.setted    = CL2.create_channel() 
-    //this.removed  = CL2.create_channel() 
+    this.changed  = CL2.create_channel()  // список поменялся
+
+    this.setted    = CL2.create_channel() // значение установлено
+    this.added    = CL2.create_channel()  // значение добавлено (а раньше не было)
+    this.deleted  = CL2.create_channel()  // значение удалено
+    // мб надо будет еще item-changed 
   }
 
   set(name,value) {
+    let value_existed = this.records.has( name )
     this.records.set( name,value ) //this.process_value(value) )
-    this.changed.submit( this.get_values() )
-    
+    this.changed.submit( this.get_values() )    
     this.setted.submit( {name,value} )
+
+    if (!value_existed)
+      this.added.submit( {name,value} )
   }
 
   get_values() {
@@ -25,14 +31,17 @@ export class ClientList {
   }
 
   delete(name) {
-    if (this.ondelete) {
-      let existing = this.records.get( name )
+    let existing = this.records.get( name )
+    if (this.ondelete) {      
       if (existing)
           this.ondelete( name, existing )
     }
     //console.log('list deleting id',name)
     this.records.delete(name)
     this.changed.submit( this.get_values() )
+
+    if (existing)
+      this.deleted.submit( {name, value:existing} )
   }
 
   // rapi нужно кодам реакций поэтому передаем иво
@@ -87,7 +96,7 @@ export class ClientApi {
         listp.call_resolve( list )
       } else if (msg.cmd_reply == 'add_item')
       {
-        //this.deployed_items_resolve[ msg.id ] (`item-added-to-main:${msg.id}`)
+        // это ответ от сервера что он обработал наше add_item        
         this.deployed_items_resolve[ msg.id ] ()
       } else if (msg.opcode) {
         //console.log("msg opcode from center",msg)
@@ -100,6 +109,8 @@ export class ClientApi {
           return
         }
         listp.then( list => {
+          // если будут обновления значений, то надо порядок тогда сохранять,
+          // а текущее это рандомный порядок
           if (msg.opcode == 'set')
             list.set( msg.arg.name, this.process_reaction_value(msg.arg.value) )
           else if (msg.opcode == 'delete')
@@ -266,13 +277,16 @@ export class ClientApi {
       submit: (arg) => { // F-MAIN-SHARED-SETS 
         // мы просто для удобства это здесь разместили. так это к реакциям не относится.
         // размещает не функцию но значение
+        // todo убрать это отсюда
+        // note фишка что это работа с 1 значением только!
         kvant.value.arg = arg
         let p = new Promise( (resolve,reject) => {
           this.deployed_items_resolve[ id ] = resolve
-          this.send( kvant )
+          return this.send( kvant )
           // теперь ждем ответа -- resolve когда-нибудь вызовут
         })
         p.delete = () => fres.delete()
+
         return p
       },
       delete: () => { // функция удаления реакции
@@ -284,7 +298,7 @@ export class ClientApi {
     return fres
   }
 
-  // shared("list-name").submit(42)
+  // shared("list-name").submit(42).delete()
   // shared("list-name").subscribe( callback_on_change )
   // shared("list-name",{id:"my_id"}).submit(42)
   // shared("list-name",{id:"my_id"}).subscribe( callback_on_change )
@@ -304,6 +318,46 @@ export class ClientApi {
     }
 
     return p;
+  }
+
+  // новое апи 2024-01
+  shared_list_reader( crit ) {
+
+    let p = this.get_list( crit )
+
+    p.changed  = CL2.create_cell()  // список поменялся
+    p.setted    = CL2.create_channel() // значение установлено
+    p.added    = CL2.create_channel()  // значение добавлено (а раньше не было)
+    p.deleted  = CL2.create_channel()  // значение удалено
+
+    let unsub = ()=>true
+    p.stop = () => unsub() // stop = хватит читать
+
+    p.then( (list_object) => {
+      let b1 = CL2.create_binding( list_object.changed, p.changed )
+      let b2 = CL2.create_binding( list_object.setted, p.setted )
+      let b3 = CL2.create_binding( list_object.added, p.added )
+      let b4 = CL2.create_binding( list_object.deleted, p.deleted )
+      unsub = () => {
+        b1.destroy()
+        b2.destroy()
+        b3.destroy()
+        b4.destroy()
+      }
+      p.changed.submit( list_object.get_values() )
+    })
+
+    return p
+  }
+
+  // создает объект для записи значения по указанному идентификатору
+  // если надо несколько значений, надо создавать разные shared_list_writer
+  // idea можно сделать опцию чтобы значение было неудаляемое автоматически как сейчас по завершению связи
+  shared_list_writer( crit,opts ) {
+    opts.reaction_id ||= opts.id
+    let p = this.reaction( crit, opts )
+    // там получается есть команда submit и delete
+    return p
   }
 
   // F-RUNNERS-LIST
@@ -378,6 +432,14 @@ export class ClientApi {
       // итак мы на клиенте и у нас есть msg
     })
   }*/
+
+  ///// запуск процессов
+
+  // возвращает функцию остановки
+  start( code, arg, worker_id ) {
+    let p = this.shared_list_writer(worker_id).submit( {code, arg} )    
+    return p.delete
+  }
 
   ///// тема выполнения заданий
 
