@@ -511,7 +511,7 @@ export class ClientApi {
       //q()
     }
 */
-    if (opts.output_cell) 
+    if (opts.output_cell)
       return opts.output_cell
 
     return promisa;
