@@ -108,8 +108,12 @@ export class Channel extends Comm {
 		//console.channel_verbose( "Port submit:",this+"","value=",value instanceof Comm ? value + "" : value,typeof(value) )
 
 		console.channel_verbose( "Port submit:",this+"","value=",fmtval(value) )
-		//console.log(this.subscribers)
-		this.subscribers.forEach( fn => fn(value) )
+		//console.error( "Port submit:",this+"","value=",value )
+		//console.error(this.subscribers)
+		this.subscribers.forEach( fn => {
+			//console.error("port ",this+"","calling subscribed fn",fn)
+			fn(value) 
+		})
 		//this.is_cell = true
 	}
 	destroy() {

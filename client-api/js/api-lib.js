@@ -32,16 +32,23 @@ export class ClientList {
 
   delete(name) {
     let existing = this.records.get( name )
-    if (this.ondelete) {      
+    /*
+    if (this.ondelete) {
       if (existing)
           this.ondelete( name, existing )
     }
+    */
     //console.log('list deleting id',name)
     this.records.delete(name)
     this.changed.submit( this.get_values() )
 
-    if (existing)
+    if (existing) {
+      //console.error("ClientList: deleting",{name})
       this.deleted.submit( {name, value:existing} )
+
+      if (existing.on_delete) // F-REACTION-ON-DELETE
+        existing.on_delete( existing.arg )
+    }
   }
 
   // rapi нужно кодам реакций поэтому передаем иво
@@ -147,6 +154,8 @@ export class ClientApi {
       value.action = this.prepare_action( value.action )
     if (value?.test)
       value.test = this.prepare_action( value.test )
+    if (value?.on_delete) // F-REACTION-ON-DELETE
+      value.on_delete = this.prepare_action( value.on_delete )
     return value
   }
 
@@ -251,7 +260,8 @@ export class ClientApi {
          N: opts.N,
          test: opts.test,
          q_priority: opts.q_priority,
-         arg: arg,
+         arg: arg, // не используется
+         on_delete: opts.on_delete, // F-REACTION-ON-DELETE
          only_saved: opts.only_saved //, // F-FOR-EACH
          //state: opts.state || {}
        }
@@ -323,7 +333,8 @@ export class ClientApi {
   // новое апи 2024-01
   shared_list_reader( crit ) {
 
-    let p = this.get_list( crit )
+    let p = {}
+    let list = this.get_list( crit )
 
     p.changed  = CL2.create_cell()  // список поменялся
     p.setted    = CL2.create_channel() // значение установлено
@@ -333,11 +344,20 @@ export class ClientApi {
     let unsub = ()=>true
     p.stop = () => unsub() // stop = хватит читать
 
-    p.then( (list_object) => {
+    list.then( (list_object) => {
+
+/*
+      console.error("shared_list_reader creating subscription to deleted. list_object.deleted=",list_object.deleted+'')
+      list_object.deleted.subscribe( x => {
+        console.error("shared_list_reader: see source list deleted val",x)
+      })
+*/      
+
       let b1 = CL2.create_binding( list_object.changed, p.changed )
       let b2 = CL2.create_binding( list_object.setted, p.setted )
       let b3 = CL2.create_binding( list_object.added, p.added )
       let b4 = CL2.create_binding( list_object.deleted, p.deleted )
+
       unsub = () => {
         b1.destroy()
         b2.destroy()
@@ -353,7 +373,7 @@ export class ClientApi {
   // создает объект для записи значения по указанному идентификатору
   // если надо несколько значений, надо создавать разные shared_list_writer
   // idea можно сделать опцию чтобы значение было неудаляемое автоматически как сейчас по завершению связи
-  shared_list_writer( crit,opts ) {
+  shared_list_writer( crit,opts={} ) {
     opts.reaction_id ||= opts.id
     let p = this.reaction( crit, opts )
     // там получается есть команда submit и delete
@@ -487,6 +507,7 @@ export class ClientApi {
        label,
        hint: opts.hint,
        local_env: opts.local_env,
+       client_id: this.client_id, // F-STOP-PROCESSES
        limits: s_expr.limits || opts.limits
     }
     //console.log(exec_msg)

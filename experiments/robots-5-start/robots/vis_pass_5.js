@@ -36,7 +36,7 @@ export function robot( rapi, id, workers ) {
        { index, id:`${id}/${index}`,
          input_port,output_port,count,
          control_port,randevu_port,verbose,
-         N
+         N, client_id: rapi.client_id
          //f:rapi.compile_js(f)
        }))
 
@@ -89,7 +89,7 @@ function start_robot( rapi, runner_id, args ) {
         counter++
         
         tick()
-      })
+      }, () => {})
     }
     
     let required = -1
@@ -97,7 +97,9 @@ function start_robot( rapi, runner_id, args ) {
 
       console.log("vis-pass-5: in_control: reading next.")
 
-      in_control.next().then( val => {
+      let k = in_control.next()
+
+      k.then( val => {
         //console.log("vis-pass-5: in_control: got next value.")
         //required = 2
 
@@ -111,8 +113,10 @@ function start_robot( rapi, runner_id, args ) {
             console.log("vis-pass-5 robot see in-control. id=",id,"sending randevu=",required)
         
         out_randevu.submit( required )
-        tack()       
-      })
+        tack()
+      }, () => {} )
+      //.catch( x => console.error("outer-catch over then.",x))
+      //k.catch( x => console.error("outer-catch ok!",x))
     }    
 
     function tuck() {
@@ -122,12 +126,23 @@ function start_robot( rapi, runner_id, args ) {
         //required = 2
         required = val        
         tuck()
-      })
+      }, () => {})
     }        
 
     tick()
     if (in_control) tack()
     if (in_randevu) tuck()      
+
+    // F-STOP-ROBOTS
+    rapi.shared_list_reader( args.client_id ).deleted.subscribe( (arg) => {
+      console.log("vis-pass-5 robot stop - client stopped:",arg)
+      //console.trace()
+      if (in_control) in_control.stop()
+      if (in_data) in_data.stop()
+      if (in_randevu) in_randevu.stop()
+      out.stop()
+      if (out_randevu) out_randevu.stop()
+    } )
 
     return true
 

@@ -87,7 +87,9 @@ PPK.connect( "runner-manager",process.env.MOZG_URL, process.env.VERBOSE_MSG, pro
 
     rapi.get_list( msg.task_label ).then( list => {
       //console.log('got list, setting ondelete',msg.task_label)
-        list.ondelete = (reaction_id,reaction_body) => {
+        list.deleted.subscribe((opts) => {
+          let reaction_id = opts.name
+          let reaction_body = opts.value
           console.log('ondelete called',{reaction_id,reaction_body})
           if (reaction_body.arg.value == msg.task_label) { 
             console.log("match. detaching runner",reaction_body.arg.value)
@@ -96,7 +98,7 @@ PPK.connect( "runner-manager",process.env.MOZG_URL, process.env.VERBOSE_MSG, pro
             solver.runner_detached( reaction_body.arg.value )
             //broadcast_runners()
           }
-        }
+        })
     })
   })
   /* вроде ети не нужны

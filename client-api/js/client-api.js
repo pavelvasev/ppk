@@ -269,6 +269,10 @@ export function connect( sender, connection_options={}, verbose=false ) {
 
     rapi.ws.on('open', () => {
       extensions_p.then( () => resolve( rapi ) )
+
+      // F-STOP-PROCESSES
+      rapi.shared_list_writer( rapi.client_id ).submit( 1 )
+
       // запросим важное - что всем всегда надо
       // exec-request.. ну типа это воркерам надо.. ну странно ))))
       /* убрал - оптимизация когда и так все должно быть норм

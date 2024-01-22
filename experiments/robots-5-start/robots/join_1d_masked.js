@@ -17,7 +17,7 @@ export function robot( rapi, id, workers ) {
   let count = workers.length  
   let r = start_robot( rapi,workers[0],
        { 
-         input_port,output_port,count
+         input_port,output_port,count, client_id: rapi.client_id
          //f:rapi.compile_js(f)
        })
 
@@ -79,14 +79,21 @@ function start_robot( rapi, runner_id, args ) {
             return rapi.submit_payload_inmem( [result,result_uid] ).then( pi => {
               console.log("join-1d-masked: writing out:",out.id)
               out.submit( {payload_info:pi} ) // выдаем
-            })
+            }).then( tick )
 
           })
 
-        }).then( tick ) // all vals             
+        }, () => {} ) //.then( tick  ) // all vals             
     }
 
     tick()
+
+    // F-STOP-ROBOTS    
+    rapi.shared_list_reader( args.client_id ).deleted.subscribe( () => {
+      console.log("join-1d-masked robot stop - client stopped")
+      in_data.map( x => x.stop() )
+      out.stop()
+    } )   
 
     return true
 

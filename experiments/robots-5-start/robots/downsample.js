@@ -7,7 +7,7 @@ export function robot( rapi, id, workers,N, start_index=0 ) {
   let count = workers.length  
   let r = workers.map( (x,index) => start_reduce_robot( rapi,x,
        { index, id:`${id}/${index}`,
-         input_port,output_port,count,start_index,N         
+         input_port,output_port,count,start_index,N, client_id: rapi.client_id
        }))
 
   let robot = { input: input_port, output: output_port }
@@ -34,7 +34,7 @@ function start_reduce_robot( rapi, runner_id, args ) {
 
         console.log("downsample tick. val=",val)
 
-        rapi.get_one_payload( val.payload_info[0] ).then( data => {
+        return rapi.get_one_payload( val.payload_info[0] ).then( data => {
 
           let result_len2 = Math.floor( (data.length-start_index)/N )
           if (result_len2 != result_len) {
@@ -51,18 +51,26 @@ function start_reduce_robot( rapi, runner_id, args ) {
           //console.log("downsampled src data= ",data)
           //console.log("downsampled to ",result,"N=",N,"start_index=",start_index)
 
-          // утечка памяти..
+          // утечка памяти.. ?
           
-            rapi.submit_payload_inmem( result ).then( pi => {
-              out.submit( {payload_info:[pi]} ) // пересылаем          
-            })
-          
+          return rapi.submit_payload_inmem( result ).then( pi => {
+            return out.submit( {payload_info:[pi]} ) // пересылаем          
+          })
 
-        }).then( tick )        
-      })
+        } ).then( tick )
+      }, () => {})
     }
 
     tick()
+
+    // F-STOP-ROBOTS
+    
+    rapi.shared_list_reader( args.client_id ).deleted.subscribe( () => {
+      console.log("downsample robot stop - client stopped")
+      in_data.stop()
+      out.stop()
+    } )
+    
 
     return true
 

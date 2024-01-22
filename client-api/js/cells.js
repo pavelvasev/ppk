@@ -83,10 +83,19 @@ export class Link {
       //local_rapi.msg( msg )
     }
 
+    let stop_f = ( r_arg ) => {
+      //console.log("stop-f function called. r_arg = ",r_arg)
+      if (r_arg.output_cell) { // F-REACTION-ON-DELETE
+        console.log("stop-f function removed output cell",r_arg.output_cell.id)
+        r_arg.output_cell.stop()
+        r_arg.output_cell = null
+      }      
+    }
+
     //console.log("link: deploy-ing reaction to:",cell_label(src_id),"with tgt",tgt_id)
 
     // tgt_id здесь не надо преобразовывать, его create_cell обрабтает в реакции
-    this.unsub = rapi.reaction( cell_label(src_id) ).action( f, {tgt_id} ).delete
+    this.unsub = rapi.reaction( cell_label(src_id), {on_delete: stop_f.toString() } ).action( f, {tgt_id} ).delete
   }
 }
 
@@ -135,6 +144,9 @@ export class WritingCell {
       console.error("sumbitting to closed writing cell!",val)
     }
   }
+  stop() {
+    this.close()
+  }
 }
 
 // процесс чтения ячейки
@@ -153,7 +165,14 @@ export class ReadingCell {
   }
 
   stop() {
+    // убираем запрос - нам больше не интересно получать сообщения
     this.query.delete()
+
+    // и отменяем все ожидания которые висят текущие
+    this.pending_promises.map( x => x.reject() )
+
+    // ну и поможем сборщику мусора, хотя он по идее сам справится
+    this.unvisited_values = [] 
   }
 
   constructor( rapi, id, queue_limit) {
@@ -198,7 +217,7 @@ export class ReadingCell {
   	return p;
   }
 
-  // создает промису
+  // создает локальную промису
   create_promise() {
       // будем использвать js промисы внутри, так удобно
       let p_resolve, p_reject
@@ -214,10 +233,14 @@ export class ReadingCell {
         }
       p.reject = (err) => {
         p.rejected = true
-        console.log("rejecting promise",p.id)
+        //console.log("rejecting promise",p.id || "")
         p.catch( () => {
-          console.log("inside promise catch.")
+          //console.error("inside default promise catch.")
         }) // надо хотя бы 1 раз поймать а то unhandled rejection
+        // потому что формально эту промису могут и не ловить
+        // но вроде как ничего страшного если мы ее отменили - в целях остановки канала
+        // но с другой стороны если там then был.. то он сам должен обеспечивать
+        // отлов остановки канала
         return p_reject(err)
       }
 
