@@ -21,7 +21,7 @@ console.log({DN})
 
 //let S = new STARTER.Slurm( "u1321@umt.imm.uran.ru" )
 let S = new STARTER.Local()
-let P = 4
+let P = process.env.P ? parseInt(process.env.P) : F.P
 
 let sys = S.start().then( (info) => {
 

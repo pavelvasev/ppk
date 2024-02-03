@@ -20,9 +20,9 @@ import * as F from "./f.js"
 //let S = new STARTER.Slurm( "u1321@umt.imm.uran.ru" )
 let S = new STARTER.Local()
 
-let P = 4
+let P = process.env.P ? parseInt(process.env.P) : F.P
 let DN = process.env.DN ? parseInt(process.env.DN) : F.DN
-console.log({DN})
+console.log({DN,P})
 
 let sys = S.start().then( (info) => {
 

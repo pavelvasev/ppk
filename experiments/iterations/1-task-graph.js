@@ -6,9 +6,9 @@ import * as PPK from "ppk"
 import * as STARTER from "ppk/starter.js"
 import * as F from "./f.js"
 
-let P = 4
+let P = process.env.P ? parseInt(process.env.P) : F.P
 let DN = process.env.DN ? parseInt(process.env.DN) : F.DN
-console.log({DN})
+console.log({DN,P})
 
 //let S = new STARTER.Slurm( "u1321@umt.imm.uran.ru" )
 let S = new STARTER.Local()
@@ -29,7 +29,7 @@ let sys = S.start().then( (info) => {
 
 sys.then( info => PPK.connect("test",info) ).then( rapi => {
     console.log("rapi connected, waiting workers");
-    rapi.wait_workers( 4 ).then( (workers) => {
+    rapi.wait_workers( P ).then( (workers) => {
       console.log("found workers", workers);
       main( rapi, workers.map( w => w.id ) )
     });
@@ -57,7 +57,9 @@ function main( rapi, worker_ids ) {
       let left_block = k > 0 ? rapi.skip_payloads( p_data[k-1] ) : null
       let right_block = k < P-1 ? rapi.skip_payloads( p_data[k+1] ) : null
       // rapi.exec = добавить задачу
-      let r = rapi.exec( rapi.js( F.f_part, { input: rapi.reuse( p_data[k] ),left_block, right_block }), {runner_id})
+      // задача назначается исполнителю в ручном режиме (параметр runner_id), без централизованной балансировки
+      // console.log("sub runner_id=",runner_id)
+      let r = rapi.exec( rapi.js( F.f_part, { input: rapi.reuse( p_data[k] ),left_block, right_block, i, k }), {runner_id})
       p_data_next.push( r )
     }
     p_data = p_data_next
