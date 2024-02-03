@@ -41,7 +41,7 @@ let P = process.env.P ? parseInt(process.env.P) : 10
 let JP = process.env.JP ? parseInt(process.env.JP) : 1
 let DN = process.env.DN ? parseInt(process.env.DN) : 1000*1000
 
-let plained_seconds = process.env.SECONDS ? parseInt(process.env.SECONDS) : 20 // время работы "планируемое"
+let plained_seconds = process.env.SECONDS ? parseInt(process.env.SECONDS) : 20*60 // время работы "планируемое"
 //let CP = P == 1 ? 100 : P== 2 ? 150 : P==4 ? 200 : 500 // ожидаемая производительность
 //let CP = P <= 4 ? 250 : 500 // ожидаемая производительность
 let CP= P == 1 ? 100 : 500
@@ -50,7 +50,7 @@ let iters_calc = Math.max( 5, Math.round( plained_seconds * CP * 1000000 / DN ) 
 // => iters = секунды * CP * 10^6 / DN
 
 let iters = process.env.ITERS ? parseInt(process.env.ITERS) : iters_calc
-let sync_mode =  process.env.SYNC ? true : false
+let sync_mode =  process.env.SYNC ? true : true // false 
 
 // сколько памяти надо 1 процессу
 let MEM_PER_PROCESS = 200 + Math.ceil( ((DN / P) *4 *2) / (1024*1024) )
