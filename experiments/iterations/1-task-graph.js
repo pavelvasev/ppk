@@ -1,5 +1,6 @@
 #!/usr/bin/env -S node
-// параллельная версия на задачах с явным назначением задач исполнителям
+
+// параллельная версия на модели графов задач с явным назначением задач исполнителям
 
 import * as PPK from "ppk"
 import * as STARTER from "ppk/starter.js"
@@ -48,13 +49,14 @@ function main( rapi, worker_ids ) {
   console.log("spawning",n)
   console.time("compute")
 
+  // генерируем и запускаем граф задач
   for (let i=0; i<n; i++) {
     let p_data_next = []
-    for (let k=0; k<P; k++) {
-    //let runner_id = worker_ids[ i % 4 ]
+    for (let k=0; k<P; k++) {    
       let runner_id = worker_ids[ k ]
       let left_block = k > 0 ? rapi.skip_payloads( p_data[k-1] ) : null
       let right_block = k < P-1 ? rapi.skip_payloads( p_data[k+1] ) : null
+      // rapi.exec = добавить задачу
       let r = rapi.exec( rapi.js( F.f_part, { input: rapi.reuse( p_data[k] ),left_block, right_block }), {runner_id})
       p_data_next.push( r )
     }

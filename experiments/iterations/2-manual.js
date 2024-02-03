@@ -1,12 +1,23 @@
 #!/usr/bin/env -S node
-// параллельная версия на каналах - ручное распараллеливание
 
-let DN = process.env.DN ? parseInt(process.env.DN) : F.DN
-console.log({DN})
+/* ручное распараллеливание
+
+   расчетная сетка разбивается на P блоков и запускается P исполнителей
+
+   на каждом исполнителе запускается процесс,
+   который считывает данные из каналов и записывает данные в канал
+   и эти каналы закольцовываются.
+
+   в каналы записываются только граничные значения. 
+   блоки данных хранятся в памяти исполнителей и не передаются
+*/
 
 import * as PPK from "ppk"
 import * as STARTER from "ppk/starter.js"
 import * as F from "./f.js"
+
+let DN = process.env.DN ? parseInt(process.env.DN) : F.DN
+console.log({DN})
 
 //let S = new STARTER.Slurm( "u1321@umt.imm.uran.ru" )
 let S = new STARTER.Local()
@@ -51,27 +62,11 @@ function main( rapi, worker_ids ) {
   // arg: data, N, P - кол-во кусочков, k - номер кусочка
   let next_iter = arg => {
 
-    let f_part = (arg) => {
-
-       let p = arg.input.payload[0]
-
-       let jmax = p.length-1
-       p[ 0 ] = arg.left_block ? arg.left_block.right : 0
-       p[ p.length-1 ] = arg.right_block ? arg.right_block.left : 0
-       let p_left = p[0]
-       let p_my   = 0
-       let p_right = 0
-       for (let j=1; j<jmax; j++) {
-         p_my = p[j]
-         p_right = p[j+1]
-         p[j] = (p_left + p_right)/2 + Math.random(1)
-         p_left = p_my
-       }
-       return {payload:[p],left:p[1], right:p[p.length-2]}
-    }
-
+    // открываем каналы на чтение
     let left_cell = arg.k > 0 ? rapi.read_cell(`${arg.k-1}-data`) : null
     let right_cell = arg.k < arg.P-1 ? rapi.read_cell(`${arg.k+1}-data`) : null
+    // открываем канал на запись
+    // в каналы будем записывать только граничные значения
     let my_cell = rapi.create_cell(`${arg.k}-data`)
     my_cell.submit( [0,0] )
 
@@ -84,7 +79,7 @@ function main( rapi, worker_ids ) {
            if (darr[1]) params.left_block = {right: darr[1][1]}
            if (darr[2]) params.right_block= {left: darr[2][0]} 
            
-           let res = f_part( params )
+           let res = arg.f_part( params )
            my_cell.submit( [res.left, res.right] )
            return res
         }).then( (new_data) => step(new_data,N-1) )
@@ -107,7 +102,7 @@ function main( rapi, worker_ids ) {
 
   for (let k=0; k<P; k++) 
     rapi.exec( rapi.operation( "next_iter",{},"js"), 
-      {arg: {k, P, N: n, my_id: worker_ids[k], data: prev}, 
+      {arg: {k, P, N: n, my_id: worker_ids[k], data: prev, f_part: rapi.compile_js(F.f_part)}, 
       runner_id: worker_ids[k]})
 
   console.log("done. prev=",prev)
