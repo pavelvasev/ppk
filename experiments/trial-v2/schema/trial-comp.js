@@ -187,16 +187,16 @@ function main( rapi, worker_ids ) {
     Promise.all( data_promises ).then( value => {
       let tdiff = performance.now()-t0
       console.timeEnd("compute")
-      console.log("finished",value)
+      //console.log("finished",value)
       let fps = 1000*iters / tdiff
       let mps = fps * DN / 1000000
       console.error("P=",P,"DN=",DN,"JP=",JP,"iters=",iters, "seconds=",tdiff / 1000, "fps=",fps,"mps=", mps, "mps_per_runner=",mps / P)
-      process.exit(0)
-    /*  
-      rapi.get_one_payload( value.payload_info[0] ).then( data => {
+      
+      
+      rapi.get_one_payload( value[0].payload_info[0] ).then( data => {
          console.log(data)
-      })
-      */
+         process.exit(0)
+      })      
       
     })
 

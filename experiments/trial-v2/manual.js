@@ -107,15 +107,25 @@ function main( rapi, worker_ids ) {
 
   console.log("done. prev=",prev)
 
+  let finish_counter = 0
+  let finish_block_0
+  
   rapi.query( "finished").done( (msg) => {
-    console.timeEnd("compute")
-    console.log("see finished",msg)
-    if (msg.k == 0)
-    rapi.get_data( msg.data ).then( p => {
-      console.log("k=",msg.k,"data=",p) 
-      //rapi.exit()
-      process.exit()
-    })
+
+
+    //console.log("see finished",msg)
+    if (msg.k == 0) finish_block_0 = msg
+
+    finish_counter = finish_counter+1
+    if (finish_counter == P) {
+        console.timeEnd("compute")
+
+      rapi.get_data( finish_block_0.data ).then( p => {
+        console.log("k=",finish_block_0.k,"data=",p) 
+        //rapi.exit()
+        process.exit()
+      })
+    }
   })
 
 }

@@ -36,21 +36,30 @@ export let f = (arg) => {
 // выход:
 //   обновлённые значения блока в том же массиве + граничные значения
 export let f_part = (arg) => {   
+
+       //console.error("fpart called. arg=",arg)
+
        let p = arg.input.payload[0]       
        
        let jmax = p.length-1
-       p[ 0 ] = arg.left_block ? arg.left_block.right : 0
-       p[ p.length-1 ] = arg.right_block ? arg.right_block.left : 0
-       let p_left = p[0]
-       let p_my   = 0
+       
+       let p_left = arg.left_block ? arg.left_block.right : 0
+       let p_my = 0
        let p_right = 0
 
-       for (let j=1; j<jmax; j++) {
+       for (let j=0; j<jmax; j++) {
          p_my = p[j]
          p_right = p[j+1]
          p[j] = (p_left + p_right)/2 + Math.random(1)
          p_left = p_my
-       }       
+       }
+
+       // последний узел сетки
+       p_my = p_right
+       p_right = arg.right_block ? arg.right_block.left : 0
+       p[jmax] = (p_left + p_right)/2 + Math.random(1)
+
+       //console.error("fpart finished. p=",p)
        
-       return {payload:[p],left:p[1], right:p[p.length-2]}
+       return {payload:[p],left:p[0], right:p[p.length-1]}
 }
