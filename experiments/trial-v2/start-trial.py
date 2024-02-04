@@ -4,11 +4,11 @@
 # Печатает результат в формате CSV.
 
 commands=[ 
-           ["seq","./0-sequential.js"],
-           ["task-graph","./1-task-graph.js"],
-           ["manual","./2-manual.js"],
-           ["iter-graph","./3-iter-graph.js"],
-           ["schema","../robots-5-start/5-trial-comp.js"]
+           ["seq","./sequential.js"],
+           ["task-graph","./task-graph.js"],
+           ["manual","./manual.js"],
+           ["iter-graph","./iter-graph.js"],
+           ["schema","./schema/trial-comp.js"]
          ]
 p_list = [2,4,8,16]
 dn_list = [100*1000, 1000*1000, 10*1000*1000]
