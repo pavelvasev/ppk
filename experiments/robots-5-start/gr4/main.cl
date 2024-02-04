@@ -21,14 +21,11 @@ react @s1.output {: vals |
 
 shared_view: cell []
 
-/*
-mixin "tree_node"
-process "the_env" {
-  in { cf&: cell }
-  apply_children @cf
-}
-*/
-  
+s2: ppk.shared @rapi "abilities"
+abilities: cell []
+bind @s2.output @abilities 
+// каждая запись это
+// title, msg_template
 
 process "simple_data_source" {
 
@@ -285,17 +282,20 @@ process "do_text" { // тут пока все вместе только для �
 
 env: node {
   repeater input=(read @shared_view | filter {: val | return val.type == "gr" :}) { sv |
-    init_params := (get @sv "params")
+    init_params := get @sv "params"
     //print "init_params=" @init_params
     s: subgr (get @sv "id") **init_params
     subgr_shadow @s
   }
+  // idea repeater input=@shared_view[type="combobox"] а хорошая штука css была. и питон молодец.
+  // типа фильтр в синтаксическом геттере.. в css такое есть. и в питоне в либах.
+  // как-то кстати питон вот в индекс умеет передать выражение.. как?
   repeater input=(read @shared_view | filter {: val | return val.type == "combobox" :}) { sv |
-    init_params := (get @sv "params")
+    init_params := get @sv "params"
     do_combobox (get @sv "id") **init_params
   }
   repeater input=(read @shared_view | filter {: val | return val.type == "text" :}) { sv |
-    init_params := (get @sv "params")
+    init_params := get @sv "params"
     do_text (get @sv "id") **init_params
   }
 }
@@ -371,7 +371,19 @@ process "main" {
   output := dom.column style=@style {
     dom.dark_theme
 
-    output_space: dom.element "div" style="border: 1px solid grey; flex: 1;" {
+    dom.row style="gap:0.5em;" {
+      dom.element "span" "Добавить:"
+      repeater input=@abilities { sv |
+          title := get @sv "title"
+          dom.button @title {: 
+            console.log("clicked",sv ) 
+            let lrapi = rapi.get()
+            lrapi.msg( sv.msg )
+          :}
+      }    
+    }
+
+    output_space: dom.element "div" style="border: 1px solid grey; flex: 1;" {      
       dom.element "div" style="position: absolute;" {
         dom.column {
           parts.create (parts.get @env.children "gui_items")
