@@ -1,0 +1,59 @@
+#!/bin/env python3
+
+import pandas as pd
+import matplotlib.pyplot as plt
+
+df1 = pd.read_csv("mean.csv")
+
+def make(df,interest):
+  adf = df[ df["DN"] == interest ].drop( ["DN"],axis=1 )
+  adf = adf.pivot(index='P', columns='CMD', values='SECONDS')
+  print(interest)
+  print(adf.to_markdown())
+  adf.plot(kind='bar',title=interest)#,colormap="Greens");
+  #plt.show()
+  plt.savefig(str(interest)+'.png')
+  
+make( df1, 100000 )  
+make( df1, 1000000 )
+make( df1, 10000000 )
+
+exit()
+
+df = df.groupby( ["CMD","DN","P"] )
+
+exit()
+
+for index, row in df.iterrows():
+    print(row['P'], row['CMD'])
+    
+exit()
+
+df = df[ df["DN"] == 100000 ].drop( ["DN"],axis=1 )
+df = df.groupby( ["P"] )
+
+print(df.indices)
+print(df.get_group(2))
+
+exit()
+
+#df = df.T
+#df2 = df["SECONDS"].mean()
+
+
+
+print(df)
+
+df = df.groupby( ["CMD","DN","P"] )
+
+#df2 = df.groupby( ["CMD","DN","P"] ).mean()
+#df2 = df.groupby( ["CMD","P"] ).mean() #.groupby( ["P"] )
+#print(df2)
+#df2.to_csv('vis.csv')
+
+#exit()
+
+import matplotlib.pyplot as plt
+
+df.plot(kind='bar')#,colormap="Greens");
+plt.show()
