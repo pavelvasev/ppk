@@ -155,24 +155,34 @@ function main( rapi, worker_ids ) {
   // ждем результаты
 
   let first_time = true
+  let finish_counter = 0
+  let finish_block_0
+  
   rapi.query( "finished").done( (msg) => {
-    if (first_time) {
-      console.timeEnd("compute")
+    if (first_time) {      
       first_time = false
       p_data.forEach( c => c.close() )
+      // зачем их закрывать? зачем-то надо было..
     }
 
-    console.log("see finished",msg)
+    if (msg.k == 0) finish_block_0 = msg
 
-      let cell = rapi.read_cell( msg.data.id )
-      console.log("reading cell ",msg.data.id)
+    finish_counter = finish_counter+1
+    if (finish_counter == P) {
+      console.timeEnd("compute")
+
+      console.log("finish_block_0=",finish_block_0)
+      let cell = rapi.read_cell( finish_block_0.data.id )
+      console.log("reading cell ",finish_block_0.data.id )
       cell.next().then( res => {
         rapi.get_payloads( res.payload_info ).then( data_r => {
-          console.log(msg.k,data_r)
+          console.log(finish_block_0.k,data_r)
           process.exit()
         })
-        
       })
+    }
+
+
   })
 
 }

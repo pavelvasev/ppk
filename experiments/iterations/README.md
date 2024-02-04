@@ -34,7 +34,7 @@ npm install
 Запуск:
 ```
 cd experiments/trial-v2
-./start-trial.py
+./x-start-trial.py
 ```
 
 ## Результаты
