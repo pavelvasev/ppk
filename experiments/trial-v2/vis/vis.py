@@ -9,6 +9,9 @@ def make(df,interest):
   adf = df[ df["DN"] == interest ].drop( ["DN"],axis=1 )
   adf = adf.pivot(index='P', columns='CMD', values='SECONDS')
   print(interest)
+
+  block_size = [str(int(interest/x)) for x in adf.index]
+  adf.insert(0,"b",block_size)
   print(adf.to_markdown())
   adf.plot(kind='bar',title=interest)#,colormap="Greens");
   #plt.show()
