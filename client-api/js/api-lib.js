@@ -268,6 +268,7 @@ export class ClientApi {
     }
 
     let fres = {
+      id,
       action: (code,arg={}) => {
         kvant.value.action = (code?.bind ? code.toString() : code)
         if (!kvant.value.action) {
@@ -331,9 +332,12 @@ export class ClientApi {
   }
 
   // новое апи 2024-01
+  // создает объект чтения списка
   shared_list_reader( crit ) {
 
     let p = {}
+    // получается эти мы инициируем процесс чтения.
+    // ну ридер он на то и ридер. если не надо - пользуйтесь writer-ом.
     let list = this.get_list( crit )
 
     p.changed  = CL2.create_cell()  // список поменялся
