@@ -90,19 +90,17 @@ sys.then( info => PPK.connect("test",info) ).then( rapi => {
 
 // функция порождения схемы вычислений (в форме блока)
 function compute1( rapi,worker_ids, n, sync ) {
-  //let data =  new Float32Array( 2 + DN / P )
-
-  //let p_data = rapi.add_data( data )
-
+  // блок начальных данных
   let init = INIT.robot( rapi, "init1", worker_ids, (args,index,local_rapi) => {
-    let data = new Float32Array( args.DN / args.P )
-    //return { left:0, right: 0, payload: [data]}    
+    let data = new Float32Array( args.DN / args.P )    
     return local_rapi.submit_payload_inmem( data ).then( pi => {
       return {left:0, right:0, payload_info: [pi] }
     })
   }, {DN,P})
 
+  // блок вычислений
   let r1 = STENCIL_1D.robot( rapi, "robo1", worker_ids, (x,left,right) => (left+right)/2 + Math.random() )
+  // блок для повтора итераций
   let pr = PASS.robot( rapi, "pass1", worker_ids, n )
 
   // начальные данные
