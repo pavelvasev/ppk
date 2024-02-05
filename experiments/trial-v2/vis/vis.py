@@ -17,7 +17,7 @@ def make(df,interest):
   #plt.show()
   plt.savefig(str(interest)+'.png')
   
-make( df1, 100000 )  
+make( df1, 100000 )
 make( df1, 1000000 )
 make( df1, 10000000 )
 

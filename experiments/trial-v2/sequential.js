@@ -5,11 +5,13 @@ import * as PPK from "ppk"
 import * as STARTER from "ppk/starter.js"
 import * as F from "./f.js"
 
-let DN = process.env.DN ? parseInt(process.env.DN) : F.DN
-console.log({DN})
+let DN = F.DN
+let iters = F.iters 
+console.log({DN,iters})
 
 //let S = new STARTER.Slurm( "u1321@umt.imm.uran.ru" )
 let S = new STARTER.Local()
+
 
 let sys = S.start().then( (info) => {
 
@@ -36,7 +38,7 @@ sys.then( info => PPK.connect("test",info) ).then( rapi => {
 ////////////////////////////////
 
 function main( rapi, worker_ids ) {
-  let n = 1001
+  let n = iters
   let data =  new Float32Array(DN)
   let data2 =  new Float32Array(DN)
   console.log("init data=",data)

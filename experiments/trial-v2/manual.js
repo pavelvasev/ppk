@@ -16,12 +16,13 @@ import * as PPK from "ppk"
 import * as STARTER from "ppk/starter.js"
 import * as F from "./f.js"
 
-let DN = process.env.DN ? parseInt(process.env.DN) : F.DN
-console.log({DN})
+let P = F.P
+let DN = F.DN
+let iters = F.iters 
+console.log({DN,P,iters})
 
 //let S = new STARTER.Slurm( "u1321@umt.imm.uran.ru" )
 let S = new STARTER.Local()
-let P = process.env.P ? parseInt(process.env.P) : F.P
 
 let sys = S.start().then( (info) => {
 
@@ -50,7 +51,7 @@ sys.then( info => PPK.connect("test",info) ).then( rapi => {
 ////////////////////////////////
 
 function main( rapi, worker_ids ) {
-  let n = 1001 //*1000*1000
+  let n = iters
   let data =  new Float32Array( DN / P )
   console.log("init data=",data)
   let prev = rapi.promises.add_data( {left:0, right:0, payload:[data]} )
@@ -70,9 +71,9 @@ function main( rapi, worker_ids ) {
     let my_cell = rapi.create_cell(`${arg.k}-data`)
     my_cell.submit( [0,0] )
 
-    function step(my_data, N) 
+    function step(my_data, N)
     {
-      if (N > 0) {        
+      if (N > 0) {
         Promise.all([my_data, left_cell ? left_cell.next() : null, right_cell ? right_cell.next() : null] ).then( darr => {
            
            let params = {input:darr[0]}
@@ -90,7 +91,7 @@ function main( rapi, worker_ids ) {
       }
     }
 
-    console.time("iter-dur")    
+    console.time("iter-dur")
     step( arg.data, arg.N)
     
   }

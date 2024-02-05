@@ -1,9 +1,15 @@
 // размер сетки
-export let DN=1000*1000
+export let DN= process.env.DN ? parseInt(process.env.DN) : 1000*1000
 
 // кол-во исполнителей
 // важно - размер сетки должен делиться без остатка на кол-во исполнителей
-export let P=4
+export let P = process.env.P ? parseInt(process.env.P) : 4
+
+// кол-во итераций
+// если до 10 млн то 10 тыс итераций, а иначе 1 тыс
+// export let iters= process.env.ITERS ? parseInt(process.env.ITERS) : (DN < 10*1000*1000 ? 10000 : 1000)
+// ладно, не будем мудрить.
+export let iters= process.env.ITERS ? parseInt(process.env.ITERS) : 1000
 
 // вычисление значений функции одного переменного по явной схеме
 // вход:

@@ -20,9 +20,10 @@ import * as F from "./f.js"
 //let S = new STARTER.Slurm( "u1321@umt.imm.uran.ru" )
 let S = new STARTER.Local()
 
-let P = process.env.P ? parseInt(process.env.P) : F.P
-let DN = process.env.DN ? parseInt(process.env.DN) : F.DN
-console.log({DN,P})
+let P = F.P
+let DN = F.DN
+let iters = F.iters 
+console.log({DN,P,iters})
 
 let sys = S.start().then( (info) => {
 
@@ -51,7 +52,7 @@ sys.then( info => PPK.connect("test",info) ).then( rapi => {
 ////////////////////////////////
 
 function main( rapi, worker_ids ) {
-  let n = 1001
+  let n = iters
   let data =  new Float32Array( DN / P )
 
   console.log("spawning",n)

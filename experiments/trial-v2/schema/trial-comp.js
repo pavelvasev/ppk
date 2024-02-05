@@ -35,15 +35,17 @@ import * as MAP from "./robots/map.js"
 import * as MAP2 from "./robots/map_2.js"
 import * as INIT from "./robots/init.js"
 
+import * as F from "../f.js"
+
 let DEBUG_WORKERS= process.env.DEBUG ? true : false
 
-// число процессов
-let P = process.env.P ? parseInt(process.env.P) : 10
+let P = F.P
+let DN = F.DN
+let iters = F.iters 
+
 // число процессов в 1 job-е (слурм запускаем job-ами)
 let JP = process.env.JP ? parseInt(process.env.JP) : 1
-let DN = process.env.DN ? parseInt(process.env.DN) : 1000*1000
 
-let iters = process.env.ITERS ? parseInt(process.env.ITERS) : 1001 // iters_calc
 let sync_mode =  process.env.SYNC ? true : false
 
 // сколько памяти надо 1 процессу
