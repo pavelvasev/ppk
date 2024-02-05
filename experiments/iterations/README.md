@@ -24,6 +24,8 @@
 
 ## Подготовка и запуск теста
 
+Система PPK работает в ОС Линукс (Дебиан) с установленными NodeJs и Python 3.
+
 ```
 git clone https://github.com/pavelvasev/ppk.git
 cd ppk
@@ -33,7 +35,7 @@ npm install
 
 Запуск:
 ```
-cd experiments/trial-v2
+cd experiments/iterations
 ./x-start-trial.py
 ```
 
