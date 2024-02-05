@@ -1,17 +1,21 @@
 #!/usr/bin/env -S node
-// 5-trial-comp для замеров скорости вычислений
-// 6-comp сделана пулл-ссылка вместо vis-робота между выч графом и графом визуализации
-// 5-comp добавлена редукция данных для визуализации
-// 3-comp с роботом начальных данных.
-// 2-comp новый метод подсчета итераций. с "планированием времени"
-// 1-comp-sync = 8-comp из robots-2 с флагом нужна ли синхронизация
+/* Метод схем - алгоритм определяется блок-схемой. 
+   Каждый блок этой схемы сам запускает необходимое число параллельных процессов на исполнителях.
+   Блоки взаимодействуют с другими блоками посредством портов. 
+   Каждый порт является группой каналов, сообразно разбиению расчётной сетки: каждому блоку сетки сопоставлен отдельный канал.
+   Порты блоков можно соединять связями. Связь соединяет соответствующие каналы.
+   Таким образом алгоритм вычислений, выраженный блок-схемой, определяет набор параллельных процессов и соединения между ними.
+*/
 
 import * as PPK from "ppk"
 import * as SLURM from "ppk/slurm.js"
 import * as LOCAL from "ppk/local.js"
 
+// определения связей 
 import * as LINK from "./robots/link.js"
 import * as LINK_PULL from "./robots/link_pull.js"
+
+// определения блоков
 import * as PASS from "./robots/pass.js"
 import * as PASS_EACH from "./robots/pass_each.js"
 import * as DOWNSAMPLE from "./robots/downsample.js"
@@ -39,14 +43,6 @@ let P = process.env.P ? parseInt(process.env.P) : 10
 let JP = process.env.JP ? parseInt(process.env.JP) : 1
 let DN = process.env.DN ? parseInt(process.env.DN) : 1000*1000
 
-let plained_seconds = 20 // время работы "планируемое"
-//let CP = P == 1 ? 100 : P== 2 ? 150 : P==4 ? 200 : 500 // ожидаемая производительность
-//let CP = P <= 4 ? 250 : 500 // ожидаемая производительность
-let CP= P == 1 ? 100 : 500
-let iters_calc = Math.max( 5, Math.round( plained_seconds * CP * 1000000 / DN ) )
-// секунды = (DN/10^6) * iters / CP; где CP это ожидаемая производительность
-// => iters = секунды * CP * 10^6 / DN
-
 let iters = process.env.ITERS ? parseInt(process.env.ITERS) : 1001 // iters_calc
 let sync_mode =  process.env.SYNC ? true : false
 
@@ -56,10 +52,6 @@ let MEM_PER_PROCESS = 200 + Math.ceil( ((DN / P) *4 *2) / (1024*1024) )
 console.log({DN,P,iters,sync_mode,MEM_PER_PROCESS})
 
 let S = process.env.SLURM ? new SLURM.Starter() : new LOCAL.Starter()
-//let S = new STARTER.Local()
-//let S = new STARTER.Slurm()
-
-//process.exit()
 
 if (DN % P != 0) {
   console.error(`DN % P != 0 = ${DN % P}. DN=${DN} P=${P}`)
@@ -75,8 +67,6 @@ let sys = S.start().then( (info) => {
 
   console.log("OK system started", info, S.url)
 
-  //return S.start_workers( 1,P,4*10*1000,1,'-t 40 --gres=gpu:v100:1 -p v100',DEBUG_WORKERS ).then( (statuses) => {
-  //return S.start_workers( P,1,4*1000,1,'-t 40',DEBUG_WORKERS ).then( (statuses) => {
   // гипертрединг: https://hpc.nmsu.edu/discovery/slurm/hyper-threading/
   return S.start_workers( P/JP,JP,JP*MEM_PER_PROCESS,'-t 40' ).then( (statuses) => {
     //console.log("workers started",statuses)
@@ -98,57 +88,27 @@ sys.then( info => PPK.connect("test",info) ).then( rapi => {
   
 })
 
-// формально и это может выдавать робота. почему нет. оно как бы такое и есть.
-// надо ток сигнатуру с полями - макро-портами.
+// функция порождения схемы вычислений (в форме блока)
 function compute1( rapi,worker_ids, n, sync ) {
-  //let data =  new Float32Array( 2 + DN / P )
-
-  //let p_data = rapi.add_data( data )
-
+  // блок начальных данных
   let init = INIT.robot( rapi, "init1", worker_ids, (args,index,local_rapi) => {
-    let data = new Float32Array( args.DN / args.P )
-    //return { left:0, right: 0, payload: [data]}    
+    let data = new Float32Array( args.DN / args.P )    
     return local_rapi.submit_payload_inmem( data ).then( pi => {
       return {left:0, right:0, payload_info: [pi] }
     })
   }, {DN,P})
 
+  // блок вычислений
   let r1 = STENCIL_1D.robot( rapi, "robo1", worker_ids, (x,left,right) => (left+right)/2 + Math.random() )
+  // блок для повтора итераций
   let pr = PASS.robot( rapi, "pass1", worker_ids, n )
 
-  // нач данные
+  // начальные данные
   LINK.create( rapi, init.output, r1.input )
 
-  //console.log( pr.iterations )
-
   // кольцо
-  /*
-  LIB.create_port_link( rapi, r1.output, pr.input )
-  LIB.create_port_link( rapi, pr.output, r1.input )
-  */
-  
-  //LINK.create( rapi, r1.output, vis_robot.input )
-  //LINK.create( rapi, vis_robot.output, pr.input )
-
   LINK.create( rapi, r1.output, pr.input )
-  
-  if (!sync) {
-     LINK.create( rapi, pr.output, r1.input )
-  }
-  else 
-  {  // синхронизация кольца
-    // перспектива
-    //let j1 = LIB.create_port_join( rapi, pr.output, merge1.output )
-    //LIB.create_port_link( rapi, j1.output, r1.input )
-
-    let merge1 = REDUCE_P.robot( rapi,"iters", worker_ids,(vals,counter) => counter )
-    LINK.create( rapi, pr.iterations, merge1.input )
-
-    let sync = MAP2.robot( rapi,"sync", worker_ids, (vals) => vals[0] )
-    LINK.create( rapi, pr.output, sync.input ) 
-    LINK.create( rapi, merge1.output, sync.input2, true ) 
-    LINK.create( rapi, sync.output, r1.input, true ) 
-  }
+  LINK.create( rapi, pr.output, r1.input )
 
   let deployed = Promise.all( [r1.deployed, pr.deployed] )
 
@@ -156,23 +116,11 @@ function compute1( rapi,worker_ids, n, sync ) {
 }
 
 ////////////////////////////////
-//import * as F from "./f.js"
 
 function main( rapi, worker_ids ) {
   console.log("main called")
-
-  // let visr = vis1( rapi, worker_ids )
-
-  //let iters = 1001*3;
+  
   let c1 = compute1( rapi, worker_ids, iters, sync_mode)
-
-  // let lp = LINK_PULL.create( rapi, c1.output, visr.input, worker_ids )
-
-  //console.log("compute ports are ",c1)
- // console.log("vis control is",lp.control)
-  //console.log("vis output is",visr.output)
-
-  // vis1( rapi, worker_ids, output[0], "part-0" )
 
   // ведем подсчет с момента когда роботы развернуты
   Promise.all( [c1.deployed] ).then( () => {
@@ -183,20 +131,19 @@ function main( rapi, worker_ids ) {
     // печать результата
     let t0 = performance.now()
     let data_promises = c1.final.map( x => rapi.read_cell( x ).next() )
-    //rapi.read_cell( c1.final[0] ).next().then( value => {
+   
     Promise.all( data_promises ).then( value => {
       let tdiff = performance.now()-t0
       console.timeEnd("compute")
-      //console.log("finished",value)
+      
       let fps = 1000*iters / tdiff
       let mps = fps * DN / 1000000
       console.error("P=",P,"DN=",DN,"JP=",JP,"iters=",iters, "seconds=",tdiff / 1000, "fps=",fps,"mps=", mps, "mps_per_runner=",mps / P)
       
-      
       rapi.get_one_payload( value[0].payload_info[0] ).then( data => {
          console.log(data)
          process.exit(0)
-      })      
+      })
       
     })
 

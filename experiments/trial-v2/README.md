@@ -4,10 +4,6 @@
 * Используется формула: `p_next = (p_left + p_right)/2 + Math.random(1)`
 * Код функции описан в файле [f.js](f.js)
 
-## Примечания
-Отличие от iterations:
-- дожидаемся завершения расчетов всех блоков
-- убрано впечатывание граничных значений в блок.
 
 ### Последовательное вычисление
 [sequential.js](sequential.js)
@@ -26,10 +22,11 @@
 
 ## Подготовка и запуск теста
 
+Система PPK работает в ОС Линукс (Дебиан) с установленными NodeJs и Python 3.
+
 ```
 git clone https://github.com/pavelvasev/ppk.git
 cd ppk
-git checkout --track origin/pavt2024
 npm install
 ```
 
