@@ -17,11 +17,14 @@ react @q1.output {: req |
 
 s1: ppk.shared @rapi "gr_view"
 react @s1.output {: vals |
-  console.log("shared gr view:",vals)
+  //console.log("shared gr view:",vals)
   shared_view.submit( vals )
 :}
 
 shared_view: cell []
+
+// корневые
+shared_view_root := read @shared_view | filter {: val | return !val.parent_id :} 
 
 s2: ppk.shared @rapi "abilities"
 abilities: cell []
@@ -283,9 +286,43 @@ process "do_text" { // тут пока все вместе только для �
   }
 }
 
+mixin "tree_node"
+process "do_button" {
+  in {
+    cell_id: cell
+    title: cell ""
+    msg_on_click: cell
+  }
 
-env: node {
-  repeater input=(read @shared_view | filter {: val | return val.type == "gr" :}) { sv |
+  src: simple_data_source @rapi (+ @cell_id "/data(cell)")
+  bind @src.output @title
+  src2: simple_data_source @rapi (+ @cell_id "/msg(cell)")
+  bind @src2.output @msg_on_click
+  
+  gui_items := {
+    dom.button @title {:
+      let lrapi = rapi.get()
+      lrapi.msg( msg_on_click.get() )
+    :}
+  }
+}
+
+process "do_container2" {
+  in {
+    cell_id: cell
+    title: cell ""    
+  }
+  apply {: cell_id_value |
+    let k = create_do_container()
+  :} @cell_id
+}
+
+mixin "tree_lift"
+process "create_from_records" {
+  in {
+    records: cell
+  }
+  repeater input=(read @records | filter {: val | return val.type == "gr" :}) { sv |
     init_params := get @sv "params"
     //print "init_params=" @init_params
     s: subgr (get @sv "id") **init_params
@@ -294,14 +331,62 @@ env: node {
   // idea repeater input=@shared_view[type="combobox"] а хорошая штука css была. и питон молодец.
   // типа фильтр в синтаксическом геттере.. в css такое есть. и в питоне в либах.
   // как-то кстати питон вот в индекс умеет передать выражение.. как?
-  repeater input=(read @shared_view | filter {: val | return val.type == "combobox" :}) { sv |
+  repeater input=(read @records | filter {: val | return val.type == "combobox" :}) { sv |
     init_params := get @sv "params"
     do_combobox (get @sv "id") **init_params
   }
-  repeater input=(read @shared_view | filter {: val | return val.type == "text" :}) { sv |
+  repeater input=(read @records | filter {: val | return val.type == "text" :}) { sv |
     init_params := get @sv "params"
     do_text (get @sv "id") **init_params
   }
+  repeater input=(read @records | filter {: val | return val.type == "button" :}) { sv |
+    init_params := get @sv "params"
+    do_button (get @sv "id") **init_params
+  }
+  repeater input=(read @records | filter {: val | return val.type == "container" :}) { sv |    
+    apply_children @mk_container (get @sv "id")
+    /*
+    apply {: cell_id_value |
+      let k = create_do_container({})
+      k.cell_id.submit( cell_id_value )
+      console.log("container created",k,"self is",self)
+      self.append( k )
+    :} (get @sv "id")
+    */
+  }
+}
+
+mixin "tree_node"
+process "do_container" {
+  in {
+    cell_id: cell
+    title: cell ""    
+  }
+
+  shared_view_my := filter @shared_view {: val | 
+    console.log("compa",val.parent_id,cell_id.get())
+    return val.parent_id == cell_id.get() :} 
+
+    print "shared_view_my=" @shared_view_my
+
+  create_from_records @shared_view_my
+  
+  gui_items := {
+    dom.column {            
+      parts.create (parts.get @self.children "gui_items")
+    }
+  }
+
+  scene_items := {
+    parts.create (parts.get @self.children "scene_items")
+  }
+}
+
+mk_container := { id | do_container @id }
+
+env: node {
+  print "shared_view_root=" @shared_view_root
+  create_from_records @shared_view_root  
 }
 
 /////////////

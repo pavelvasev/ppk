@@ -15,7 +15,7 @@ import * as fs from 'node:fs'; // https://nodejs.org/api/fs.html
   - ключ для авто-открытия браузера. почему бы и нет. 
 */
 
-export function start( open_browser=true ) {  
+export function start( open_browser=false ) {  
     let cwd = path.resolve( __dirname, "gr4/dist" )
     let args = [`http-server`] //,"--silent"] 
     // --silent = не печатать логи 

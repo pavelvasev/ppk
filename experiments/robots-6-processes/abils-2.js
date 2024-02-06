@@ -71,6 +71,11 @@ export function setup_visuals( rapi, worker_ids, calc_output ) {
     rapi.start( val.code, val.arg, val.target)
   })
 
+  rapi.query("stop_process").done( val => {
+    console.log("see msg for stop_process! val=",val)
+    rapi.stop( val.id )
+  })
+
   let procs = rapi.shared_list_reader("abils")
   procs.added.subscribe( val => {
     //console.log("see process request",val)
@@ -78,7 +83,8 @@ export function setup_visuals( rapi, worker_ids, calc_output ) {
     console.log("see process request",val,{code,arg})
 
     if (code == "gr1") {
-      let r = main_3( rapi, worker_ids, calc_output )
+      let id = "id_"+Math.random()
+      let r = main_3( rapi, worker_ids, calc_output,id )
     }
   })
 
@@ -88,23 +94,30 @@ export function setup_visuals( rapi, worker_ids, calc_output ) {
 
 }
 
-function main_3( rapi, worker_ids, calc_output ) {
+function main_3( rapi, worker_ids, calc_output, id ) {
+
+  function mkid(part_id) { return id + "/"+part_id }
+
+  rapi.shared("gr_view").submit({type:"container",id:mkid("c1")})
+
+  rapi.shared("gr_view").submit({type:"button",id:mkid("gr1id_b"),parent_id:mkid("c1"),
+      params:{title: "Стоп", msg: {label:"stop_process"}}})
 
   //////////////////////////// график
 
-  rapi.shared("gr_view").submit({type:"gr",id:"gr1id",params:{sx: 10, sy: 2000}})
-  let gr1id = rapi.open_cell("gr1id/data")
-  let gr1id_p = rapi.create_cell("gr1id/params")
+  rapi.shared("gr_view").submit({type:"gr",id:mkid("gr1id"),parent_id:mkid("c1"),params:{sx: 10, sy: 2000}})
+  let gr1id = rapi.open_cell(mkid("gr1id/data"))
+  let gr1id_p = rapi.create_cell(mkid("gr1id/params"))
 
   //////////////////////////// граф визуализации
 
-  let visr = vis1( rapi, "vis1", worker_ids )
+  let visr = vis1( rapi, mkid("vis1"), worker_ids )
   console.log('connecting via pull',calc_output, visr.input)
   let lp = LINK_PULL.create( rapi, calc_output, visr.input, worker_ids )
 
   //////////////////////////// связь графика и графа визуализации
-  rapi.create_link( visr.output[0], "gr1id/data" )
-  rapi.create_link( "gr1id/updated", lp.control[0] )
+  rapi.create_link( visr.output[0], mkid("gr1id/data") )
+  rapi.create_link( mkid("gr1id/updated"), lp.control[0] )
   console.log("visr.output[0]=",visr.output[0])
 
   //////////////////////////// начальный запрос
@@ -113,7 +126,7 @@ function main_3( rapi, worker_ids, calc_output ) {
   console.log("submitting to control_cell",lp.control[0])
   control_cell.submit( 22 )
   //let data_port = rapi.read_cell( visr.output[0] ) 
-  let data_port = rapi.read_cell( "gr1id/data" )
+  let data_port = rapi.read_cell( mkid("gr1id/data") )
 
   function tick() {
     console.log("waiting data port..",data_port.id)
