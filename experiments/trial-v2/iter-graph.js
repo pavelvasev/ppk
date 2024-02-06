@@ -115,6 +115,15 @@ function main( rapi, worker_ids ) {
   
   // получаем результаты
   rapi.query( "finished").done( (msg) => {
+    if (first_time) {      
+      first_time = false      
+      // необходимо закрыть каналы начальных данных
+      // так как это те же каналы что и каналы с результатами
+      // и если их не закрыть, то мы прочитаем начальные данные 
+      // (т.к. канал перепосылает данные вновь подключившимся)
+      p_data.forEach( c => c.close() )
+    }
+
     if (msg.k == 0) finish_block_0 = msg
 
     finish_counter = finish_counter+1
