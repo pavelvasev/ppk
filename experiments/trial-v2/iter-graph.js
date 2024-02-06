@@ -52,11 +52,10 @@ sys.then( info => PPK.connect("test",info) ).then( rapi => {
 ////////////////////////////////
 
 function main( rapi, worker_ids ) {
-  let n = iters
+  
   let data =  new Float32Array( DN / P )
 
-  setup_iter_operation( rapi )
-  rapi.define("step1", rapi.js(F.f_part))
+  setup_iter_operation( rapi )  
 
   // готовим начальные данные
   let init_data = rapi.submit_payload( [data] )
@@ -75,7 +74,9 @@ function main( rapi, worker_ids ) {
   // порождение графа одной итерации.
   // data_arr - каналы с данными предыдущей итерации
   // data_arr_next - каналы куда записать результаты итерации
-  function iter_step_graph(data_arr,data_arr_next) {
+  function define_iter_graph(data_arr,data_arr_next) {
+
+    rapi.define("step1", rapi.js(F.f_part))
 
     let graph = {}
 
@@ -92,7 +93,7 @@ function main( rapi, worker_ids ) {
   }
 
   // строим граф одной итерации
-  let iter_graph = iter_step_graph( 
+  let iter_graph = define_iter_graph( 
       (k) => { return rapi.open_cell(k.toString()) },
       (k) => { return rapi.open_cell(k.toString()) }
   )
@@ -100,12 +101,8 @@ function main( rapi, worker_ids ) {
   //console.log("graph=",JSON.stringify(iter_graph,null," "))
 
   // запускаем вычисление, состоящие из итераций
-  // главный аргумент - граф одной итерации iter_graph
-  // p_data - набор каналов с входными данными для графа итерации, 
-  // и в эти же каналы граф записывает свой результат
-  for (let k=0; k<P; k++)
-     rapi.exec( rapi.operation( "next_iter",{},{lang_env:"js"}), 
-        {arg: {k, N: n, P, my_id: worker_ids[k], p_data, iter_graph}, runner_id: worker_ids[k]})
+
+  compute_iter_graph( rapi, worker_ids, iter_graph, p_data, iters )
 
   // ждем результаты
 
@@ -141,20 +138,36 @@ function main( rapi, worker_ids ) {
       })
     }
 
-
   })
 
 }
 
 ////////////////////////////////////////////////////
-////////////// настройка операции запуска вычислений 
+////////////// операция запуска вычислений /////////
 ////////////////////////////////////////////////////
-// по сути, это является системной функцией
+// по сути, это является системной функцией 
 // и в коды приложения не входит
 
-function setup_iter_operation( rapi ) {
+/* compute_iter_graph - операция запуска вычисления, состоящего из итераций
 
-// это алгоритм, который работает на исполнителях и в цикле запускает граф итерации
+  iter_graph - граф одной итерации
+  p_data - набор каналов с входными данными для графа итерации, 
+  worker_ids - идентификаторы исполнителей
+  iters - кол-во итераций
+  и в эти же каналы граф записывает свой результат
+
+*/
+function compute_iter_graph( rapi, worker_ids, iter_graph, p_data, n )
+{  
+  for (let k=0; k<worker_ids.length; k++)
+     rapi.exec( rapi.operation( "next_iter",{},{lang_env:"js"}), 
+        {arg: {k, N: n, P, my_id: worker_ids[k], p_data, iter_graph}, runner_id: worker_ids[k]})
+}
+
+
+// функция настройки системы для работы compute_iter_graph
+function setup_iter_operation( rapi ) {
+  // алгоритм, который работает на исполнителях и в цикле запускает граф итерации
   let next_iter = arg => {
 
     function get_iter_tasks(data_arr,runner_id) {
@@ -197,4 +210,4 @@ function setup_iter_operation( rapi ) {
   }
   rapi.define("next_iter", rapi.js(next_iter))
 
-}  
+}
