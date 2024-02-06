@@ -55,9 +55,97 @@ function main( rapi, worker_ids ) {
   let n = iters
   let data =  new Float32Array( DN / P )
 
-  console.log("spawning",n)
+  setup_iter_operation( rapi )
+  rapi.define("step1", rapi.js(F.f_part))
 
-  // это алгоритм, который работает на исполнителях и в цикле запускает граф итерации
+  // готовим начальные данные
+  let init_data = rapi.submit_payload( [data] )
+  let p_data = []
+  
+  for (let k=0; k<P; k++) {
+    let c = rapi.create_cell( k.toString() )
+    init_data.then( pi => {
+      c.submit( {left:0, right:0, payload_info:pi} ) 
+    })
+    p_data.push( c )
+  }
+
+  console.time("compute")  
+
+  // порождение графа одной итерации.
+  // data_arr - каналы с данными предыдущей итерации
+  // data_arr_next - каналы куда записать результаты итерации
+  function iter_step_graph(data_arr,data_arr_next) {
+
+    let graph = {}
+
+    for (let k=0; k<P; k++) {
+      let left_block = k > 0 ? rapi.skip_payloads( data_arr(k-1) ) : null
+      let right_block = k < P-1 ? rapi.skip_payloads( data_arr(k+1) ) : null
+      let res = rapi.operation("step1", 
+              {input: rapi.reuse(data_arr(k)),left_block, right_block}, 
+              {lang_env: "js", output_cell: data_arr_next(k)} )
+      graph[ worker_ids[k] ] = [res]
+    }
+
+    return graph;    
+  }
+
+  // строим граф одной итерации
+  let iter_graph = iter_step_graph( 
+      (k) => { return rapi.open_cell(k.toString()) },
+      (k) => { return rapi.open_cell(k.toString()) }
+  )
+
+  //console.log("graph=",JSON.stringify(iter_graph,null," "))
+
+  // запускаем вычисление, состоящие из итераций
+  // главный аргумент - граф одной итерации iter_graph
+  // p_data - набор каналов с входными данными для графа итерации, 
+  // и в эти же каналы граф записывает свой результат
+  for (let k=0; k<P; k++)
+     rapi.exec( rapi.operation( "next_iter",{},{lang_env:"js"}), 
+        {arg: {k, N: n, P, my_id: worker_ids[k], p_data, iter_graph}, runner_id: worker_ids[k]})
+
+  // ждем результаты
+
+  let first_time = true
+  let finish_counter = 0
+  let finish_block_0
+  
+  // получаем результаты
+  rapi.query( "finished").done( (msg) => {
+    if (msg.k == 0) finish_block_0 = msg
+
+    finish_counter = finish_counter+1
+    if (finish_counter == P) {
+      console.timeEnd("compute")
+
+      console.log("finish_block_0=",finish_block_0)
+      let cell = rapi.read_cell( finish_block_0.data.id )
+      console.log("reading cell ",finish_block_0.data.id )
+      cell.next().then( res => {
+        rapi.get_payloads( res.payload_info ).then( data_r => {
+          console.log(finish_block_0.k,data_r)
+          process.exit()
+        })
+      })
+    }
+
+
+  })
+
+}
+
+////////////////////////////////////////////////////
+////////////// настройка операции запуска вычислений 
+////////////////////////////////////////////////////
+// по сути, это является системной функцией
+// и в коды приложения не входит
+
+function setup_iter_operation( rapi ) {
+
+// это алгоритм, который работает на исполнителях и в цикле запускает граф итерации
   let next_iter = arg => {
 
     function get_iter_tasks(data_arr,runner_id) {
@@ -100,90 +188,4 @@ function main( rapi, worker_ids ) {
   }
   rapi.define("next_iter", rapi.js(next_iter))
 
-  ////////////////////////////////////
-
-  rapi.define("step1", rapi.js(F.f_part))
-
-  console.time("compute")
-
-  // порождение графа одной итерации.
-  // data_arr - каналы с данными предыдущей итерации
-  // data_arr_next - каналы куда записать результаты итерации
-  function iter_step_graph(data_arr,data_arr_next) {
-
-    let graph = {}
-
-    for (let k=0; k<P; k++) {
-      let left_block = k > 0 ? rapi.skip_payloads( data_arr(k-1) ) : null
-      let right_block = k < P-1 ? rapi.skip_payloads( data_arr(k+1) ) : null
-      let res = rapi.operation("step1", 
-              {input: rapi.reuse(data_arr(k)),left_block, right_block}, 
-              {lang_env: "js", output_cell: data_arr_next(k)} )
-      graph[ worker_ids[k] ] = [res]
-    }
-
-    return graph;    
-  }
-
-  // строим граф одной итерации
-  let iter_graph = iter_step_graph( 
-      (k) => { return rapi.open_cell(k.toString()) },
-      (k) => { return rapi.open_cell(k.toString()) }
-  )
-
-  //console.log("graph=",JSON.stringify(iter_graph,null," "))
-
-  // готовим начальные данные
-  let init_data = rapi.submit_payload( [data] )
-  let p_data = []
-  
-  for (let k=0; k<P; k++) {
-    let c = rapi.create_cell( k.toString() )
-    init_data.then( pi => {
-      c.submit( {left:0, right:0, payload_info:pi} ) 
-    })
-    p_data.push( c )    
-  }
-
-  // запускаем вычисление, состоящие из итераций
-  // главный аргумент - граф одной итерации iter_graph
-  // p_data - набор каналов с входными данными для графа итерации, 
-  // и в эти же каналы граф записывает свой результат
-  for (let k=0; k<P; k++)
-     rapi.exec( rapi.operation( "next_iter",{},{lang_env:"js"}), 
-        {arg: {k, N: n, P, my_id: worker_ids[k], p_data, iter_graph}, runner_id: worker_ids[k]})
-
-  // ждем результаты
-
-  let first_time = true
-  let finish_counter = 0
-  let finish_block_0
-  
-  rapi.query( "finished").done( (msg) => {
-    if (first_time) {      
-      first_time = false
-      p_data.forEach( c => c.close() )
-      // зачем их закрывать? зачем-то надо было..
-    }
-
-    if (msg.k == 0) finish_block_0 = msg
-
-    finish_counter = finish_counter+1
-    if (finish_counter == P) {
-      console.timeEnd("compute")
-
-      console.log("finish_block_0=",finish_block_0)
-      let cell = rapi.read_cell( finish_block_0.data.id )
-      console.log("reading cell ",finish_block_0.data.id )
-      cell.next().then( res => {
-        rapi.get_payloads( res.payload_info ).then( data_r => {
-          console.log(finish_block_0.k,data_r)
-          process.exit()
-        })
-      })
-    }
-
-
-  })
-
-}
+}  

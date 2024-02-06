@@ -8,14 +8,30 @@ df1 = pd.read_csv("mean.csv")
 def make(df,interest):
   adf = df[ df["DN"] == interest ].drop( ["DN"],axis=1 )
   adf = adf.pivot(index='P', columns='CMD', values='SECONDS')
-  print(interest)
+  print("")
+  print( "# Размер сетки " + str(interest))
 
   block_size = [str(int(interest/x)) for x in adf.index]
   adf.insert(0,"b",block_size)
   print(adf.to_markdown())
   adf.plot(kind='bar',title=interest)#,colormap="Greens");
   #plt.show()
-  plt.savefig(str(interest)+'.png')
+  fname = str(interest)+'.png'
+  plt.savefig(fname)
+  print("")
+  print(f"![]({fname})")
+  
+print("""
+## Результаты
+
+* P - количество исполнителей.
+* b - размер одного блока (кол-во ячеек).
+* Значения в таблицах - время в секундах.
+* Запуски проведены в количестве 4х штук и времена взяты итоговые - минимальные из них.
+* Процессор Ryzen 1700x.
+
+Список всех запусков [data.csv](data.csv) и итоговые времена [mean.csv](mean.csv)
+""")
   
 make( df1, 100000 )
 make( df1, 1000000 )

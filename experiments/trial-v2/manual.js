@@ -113,7 +113,6 @@ function main( rapi, worker_ids ) {
   
   rapi.query( "finished").done( (msg) => {
 
-
     //console.log("see finished",msg)
     if (msg.k == 0) finish_block_0 = msg
 

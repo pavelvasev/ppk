@@ -124,16 +124,18 @@ function main( rapi, worker_ids ) {
   
   let c1 = compute1( rapi, worker_ids, iters, sync_mode)
 
+  console.time("compute")
+
   // ведем подсчет с момента когда роботы развернуты
   Promise.all( [c1.deployed] ).then( () => {
 
-    console.log("robots spawned. waiting finish")
-    console.time("compute")
+    console.log("robots spawned. waiting finish")    
 
     // печать результата
     let t0 = performance.now()
-    let data_promises = c1.final.map( x => rapi.read_cell( x ).next() )
-   
+    // идея - печать результата можно завернуть в блок-схему
+    let data_promises = c1.final.map( x => rapi.read_cell( x ).next() )   
+
     Promise.all( data_promises ).then( value => {
       let tdiff = performance.now()-t0
       console.timeEnd("compute")
@@ -150,6 +152,5 @@ function main( rapi, worker_ids ) {
     })
 
   })
-
 
 }
