@@ -58,12 +58,27 @@ process "simple_data_source" {
   :} @rapi @data_port_id
 }
 
+process "pause" {
+  in {
+    input: channel
+    t: cell 0
+  }
+  output: channel
+
+  react @input {: iv |    
+    setTimeout( () => {
+      //console.log("sending val after pause",t.get())
+      output.submit( iv )
+      }, t.get() || 0 )
+  :}
+}
+
 process "simple_data_target" {
 
   in {
     c_rapi: cell
     data_port_id: cell
-    input: channel
+    input: channel    
   }
 
   counter: cell 0
@@ -162,7 +177,7 @@ process "subgr" { // тут пока все вместе только для у�
       
       param_src: simple_data_source @rapi (+ @cell_id "/params(cell)")
 
-      simple_data_target @rapi ( + @cell_id "/updated(cell)") input=@src.counter
+      simple_data_target @rapi ( + @cell_id "/updated(cell)") input=(pause @src.counter 30)
 
       react @param_src.output {: params |
          //console.log("incoming params=",params)
@@ -302,6 +317,7 @@ process "do_button" {
   gui_items := {
     dom.button @title {:
       let lrapi = rapi.get()
+      console.log("btn clicked, sending msg=",msg_on_click.get())
       lrapi.msg( msg_on_click.get() )
     :}
   }

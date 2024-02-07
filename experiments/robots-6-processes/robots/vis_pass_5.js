@@ -74,7 +74,7 @@ function start_robot( rapi, runner_id, args ) {
     function tick() {
       in_data.next().then( val => {
         //console.log("vis-pass. iter counter=",counter)
-        //if (verbose)
+        if (verbose)
           console.log("vis-pass robot see input data id=",id,"iter counter=",counter,"btw required=",required)
 
         //if (required > 0) required--
@@ -109,7 +109,7 @@ function start_robot( rapi, runner_id, args ) {
         required = counter + SHIFT_AHEAD
         // да похоже так и есть.. тонкое местечко..
 
-        //if (verbose)
+        if (verbose)
             console.log("vis-pass-5 robot see in-control. id=",id,"sending randevu=",required)
         
         out_randevu.submit( required )
