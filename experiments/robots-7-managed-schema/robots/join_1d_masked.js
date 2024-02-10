@@ -93,7 +93,7 @@ function start_robot( rapi, runner_id, args ) {
       console.log("join-1d-masked robot stop - client stopped")
       in_data.map( x => x.stop() )
       out.stop()
-    } )
+    } )   
 
     return true
 

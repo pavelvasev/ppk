@@ -460,8 +460,8 @@ export class ClientApi {
   ///// запуск процессов
 
   // возвращает функцию остановки
-  start( code, arg, worker_id ) {
-    let p = this.shared_list_writer(worker_id).submit( {code, arg} )    
+  start_process( type, arg, target_worker_id, id) {
+    let p = this.shared_list_writer(target_worker_id).submit( {type, arg, id} )
     return p.delete
   }
 
