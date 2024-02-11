@@ -62,6 +62,101 @@ function vis1( rapi, id, worker_ids ) {
   return { input: downsample.input, output: joinr.output }
 }
 
+export function link_process( rapi, id, worker_ids ) 
+{
+
+  function mkid(part_id) { return id + "/"+part_id }
+
+  let stop_fn = []
+  let u
+  let container_id = mkid("c1")
+
+  u = rapi.shared("gr_view").submit({type:"container",id:container_id})
+  stop_fn.push( u.delete ) // todo idea сделать функцию добавления в массив этот
+
+  let input = [ ["--",""] ]
+
+  u = rapi.shared(container_id).submit({type:"combobox",id:mkid("src"),
+       params:{title: "Источник",input}})  
+  stop_fn.push( u.delete )
+
+  u = rapi.shared(container_id).submit({type:"combobox",id:mkid("tgt"),
+       params:{title: "Приёмник",input}})  
+  stop_fn.push( u.delete )
+
+  /////////////////////////
+
+  let src_input_cell = rapi.create_cell(mkid("src/input"))
+  let tgt_input_cell = rapi.create_cell(mkid("tgt/input"))
+
+  let ports = rapi.shared_list_reader("ports")
+  let ports_values = []
+  ports.changed.subscribe( val => {
+    console.log("link see ports change:",val)
+    ports_values = val
+
+    input = [ ["--",""] ].concat( val.map( (val) => {
+      return [ [val.id,val.id]]
+    }).flat(1) )
+
+    src_input_cell.submit( input )
+    tgt_input_cell.submit( input )
+    
+  })
+
+  /////////////////////////
+
+  let selected_src = rapi.read_cell( mkid("src/index") )
+  stop_fn.push( selected_src.stop.bind(selected_src) )
+  let selected_tgt = rapi.read_cell( mkid("tgt/index") )
+  stop_fn.push( selected_tgt.stop.bind(selected_tgt) )
+
+  let selected_src_value
+  let selected_tgt_value
+  let link
+
+  function thus_update_link() {
+    if (link)
+      link.destroy()
+    link = null
+    console.log("thus_update_link",selected_src_value, selected_tgt_value)
+    if (selected_src_value && selected_tgt_value) {
+      console.log("thus creating")
+      link = LINK.create( rapi, selected_src_value, selected_tgt_value, true ) 
+    }
+  }
+  stop_fn.push( () => link.destroy() )
+
+  function tick() {
+    selected_src.next().then( value => {
+      console.log("link src =",value)      
+      selected_src_value = ports_values[ value-1 ]?.channels 
+      thus_update_link()
+      tick()
+    }, () => {})
+  }
+  tick()  
+
+  function tick2() {
+    selected_tgt.next().then( value => {
+      console.log("link tgt =",value)
+      selected_tgt_value = ports_values[ value-1 ]?.channels
+      //console.log( {ports_values, value, selected_tgt_value})
+      thus_update_link()
+      tick2()
+    }, () => {})
+  }
+  tick2()
+
+  return { stop: () => {
+    stop_fn.map( (x,index) => {
+      //console.log("stop_fn calling x",x, index)
+      x()
+    } )
+  }}
+}
+
+
 export function main_3( rapi, id, worker_ids ) {
 
   /* тема удаления.. 
@@ -77,17 +172,18 @@ export function main_3( rapi, id, worker_ids ) {
 
   let stop_fn = []
   let u
+  let container_id = mkid("c1")
 
-  u = rapi.shared("gr_view").submit({type:"container",id:mkid("c1")})
+  u = rapi.shared("gr_view").submit({type:"container",id:container_id})
   stop_fn.push( u.delete ) // todo idea сделать функцию добавления в массив этот
 
-  u = rapi.shared("gr_view").submit({type:"button",id:mkid("gr1id_b"),parent_id:mkid("c1"),
+  u = rapi.shared(container_id).submit({type:"button",id:mkid("gr1id_b"),
        params:{title: "Стоп", msg_on_click: {label:"stop_process", id }}})
   stop_fn.push( u.delete )
 
   //////////////////////////// график
 
-  u = rapi.shared("gr_view").submit({type:"gr",id:mkid("gr1id"),parent_id:mkid("c1"),params:{sx: 10, sy: 2000}})
+  u = rapi.shared(container_id).submit({type:"gr",id:mkid("gr1id"),params:{sx: 10, sy: 2000}})
   stop_fn.push( u.delete )
 
   let gr1id = rapi.open_cell(mkid("gr1id/data"))
@@ -138,11 +234,11 @@ export function main_3( rapi, id, worker_ids ) {
 
   //console.log("CCC",stop_fn)
 
-  return () => {
+  return { input: lp.input, stop: () => {
     stop_fn.map( (x,index) => {
       //console.log("stop_fn calling x",x, index)
       x()
     } )
-  }
+  } }
 
 }

@@ -109,9 +109,11 @@ sys.then( info => PPK.connect("test",info) ).then( rapi => {
 function compute1( rapi, id, worker_ids, n, sync ) {
   //let data =  new Float32Array( 2 + DN / P )
 
+  function mkid(part_id) { return id + "/"+part_id }  
+
   //let p_data = rapi.add_data( data )
 
-  let init = INIT.robot( rapi, "init1", worker_ids, (args,index,local_rapi) => {
+  let init = INIT.robot( rapi, mkid("init1"), worker_ids, (args,index,local_rapi) => {
     let data = new Float32Array( args.DN / args.P )
     //return { left:0, right: 0, payload: [data]}    
     return local_rapi.submit_payload_inmem( data ).then( pi => {
@@ -119,8 +121,8 @@ function compute1( rapi, id, worker_ids, n, sync ) {
     })
   }, {DN,P})
 
-  let r1 = STENCIL_1D.robot( rapi, "robo1", worker_ids, (x,left,right) => (left+right)/2 + Math.random() )
-  let pr = PASS.robot( rapi, "pass1", worker_ids, n )
+  let r1 = STENCIL_1D.robot( rapi, mkid("robo1"), worker_ids, (x,left,right) => (left+right)/2 + Math.random() )
+  let pr = PASS.robot( rapi, mkid("pass1"), worker_ids, n )
 
   // нач данные
   LINK.create( rapi, init.output, r1.input )
@@ -147,10 +149,10 @@ function compute1( rapi, id, worker_ids, n, sync ) {
     //let j1 = LIB.create_port_join( rapi, pr.output, merge1.output )
     //LIB.create_port_link( rapi, j1.output, r1.input )
 
-    let merge1 = REDUCE_P.robot( rapi,"iters", worker_ids,(vals,counter) => counter )
+    let merge1 = REDUCE_P.robot( rapi,mkid("iters"), worker_ids,(vals,counter) => counter )
     LINK.create( rapi, pr.iterations, merge1.input )
 
-    let sync = MAP2.robot( rapi,"sync", worker_ids, (vals) => vals[0] )
+    let sync = MAP2.robot( rapi,mkid("sync"), worker_ids, (vals) => vals[0] )
     LINK.create( rapi, pr.output, sync.input ) 
     LINK.create( rapi, merge1.output, sync.input2, true ) 
     LINK.create( rapi, sync.output, r1.input, true ) 
@@ -164,17 +166,31 @@ function compute1( rapi, id, worker_ids, n, sync ) {
 ////////////////////////////////
 //import * as F from "./f.js"
 
+  let table= { 
+    compute: {
+      title: "Вычисление",
+      fn: (rapi, id, worker_ids) => compute1( rapi, id, worker_ids, iters, sync_mode),
+      ports: []}, 
+    vis: { 
+      title: "График",
+      fn: ABILITIES.main_3,
+      ports: {} },
+    link_process: { 
+      title: "Связь",
+      fn: ABILITIES.link_process, ports: {} } 
+  }
+
+
 function main( rapi, worker_ids ) {
   console.log("main called")
 
-  let table= { compute: (rapi, id, worker_ids) => compute1( rapi, id, worker_ids, iters, sync_mode),
-               vis: ABILITIES.main_3 }
-
   setup_process_engine( rapi, worker_ids, table)
 
+  // todo это вычислимо из tablica
   rapi.shared("abilities").submit({title:"Вычисление",msg:{label:"start_process",type:"compute",target:"pr_list"}})
   rapi.shared("abilities").submit({title:"График",msg:{label:"start_process",type:"vis",target:"pr_list"}})
   rapi.shared("abilities").submit({title:"Счетчик",msg:{label:"start_process",type:"show_iters",target:"pr_list"}})  
+  rapi.shared("abilities").submit({title:"Связь",msg:{label:"start_process",type:"link_process",target:"pr_list"}})  
   
   //let stop = rapi.start_process("compute",{},"pr_list","compute1")
 
@@ -220,14 +236,23 @@ export function setup_process_engine( rapi, worker_ids,process_types_table = {} 
     console.log("see process request",val,{type,arg})
 
     id ||= type + "_p_"+(id_counter++)
-    let fn = process_types_table[ type ]
+    let fn = process_types_table[ type ].fn
 
     if (!fn) {
       console.error("process start funciton not found for type",fn)
+      return
     }
 
     let r = fn( rapi, id, worker_ids )
-    stop_process_fn2[ id ] = r
+
+    if (!r.stop) {
+      console.error("no stop record for type ",type)
+      r.stop = () => {}
+    }
+
+    let stop_publish_ports = publish_ports( rapi, id, r )
+
+    stop_process_fn2[ id ] = () => { r.stop(); stop_publish_ports() }
  
   })
 
@@ -241,4 +266,24 @@ export function setup_process_engine( rapi, worker_ids,process_types_table = {} 
     if (fn) fn(); else console.error("delete: process not found")
   })
 
+}
+
+function publish_ports( rapi, id, ports_record ) {
+  let stop_arr = []
+
+  for (let k in ports_record) {
+    let r = ports_record[k]
+    if (Array.isArray(r)) {
+      console.log("found port:",id+"/"+k,r)
+      let unsub = rapi.shared_list_writer("ports").submit({id:id+"/"+k,channels:r})
+      stop_arr.push( unsub.delete )      
+    }
+  }
+
+  return () => {
+    stop_arr.map( (x,index) => {
+      //console.log("stop_fn calling x",x, index)
+      x()
+    } )
+  }
 }

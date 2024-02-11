@@ -10,25 +10,10 @@ import parts="std/parts.cl"
 
 rapi := ppk.connect
 
-q1: ppk.query @rapi "gr(cell)"
-react @q1.output {: req |
-   console.log("see gr req",req)
-:}
 
-s1: ppk.shared @rapi "gr_view"
-react @s1.output {: vals |
-  //console.log("shared gr view:",vals)
-  shared_view.submit( vals )
-:}
+shared_view := ppk.shared @rapi "gr_view"
 
-shared_view: cell []
-
-// корневые
-shared_view_root := read @shared_view | filter {: val | return !val.parent_id :} 
-
-s2: ppk.shared @rapi "abilities"
-abilities: cell []
-bind @s2.output @abilities 
+abilities := ppk.shared @rapi "abilities"
 // каждая запись это
 // title, msg_template
 
@@ -278,13 +263,17 @@ mixin "tree_node"
 process "do_combobox" {
   in {
     cell_id: cell
-    input: cell
+    input: cell // таблица значений
     input_index: cell
     title: cell ""
   }
 
   index: cell
   simple_data_target @rapi ( + @cell_id "/index(cell)") input=@index
+
+  src_input: simple_data_source @rapi ( + @cell_id "/input(cell)")
+  bind @src_input.output @input
+  // но в целом это странно и должно быть автоматом - idea 
   
   gui_items := {
     dom.element "span" @title
@@ -330,15 +319,6 @@ process "do_button" {
   }
 }
 
-process "do_container2" {
-  in {
-    cell_id: cell
-    title: cell ""    
-  }
-  apply {: cell_id_value |
-    let k = create_do_container()
-  :} @cell_id
-}
 
 mixin "tree_lift"
 process "create_from_records" {
@@ -386,11 +366,9 @@ process "do_container" {
     title: cell ""    
   }
 
-  shared_view_my := filter @shared_view {: val | 
-    console.log("compa",val.parent_id,cell_id.get())
-    return val.parent_id == cell_id.get() :} 
-
-    print "shared_view_my=" @shared_view_my
+  shared_view_my := ppk.shared @rapi @cell_id
+  
+  print "shared_view_my=" @shared_view_my
 
   create_from_records @shared_view_my
   
@@ -414,7 +392,7 @@ process "show_processes_gui" {
 
   print "pr_list=" @pr_list
   
-  gui_items := {
+  gui_items_row2 := {    
     dom.element "span" "Процессы:"
     
       repeater input = @pr_list { item |
@@ -427,16 +405,17 @@ process "show_processes_gui" {
             console.log("btn clicked, sending msg=",msg)
             lrapi.msg( msg )
             :}
-        }
-      }  
+        }        
+    }  
   }
 }
 
 env: node {
-  print "shared_view_root=" @shared_view_root
-  create_from_records @shared_view_root
 
   show_processes_gui
+
+  print "shared_view_root=" @shared_view
+  create_from_records @shared_view  
 }
 
 /////////////
@@ -519,12 +498,16 @@ process "main" {
             let lrapi = rapi.get()
             lrapi.msg( sv.msg )
           :}
-      }    
+      }
+    }
+
+    dom.row style="gap:0.5em;" {
+      parts.create (parts.get @env.children "gui_items_row2")
     }
 
     output_space: dom.element "div" style="border: 1px solid grey; flex: 1;" {      
-      dom.element "div" style="position: absolute;" {
-        dom.column {
+      dom.element "div" style="position: absolute; padding: 0px;" {        
+        dom.column style="gap:0.5em;" {
           parts.create (parts.get @env.children "gui_items")
         }
       }      
