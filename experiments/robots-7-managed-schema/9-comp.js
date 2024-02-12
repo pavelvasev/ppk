@@ -243,7 +243,7 @@ export function setup_process_engine( rapi, worker_ids,process_types_table = {} 
       return
     }
 
-    let r = fn( rapi, id, worker_ids )
+    let r = fn( rapi, id, worker_ids, arg )
 
     if (!r.stop) {
       console.error("no stop record for type ",type)
