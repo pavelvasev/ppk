@@ -30,12 +30,12 @@ process "simple_data_source" {
 
   apply {: rapi data_port_id |
 
-    console.log("query data_port_id=",data_port_id)
+    //console.log("query data_port_id=",data_port_id)
 
     rapi.query( data_port_id ).done( msg => {
       let arr = msg.value
       //console.log(data_port_id,"=",counter.get())
-      //console.log(data_port_id,"=",arr)
+      // console.log(">>>>",data_port_id,"=",arr)
       output.submit( arr )
       //output_c2.submit( msg.value.payload[1] )
       counter.submit( counter.get() + 1 )
@@ -71,7 +71,7 @@ process "simple_data_target" {
   react @input {: iv |
     let rapi = c_rapi.get()
     rapi.msg( {label: data_port_id.get(), value: iv} )
-    :}  
+    :}
 }
 
 /* идеи
@@ -265,20 +265,28 @@ process "do_combobox" {
     cell_id: cell
     input: cell // таблица значений
     input_index: cell
+    input_value: cell
     title: cell ""
   }
 
-  index: cell
-  simple_data_target @rapi ( + @cell_id "/index(cell)") input=@index
+  selected_value: cell
+  simple_data_target @rapi ( + @cell_id "/value(cell)") input=@selected_value
 
   src_input: simple_data_source @rapi ( + @cell_id "/input(cell)")
   bind @src_input.output @input
   // но в целом это странно и должно быть автоматом - idea 
+
+  src_input_value: simple_data_source @rapi ( + @cell_id "/value_mon(cell)")
+  bind @src_input_value.output @input_value
+  // но в целом это странно и должно быть автоматом - idea 
+
+  //print "do_combobox input_value=" @input_value
+  //print "do_combobox hello"  ( + @cell_id "/value(cell)")
   
   gui_items := {
     dom.element "span" @title
-    ds: dom.select input=@input input_index=@input_index
-    bind @ds.index @index
+    ds: dom.select input=@input input_index=@input_index input_value=@input_value
+    bind @ds.output @selected_value
   }
 }
 

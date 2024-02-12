@@ -86,11 +86,14 @@ export function link_process( rapi, id, worker_ids )
 
   /////////////////////////
 
+  // передаем в гуи варианты ссылок
   let src_input_cell = rapi.create_cell(mkid("src/input"))
   let tgt_input_cell = rapi.create_cell(mkid("tgt/input"))
 
   let ports = rapi.shared_list_reader("ports")
   let ports_values = []
+  let ports_values_map = {}
+
   ports.changed.subscribe( val => {
     console.log("link see ports change:",val)
     ports_values = val
@@ -99,17 +102,26 @@ export function link_process( rapi, id, worker_ids )
       return [ [val.id,val.id]]
     }).flat(1) )
 
+    ports_values_map = {}
+    val.forEach( val => ports_values_map[ val.id] = val.channels )    
+
     src_input_cell.submit( input )
     tgt_input_cell.submit( input )
     
   })
 
-  /////////////////////////
+  ///////////////////////// получаем из гуи
 
-  let selected_src = rapi.read_cell( mkid("src/index") )
+  let selected_src = rapi.read_cell( mkid("src/value") )
   stop_fn.push( selected_src.stop.bind(selected_src) )
-  let selected_tgt = rapi.read_cell( mkid("tgt/index") )
+  let selected_tgt = rapi.read_cell( mkid("tgt/value") )
   stop_fn.push( selected_tgt.stop.bind(selected_tgt) )
+
+      // публикуем наружу
+      let selected_src2 = rapi.create_cell( mkid("src/value_mon") )
+      stop_fn.push( selected_src2.stop.bind(selected_src2) )
+      let selected_tgt2 = rapi.create_cell( mkid("tgt/value_mon") )
+      stop_fn.push( selected_tgt2.stop.bind(selected_tgt2) )
 
   let selected_src_value
   let selected_tgt_value
@@ -125,12 +137,13 @@ export function link_process( rapi, id, worker_ids )
       link = LINK.create( rapi, selected_src_value, selected_tgt_value, true ) 
     }
   }
-  stop_fn.push( () => link.destroy() )
+  stop_fn.push( () => link ? link.destroy(): 1 )
 
   function tick() {
     selected_src.next().then( value => {
       console.log("link src =",value)      
-      selected_src_value = ports_values[ value-1 ]?.channels 
+      selected_src_value = ports_values_map[value] //ports_values[ value-1 ]?.channels 
+      selected_src2.submit( value )
       thus_update_link()
       tick()
     }, () => {})
@@ -140,7 +153,8 @@ export function link_process( rapi, id, worker_ids )
   function tick2() {
     selected_tgt.next().then( value => {
       console.log("link tgt =",value)
-      selected_tgt_value = ports_values[ value-1 ]?.channels
+      selected_tgt_value = ports_values_map[value] //ports_values[ value-1 ]?.channels
+      selected_tgt2.submit( value )
       //console.log( {ports_values, value, selected_tgt_value})
       thus_update_link()
       tick2()
