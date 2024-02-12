@@ -21,7 +21,10 @@ export function create( rapi, src_port, tgt_port, allow_loop ) {
 
   } else console.error("create_port_link: ports links count mismatch")
 
-  link.destroy = () => console.log("todo: destroy port link")
+  link.destroy = () => {
+    //console.log("destroy port link")
+    for (let x of link) x.unsub()
+  }
 
   return link
 }
