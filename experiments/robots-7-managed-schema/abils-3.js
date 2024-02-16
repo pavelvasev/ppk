@@ -36,6 +36,19 @@ function range(n) {
 // todo id это параметр вызова
 function vis1( rapi, id, worker_ids ) {
   //let visr = VIS3.robot( rapi, "vis1", worker_ids )
+  function mkid(part_id) { return id + "/"+part_id }  
+
+/*
+  let gui = {
+    input: {
+      target_points: { class: "string" }
+    }
+  }
+
+  let gui_cell = rapi.create_cell(mkid("gui"))
+  //console.log("created gui cell:",gui_cell.id)
+  gui_cell.submit( gui )
+*/  
 
   let target_points = 1000
   let downsample_coef = Math.ceil( DN / target_points )
@@ -64,7 +77,6 @@ function vis1( rapi, id, worker_ids ) {
 
 export function link_process( rapi, id, worker_ids, arg ) 
 {
-
   console.log("link_process arg=",arg)
 
   function mkid(part_id) { return id + "/"+part_id }
@@ -211,6 +223,17 @@ export function main_3( rapi, id, worker_ids ) {
   */
 
   function mkid(part_id) { return id + "/"+part_id }
+
+
+  let gui = {
+    input: {
+      target_points: { class: "string" }
+    }
+  }
+
+  let gui_cell = rapi.create_cell(mkid("gui"))
+  //console.log("created gui cell:",gui_cell.id)
+  gui_cell.submit( gui )  
 
   let stop_fn = []
   let u

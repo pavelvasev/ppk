@@ -410,22 +410,18 @@ ppk.shared_writer @rapi "pr_gui" (dict class="link_process"
 
 // ну это вообще все созданные
   pr_list := ppk.shared @rapi "pr_list"
-  gui_of_processes := ppk.shared @rapi "pr_gui"
-  print "gui_of_processes=" @gui_of_processes
+  //gui_of_processes := ppk.shared @rapi "pr_gui"
+  //print "gui_of_processes=" @gui_of_processes
   print "pr_list=" @pr_list
 
+  active_process_gui := simple_data_source @rapi (+ @active_process_id "/gui(cell)")
   active_process_id: cell
-  active_process_gui := apply {: id vals pr_list |
-    //console.log("evalling active_process_gui")
-    let active_proc = pr_list.find( val => val.id == id )
-    if (!active_proc) return null
-    let active_class = active_proc.type // todo class!
-    let found = vals.find( val => val.class == active_class )
-    if (!found) return null
-    found = {...found,pid:id}
-    //console.log("active_process_gui!",found)
-    return found
-    :} @active_process_id @gui_of_processes @pr_list
+
+  react @active_process_id {: active_process_gui.submit({}) :}
+
+  print "active_process_id:" @active_process_id
+  print "query gui slot:" (+ @active_process_id "/gui(cell)")
+  print "active_process_gui" @active_process_gui
 
 /////////////////////////    
 
@@ -450,7 +446,7 @@ process "show_processes_gui" {
             lrapi.msg( msg )
             :}
           */  
-        }
+        } 
     }  
   }
 
@@ -500,6 +496,98 @@ process "show_processes_gui2"
           clear_current_gui.submit( unsub )
         :} @active_process_gui @gui_div.output @rapi      
     //}
+  
+}
+
+/*
+  process_gui:
+    {
+       input: ["a","b"], - порты
+       output: ["c","d"], - порты
+       params: { - параметры
+          "alfa" : {
+             type: "string"
+          }
+       }
+    }
+   .. либо вариант: 
+  process_gui:
+    {
+       input: {
+          "alfa" : { type: "string" },
+          "beta" : { type: "port" },
+          "restart":{ type: "command" }
+       },
+       output: {
+          "beta" : { type: "string" },
+          "c" : { type: "port" }
+       }
+    }   
+   .. либо вариант: 
+  process_gui:
+    {
+       input: {
+          "alfa" : { type: "string" },
+          "beta" : { type: "port" },
+       },
+       output: {
+          "beta" : { type: "string" },
+          "c" : { type: "port" }
+       },
+       commands: {
+          "restart": true
+       }
+    }     
+*/
+
+func "map_to_arr" {: h |
+    let arr = []
+    for (let k in h) {
+      let rec = h[k]
+      rec.name = k
+      arr.push( rec )
+    }
+    return arr
+:}
+
+mixin "tree_lift"
+process "show_processes_gui3" 
+{
+
+   clear_current_gui: cell null
+    
+    //if @active_process_id {
+      dom.row style="gap:0.2em" {
+        dom.element "span" @active_process_id
+        dom.button "X" {: 
+              let lrapi = rapi.get()
+              
+              let msg = { label: "stop_process", id: active_process_id.get() }
+              console.log("btn clicked, sending msg=",msg)
+              lrapi.msg( msg )
+              active_process_id.set(null)
+              :}
+      }
+
+      input_params_r := dict string={ pid param_record |
+        print "hello from string" @param_record
+        dom.element "span" ( + (get @param_record "name") ":")
+        dom.input
+      } 
+
+      gui_div: dom.column {
+        //params := get @active_process_gui "input" | filter {: x | return x.type != "port" :}
+        input_params := get @active_process_gui "input" | map_to_arr
+        //print "input_params=" @input_params
+
+        repeater input=@input_params { param_record |
+          type := get @param_record "class"
+          fn := get @input_params_r @type
+          //print "fn=" @fn
+          // todo разобраться почему 2 раза 
+          apply_children @fn @active_process_id @param_record
+        }
+      }
   
 }
 
@@ -596,12 +684,13 @@ process "main" {
 
     dom.row style="gap:0.5em;" {
       parts.create (parts.get @env.children "gui_items_row2")
-    }
+      //print "calling row2 parts create:" (parts.get @env.children "gui_items_row2")
+    } 
 
     output_space: dom.element "div" style="border: 1px solid grey; flex: 1;" {      
       dom.element "div" style="position: absolute; padding: 0px;" {
 
-        show_processes_gui2
+        show_processes_gui3
         dom.column style="gap:0.5em;" {          
           parts.create (parts.get @env.children "gui_items")
         }
