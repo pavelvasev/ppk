@@ -125,8 +125,9 @@ class ReprWsClientApi {
     let that = this
     let res = {
       id,
-      submit(cb) {
-        this.msg( {shared_submit: true, crit, opts:{id}} )
+      submit(value) {
+        console.log(":shared_list_writer submits",{shared_submit: true, crit, value,opts:{id}})
+        that.msg( {shared_submit: true, crit, value,opts:{id}} )
       }
     }
     return res

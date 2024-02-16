@@ -393,19 +393,55 @@ process "do_container" {
 
 mk_container := { id | do_container @id }
 
-mixin "tree_node"
-process "show_processes_gui" {
+ppk.shared_writer @rapi "pr_gui" (dict class="link_process" 
+  fn=(apply {: x | return x.toString() :} {: pid div rapi |
+  console.log("hello from gui1",pid,div,rapi)
+  var s = '<div id="myDiv">Src:<select></select></div>';  
+  div.innerHTML = s;
+  let unsub = () => {
+    console.log("clearing gui")
+    div.innerHTML = ''
+  }
+  return unsub
 
+  :}))
+
+/////////////////////////
+
+// ну это вообще все созданные
   pr_list := ppk.shared @rapi "pr_list"
-
+  gui_of_processes := ppk.shared @rapi "pr_gui"
+  print "gui_of_processes=" @gui_of_processes
   print "pr_list=" @pr_list
+
+  active_process_id: cell
+  active_process_gui := apply {: id vals pr_list |
+    //console.log("evalling active_process_gui")
+    let active_proc = pr_list.find( val => val.id == id )
+    if (!active_proc) return null
+    let active_class = active_proc.type // todo class!
+    let found = vals.find( val => val.class == active_class )
+    if (!found) return null
+    found = {...found,pid:id}
+    //console.log("active_process_gui!",found)
+    return found
+    :} @active_process_id @gui_of_processes @pr_list
+
+/////////////////////////    
+
+mixin "tree_node"
+process "show_processes_gui" {  
   
   gui_items_row2 := {    
     dom.element "span" "Процессы:"
     
       repeater input = @pr_list { item |
         dom.row {
-          dom.element "span" (get @item "id")
+          dom.button (get @item "id") {: 
+            console.log("item.id=",item.id,item)
+            active_process_id.submit( item.id )
+            :}
+          /*
           dom.button "x" {: 
             let lrapi = rapi.get()
             
@@ -413,9 +449,58 @@ process "show_processes_gui" {
             console.log("btn clicked, sending msg=",msg)
             lrapi.msg( msg )
             :}
-        }        
+          */  
+        }
     }  
   }
+
+  //print "active_process_gui=" @active_process_gui
+  /*
+  gui_items := {
+    print "iiii"
+  }
+  */
+ 
+}
+
+mixin "tree_lift"
+process "show_processes_gui2" 
+{
+
+   clear_current_gui: cell null
+    
+    //if @active_process_id {
+      dom.row style="gap:0.2em" {
+        dom.element "span" @active_process_id
+        dom.button "X" {: 
+              let lrapi = rapi.get()
+              
+              let msg = { label: "stop_process", id: active_process_id.get() }
+              console.log("btn clicked, sending msg=",msg)
+              lrapi.msg( msg )
+              active_process_id.set(null)
+              :}
+      }
+
+      gui_div: dom.element "div"
+
+      // todo: apply и print не удаляются из контекста при пересоздании gui_items
+      // и это есть баг
+      apply {: gui div rapi |          
+          let pid = gui?.pid
+          console.log("gonna deploy gui:",gui,div,rapi,pid)
+          if (clear_current_gui.is_set) {
+            let unsub = clear_current_gui.get()
+            if (unsub) unsub()
+            clear_current_gui.submit(null)
+          }
+          if (!gui) return
+          let fn = eval(gui.fn)
+          let unsub = fn( pid, div, rapi )
+          clear_current_gui.submit( unsub )
+        :} @active_process_gui @gui_div.output @rapi      
+    //}
+  
 }
 
 env: node {
@@ -514,8 +599,10 @@ process "main" {
     }
 
     output_space: dom.element "div" style="border: 1px solid grey; flex: 1;" {      
-      dom.element "div" style="position: absolute; padding: 0px;" {        
-        dom.column style="gap:0.5em;" {
+      dom.element "div" style="position: absolute; padding: 0px;" {
+
+        show_processes_gui2
+        dom.column style="gap:0.5em;" {          
           parts.create (parts.get @env.children "gui_items")
         }
       }      

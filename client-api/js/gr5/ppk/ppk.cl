@@ -84,17 +84,34 @@ process "shared" {
   :} @rapi @label
 }
 
+process "list_to_map" {
+  in {
+    input: cell
+    key: const
+  }
+  output: cell
+
+  react @input {: values |
+    let h = {}
+    values.forEach( val => h[key] = val )
+    return h
+  :}
+}
+
 process "shared_writer" {
   in {
     rapi: cell
-    label: cell
-    input: cell
-    id: cell null
+    label: cell // имя списка
+    input: cell // записываемое значение
+    id: cell "" // какое ключ для записи использовать
   }
 
   apply {: rapi label id |
-    let writer = rapi.shared_list_writer( label, {id} )
+    //console.log("writer hello")
+    let writer = rapi.shared_list_writer( label, id )
     input.subscribe( value => {
+      //console.log("writer pass",value)
+      //if (value.toString) value = value.toString()
       writer.submit( value )
     })
   :} @rapi @label @id
