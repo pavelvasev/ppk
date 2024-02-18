@@ -112,7 +112,7 @@ class ReprWsClientApi {
 
   shared_dic = {}
   shared( crit ) {
-    let qid = `s_${this.query_counter++}`
+    let qid = `${this.client_id}/s_${this.query_counter++}`
     //console.log("client sending ")
     this.msg( {shared: qid, crit} )
     let that = this
@@ -126,7 +126,7 @@ class ReprWsClientApi {
 
   shared_writer_dic = {}  
   shared_list_writer( crit,id ) {
-    id ||= `sw_${this.query_counter++}`    
+    id ||= `${this.client_id}/sw_${this.query_counter++}`    
     let that = this
     let res = {
       id,
@@ -136,5 +136,5 @@ class ReprWsClientApi {
       }
     }
     return res
-  }  
+  }
 }

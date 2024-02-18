@@ -221,9 +221,13 @@ export function setup_process_engine( rapi, worker_ids,process_types_table = {} 
     stop_process_fn[ id ] = delete_fn
   })
 
+  // todo надо обобщить. т.е. управлять прямо списком бы..
   rapi.query("stop_process").done( val => {
     console.log("see msg for stop_process! val=",val)
-    stop_process_fn[ val.id ]()
+    let f1 = stop_process_fn[ val.id ]
+    let f2 = stop_process_fn2[ val.id ]
+    let f = f1 || f2
+    f()
   })
 
   //////////////////////// list api
@@ -254,7 +258,9 @@ export function setup_process_engine( rapi, worker_ids,process_types_table = {} 
     // публикуем порты созданного процесса
     let stop_publish_ports = publish_ports( rapi, id, r )
 
-    stop_process_fn2[ id ] = () => { r.stop(); stop_publish_ports() }    
+    stop_process_fn2[ id ] = () => { 
+      console.log('stop_process_fn2',id)
+      r.stop(); stop_publish_ports(); delete stop_process_fn2[ id ] }    
   }
 
   // начальные значения F-SPAWN-ON-START

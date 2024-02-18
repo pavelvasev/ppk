@@ -457,6 +457,82 @@ process "show_processes_gui" {
     }     
 */
 
+pr_list_links := read @pr_list | filter {: x | return x.type == "link_process" :}
+pr_list_links_tgt := apply {: links | 
+  let h = {}
+  for (let k of links) h[ k.arg.tgt ] = k
+  return h
+  :} @pr_list_links
+
+//print "pr_list_links_tgt=" @pr_list_links_tgt
+
+active_ports := ppk.shared @rapi "ports"
+active_ports_select_variants := concat (list (list "-" "-")) (map @active_ports {: p | return [p.id,p.id] :})
+//print "active_ports=" @active_ports @active_ports_select_variants
+
+input_params_r := dict 
+        string={ proc param_record |
+          name := get @param_record "name"
+
+          dom.element "span" ( + @name "*:")
+          di: dom.input "text"
+
+          process_cell := get @proc @name
+          if @process_cell {
+          react (read_value @process_cell) {: val |
+            //console.log("DDD val=",val)
+            di.input_value.submit( val )
+          :}
+          react @di.value {: val |
+            let cell = process_cell.get()
+            cell.submit( val)
+            :}
+          }
+        }
+        range={ proc param_record |
+          name := get @param_record "name"
+
+          dom.element "span" ( + @name "*:")
+          di: dom.input "range" min=(get @param_record "min") max=(get @param_record "max") step=(get @param_record "step")
+
+          process_cell := get @proc @name
+
+          if @process_cell {
+          react (read_value @process_cell) {: val |
+            di.input_value.submit( val )
+          :}
+          react @di.value {: val |
+            let cell = process_cell.get()
+            cell.submit( val )
+            :}
+          }
+        }
+        port={ proc param_record |
+          //print "hello from string" @param_record
+          name := get @param_record "name"
+          dom.element "span" ( + @name " (port):")
+          path := + (get @proc "id" | read_value) "/" @name
+          known_src := get @pr_list_links_tgt @path
+          known_src_path := (get @known_src "arg" | get "src")
+          print "known_src_path=" @known_src_path
+          //dom.element "span" (get @known_src "arg" | get "src")
+
+          ds: dom.select @active_ports_select_variants input_value=@known_src_path
+
+          react @ds.value {: new_tgt |
+            let k = known_src.get()
+            //if (k.id)
+            console.log("user select new tgt:",{new_tgt,k})
+            // надо теперь удалить старый процесс ссылки
+            if (k?.id) {
+              // треш конечно эти глобальные ссылки..
+              let lrapi = rapi.get()
+              let msg = { label: "stop_process", id: k.id }
+              lrapi.msg( msg )
+            }
+            :}
+        }
+
 mixin "tree_lift"
 process "show_process_gui3" 
 {
@@ -475,56 +551,12 @@ process "show_process_gui3"
         dom.element "span" @id
         dom.button "X" {: 
               let lrapi = rapi.get()
-              
               let msg = { label: "stop_process", id: id.get() }
-              console.log("btn clicked, sending msg=",msg)
+              //console.log("btn clicked, sending msg=",msg)
               lrapi.msg( msg )
               active_process.submit( null )
               :}
-      }
-
-      input_params_r := dict 
-        string={ pid param_record |
-          name := get @param_record "name"
-
-          dom.element "span" ( + @name "*:")
-          di: dom.input "text"
-
-          process_cell := get @proc @name
-          if @process_cell {
-          react (read_value @process_cell) {: val |
-            //console.log("DDD val=",val)
-            di.input_value.submit( val )
-          :}
-          react @di.value {: val |
-            let cell = process_cell.get()
-            cell.submit( val)
-            :}
-          }
-        }
-        range={ pid param_record |
-          name := get @param_record "name"
-
-          dom.element "span" ( + @name "*:")
-          di: dom.input "range" min=(get @param_record "min") max=(get @param_record "max") step=(get @param_record "step")
-
-          process_cell := get @proc @name
-
-          if @process_cell {
-          react (read_value @process_cell) {: val |
-            di.input_value.submit( val )
-          :}
-          react @di.value {: val |
-            let cell = process_cell.get()
-            cell.submit( val )
-            :}
-          }
-        }
-        port={ pid param_record |
-          //print "hello from string" @param_record
-          name := get @param_record "name"
-          dom.element "span" ( + @name " (port):")
-        }
+      }      
 
       gui_div: dom.column {
         input_params := get @gui "input" | map_to_arr
@@ -535,7 +567,7 @@ process "show_process_gui3"
           fn := get @input_params_r @type
           //print "fn=" @fn
           // todo разобраться почему 2 раза 
-          apply_children @fn @id @param_record
+          apply_children @fn @proc @param_record
         }
       }
   
