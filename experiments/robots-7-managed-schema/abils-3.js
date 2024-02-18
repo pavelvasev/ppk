@@ -78,138 +78,28 @@ function vis1( rapi, id, worker_ids ) {
 export function link_process( rapi, id, worker_ids, arg ) 
 {
   console.log("link_process arg=",arg)
-
   function mkid(part_id) { return id + "/"+part_id }
 
-  let stop_fn = []
-  let u
-  let container_id = mkid("c1")
-
-  u = rapi.shared("gr_view").submit({type:"container",id:container_id})
-  stop_fn.push( u.delete ) // todo idea сделать функцию добавления в массив этот
-
-  let input = [ ["--",""] ]
-
-  u = rapi.shared(container_id).submit({type:"combobox",id:mkid("src"),
-       params:{title: "Источник",input}})  
-  stop_fn.push( u.delete )
-
-  u = rapi.shared(container_id).submit({type:"combobox",id:mkid("tgt"),
-       params:{title: "Приёмник",input}})  
-  stop_fn.push( u.delete )
-
-  /////////////////////////
-
-  // передаем в гуи варианты ссылок
-  let src_input_cell = rapi.create_cell(mkid("src/input"))
-  let tgt_input_cell = rapi.create_cell(mkid("tgt/input"))
-
-  let ports = rapi.shared_list_reader("ports")
-  let ports_values = []
-  let ports_values_map = {}
-
-  u = ports.changed.subscribe( val => {
-    console.log("link see ports change:",val)
-    ports_values = val
-
-    input = [ ["--",""] ].concat( val.map( (val) => {
-      return [ [val.id,val.id]]
-    }).flat(1) )
-
-    ports_values_map = {}
-    val.forEach( val => ports_values_map[ val.id] = val.channels )    
-
-    src_input_cell.submit( input )
-    tgt_input_cell.submit( input )
-
-    //console.log("::",selected_src2.value,selected_tgt2.value)
-
-    if (!selected_src_value && selected_src2.value) {
-      // todo разобраться надо что куда идет 
-      update_src(selected_src2.value)
-    }
-    if (!selected_tgt_value && selected_tgt2.value) {
-      // todo разобраться надо что куда идет 
-      update_tgt(selected_tgt2.value)
-    }
-    
-  })
-  stop_fn.push( u )
-
-  ///////////////////////// получаем из гуи
-
-  let selected_src = rapi.read_cell( mkid("src/value") )
-  stop_fn.push( selected_src.stop.bind(selected_src) )
-  let selected_tgt = rapi.read_cell( mkid("tgt/value") )
-  stop_fn.push( selected_tgt.stop.bind(selected_tgt) )
-
-      // публикуем наружу
-      let selected_src2 = rapi.create_cell( mkid("src/value_mon") )
-      stop_fn.push( selected_src2.stop.bind(selected_src2) )
-      let selected_tgt2 = rapi.create_cell( mkid("tgt/value_mon") )
-      stop_fn.push( selected_tgt2.stop.bind(selected_tgt2) )
-
-      // начальные данные
-      let selected_src3 = rapi.create_cell( mkid("src/value") )
-      stop_fn.push( selected_src3.stop.bind(selected_src3) )
-      let selected_tgt3 = rapi.create_cell( mkid("tgt/value") )
-      stop_fn.push( selected_tgt3.stop.bind(selected_tgt3) )      
-      if (arg.src) selected_src3.submit( arg.src )
-      if (arg.tgt) selected_tgt3.submit( arg.tgt )
-
-  let selected_src_value
-  let selected_tgt_value
   let link
 
-  function thus_update_link() {
-    if (link)
-      link.destroy()
-    link = null
-    console.log("thus_update_link",selected_src_value, selected_tgt_value)
-    if (selected_src_value && selected_tgt_value) {
-      console.log("thus creating link")
-      link = LINK.create( rapi, selected_src_value, selected_tgt_value, true ) 
+  let ports = rapi.shared_list_reader("ports")
+
+  let u = ports.changed.subscribe( val => {    
+    let src_port_info = val.find( x => x.id == arg.src )
+    let tgt_port_info = val.find( x => x.id == arg.tgt )    
+    if (src_port_info && tgt_port_info) {
+      console.log("link_process: creating real link for ",arg)
+      link = LINK.create( rapi, src_port_info.channels, tgt_port_info.channels, true )
+      u(); u = () => {}
+      // больше нас не вызывают, ссылка создана
     }
-  }
-  stop_fn.push( () => link ? link.destroy(): 1 )
+  })
 
-  function update_src( value ) {
-    //console.log("link src =",value)      
-      selected_src_value = ports_values_map[value] //ports_values[ value-1 ]?.channels 
-      selected_src2.submit( value )
-      thus_update_link()
-  }
-  function update_tgt( value ) {
-    //console.log("link src =",value)      
-      selected_tgt_value = ports_values_map[value] //ports_values[ value-1 ]?.channels
-      selected_tgt2.submit( value )
-      thus_update_link()
-  }
-
-  function tick() {
-    selected_src.next().then( value => {
-      update_src( value )
-      tick()
-    }, () => {})
-  }
-  tick()  
-
-  function tick2() {
-    selected_tgt.next().then( value => {
-      update_tgt( value )
-      tick2()
-    }, () => {})
-  }
-  tick2()
-
-  return { stop: () => {
-    stop_fn.map( (x,index) => {
-      //console.log("stop_fn calling x",x, index)
-      x()
-    } )
+  return {stop: () => {
+    u()
+    if (link) link.destroy()
   }}
 }
-
 
 export function main_3( rapi, id, worker_ids ) {
 
@@ -228,8 +118,8 @@ export function main_3( rapi, id, worker_ids ) {
     id,
     input: {
       target_points_count: { class: "string" },
-      sigma: { class: "range", min: 10, max: 20, step: 1 }
-      //, input: { class: "port" }
+      sigma: { class: "range", min: 10, max: 20, step: 1 },
+      input: { class: "port" }
     }
   }
 
@@ -237,8 +127,7 @@ export function main_3( rapi, id, worker_ids ) {
     console.log("main_3: see new target_points_count",msg.value)
   })
 
-  let q2 = rapi.create_cell(mkid("target_points_count"))
-  q2.submit( 50 )
+  let q2 = rapi.create_cell(mkid("target_points_count"), 50)  
 
   //let gr1id = rapi.read_cell(mkid("target_points_count"))
 

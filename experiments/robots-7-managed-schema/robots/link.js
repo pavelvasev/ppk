@@ -2,12 +2,12 @@
 export function create( rapi, src_port, tgt_port, allow_loop ) {
 
   if (!src_port) {
-    console.error("src_port is null! tgt_port=",tgt_port)
+    console.error("PortLink: src_port is null! tgt_port=",tgt_port)
     console.trace();
   }
 
   if (!tgt_port) {
-    console.error("tgt_port is null! src_port=",src_port)
+    console.error("PortLink: tgt_port is null! src_port=",src_port)
     console.trace();
   }
 

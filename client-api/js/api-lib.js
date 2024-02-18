@@ -344,12 +344,12 @@ export class ClientApi {
     p.setted    = CL2.create_channel() // значение установлено
     p.added    = CL2.create_channel()  // значение добавлено (а раньше не было)
     p.deleted  = CL2.create_channel()  // значение удалено
+    p.loaded  = CL2.create_channel()  // начальные значения
 
     let unsub = ()=>true
     p.stop = () => unsub() // stop = хватит читать
 
     list.then( (list_object) => {
-
 /*
       console.error("shared_list_reader creating subscription to deleted. list_object.deleted=",list_object.deleted+'')
       list_object.deleted.subscribe( x => {
@@ -362,13 +362,16 @@ export class ClientApi {
       let b3 = CL2.create_binding( list_object.added, p.added )
       let b4 = CL2.create_binding( list_object.deleted, p.deleted )
 
+
       unsub = () => {
         b1.destroy()
         b2.destroy()
         b3.destroy()
         b4.destroy()
       }
-      p.changed.submit( list_object.get_values() )
+      let vals = list_object.get_values()
+      p.changed.submit( vals )
+      p.loaded.submit( vals )
     })
 
     return p

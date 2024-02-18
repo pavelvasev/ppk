@@ -26,13 +26,13 @@ export class Cells {
  	  this.rapi = rapi
   }
 
-  create_cell(id) {
+  create_cell(id, initial_value ) {
     if (id.id && id.cell) id = id.id // встроенный адаптер
     if (!(typeof(id) === "string")) {
       console.error("create_cell: error! passed cell id must be string or cell. you passed:",typeof(id),"value=",id)
       return null
     }
-  	return new WritingCell( this.rapi, id )
+  	return new WritingCell( this.rapi, id, initial_value )
   }
 
   read_cell(id, opts={}) {
@@ -101,7 +101,7 @@ export class Link {
 
 // процесс записи в ячейку
 export class WritingCell {
-  constructor( rapi, id) {
+  constructor( rapi, id, initial_value) {
   this.cell = true // надо для preprocess_args / exec
  	this.rapi = rapi
  	this.id = id
@@ -116,6 +116,9 @@ export class WritingCell {
  				rec.value.action( {label:this.label, value:this.value}, rec.value.arg, rapi )
  		})
  	})
+  //console.log("WritingCell id",id,"iv=",initial_value)
+  if (initial_value !== undefined)
+    this.submit( initial_value )
   }
   submit( value ) {
   	this.is_set = true

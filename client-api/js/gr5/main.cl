@@ -522,7 +522,8 @@ process "show_process_gui3"
         }
         port={ pid param_record |
           //print "hello from string" @param_record
-          dom.element "span" ( + (get @param_record "name") " (port):")
+          name := get @param_record "name"
+          dom.element "span" ( + @name " (port):")
         }
 
       gui_div: dom.column {

@@ -230,10 +230,11 @@ export function setup_process_engine( rapi, worker_ids,process_types_table = {} 
   let stop_process_fn2 = {}
 
   let procs = rapi.shared_list_reader("pr_list")
-  procs.added.subscribe( val => {
+
+  function start_process( record ) {
     //console.log("see process request",val)
-    let {type,arg,id} = val.value.arg // чето перебор
-    console.log("see process request",val,{type,arg})
+    let {type,arg,id} = record 
+    console.log("see process request",{type,arg,id})
 
     id ||= type + "_p_"+(id_counter++)
     let fn = process_types_table[ type ].fn
@@ -250,10 +251,21 @@ export function setup_process_engine( rapi, worker_ids,process_types_table = {} 
       r.stop = () => {}
     }
 
+    // публикуем порты созданного процесса
     let stop_publish_ports = publish_ports( rapi, id, r )
 
-    stop_process_fn2[ id ] = () => { r.stop(); stop_publish_ports() }
- 
+    stop_process_fn2[ id ] = () => { r.stop(); stop_publish_ports() }    
+  }
+
+  // начальные значения
+  procs.loaded.once( initial_values => {
+    console.log("loaded:",initial_values)
+    for (let val of initial_values)
+      start_process( val )
+  })
+
+  procs.added.subscribe( val => {
+    start_process( val.value.arg ) // чето перебор
   })
 
   procs.deleted.subscribe( val => {
@@ -275,6 +287,8 @@ function publish_ports( rapi, id, ports_record ) {
     let r = ports_record[k]
     if (Array.isArray(r)) {
       console.log("found port:",id+"/"+k,r)
+      // id: id-процесса / порт
+      // channels: перечень каналов 
       let unsub = rapi.shared_list_writer("ports").submit({id:id+"/"+k,channels:r})
       stop_arr.push( unsub.delete )      
     }
