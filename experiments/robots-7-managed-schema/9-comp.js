@@ -217,7 +217,7 @@ export function setup_process_engine( rapi, worker_ids,process_types_table = {} 
   rapi.query("start_process").done( val => {
     console.log("see msg for start_process! val=",val)
     let id = val.id || val.type + "_"+(id_counter++)
-    let delete_fn = rapi.start_process( val.type, {arg: val.arg}, val.target, id)
+    let delete_fn = rapi.start_process( val.type, val.arg, val.target || "pr_list", id)
     stop_process_fn[ id ] = delete_fn
   })
 
@@ -225,9 +225,24 @@ export function setup_process_engine( rapi, worker_ids,process_types_table = {} 
   rapi.query("stop_process").done( val => {
     console.log("see msg for stop_process! val=",val)
     let f1 = stop_process_fn[ val.id ]
-    let f2 = stop_process_fn2[ val.id ]
-    let f = f1 || f2
-    f()
+    if (f1) { f1(); return }
+    // F-EXTERNAL-REMOVE
+    // ок размещали не мы
+    procs.list.then( (list_object) => {
+      console.log("RRR=",list_object.records)
+      for (let n of list_object.records.keys()) {        
+        let rec = list_object.records.get(n)
+        console.log(rec.arg.id,val.id)
+        if (rec.arg.id == val.id) {
+          // наш клиент
+          console.log("TGT=",n)
+          rapi.shared_list_writer( "pr_list",{id:n}).delete()
+          break;
+        }
+      }
+    })
+    //let active_procs = procs.changed.get()
+    //console.log({active_procs})
   })
 
   //////////////////////// list api
@@ -238,7 +253,7 @@ export function setup_process_engine( rapi, worker_ids,process_types_table = {} 
   function start_process( record ) {
     //console.log("see process request",val)
     let {type,arg,id} = record 
-    console.log("see process request",{type,arg,id})
+    console.log("pr_list: see process request",{type,arg,id})
 
     id ||= type + "_p_"+(id_counter++)
     let fn = process_types_table[ type ].fn
@@ -258,14 +273,14 @@ export function setup_process_engine( rapi, worker_ids,process_types_table = {} 
     // публикуем порты созданного процесса
     let stop_publish_ports = publish_ports( rapi, id, r )
 
-    stop_process_fn2[ id ] = () => { 
-      console.log('stop_process_fn2',id)
+    stop_process_fn2[ id ] = () => {
+      //console.log('stop_process_fn2',id)
       r.stop(); stop_publish_ports(); delete stop_process_fn2[ id ] }    
   }
 
   // начальные значения F-SPAWN-ON-START
   procs.loaded.once( initial_values => {
-    console.log("loaded:",initial_values)
+    console.log("pr_list loaded:",initial_values)
     for (let val of initial_values)
       start_process( val )
   })
@@ -275,9 +290,9 @@ export function setup_process_engine( rapi, worker_ids,process_types_table = {} 
   })
 
   procs.deleted.subscribe( val => {
-    console.log("see procs deleted",val)
+    console.log("pr_list procs: see procs deleted from list",val)
     let process_id = val.value.arg.id // фантастика
-    console.log("process_id=",process_id)
+    //console.log("process_id=",process_id)
     // и как мы тебя удалять будем?
     // по идее контейнер
     let fn = stop_process_fn2[ process_id ]

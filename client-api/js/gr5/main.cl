@@ -510,24 +510,31 @@ input_params_r := dict
         port={ proc param_record |
           //print "hello from string" @param_record
           name := get @param_record "name"
-          dom.element "span" ( + @name " (port):")
+          dom.element "span" ( + @name " (select src):")
           path := + (get @proc "id" | read_value) "/" @name
-          known_src := get @pr_list_links_tgt @path
+          known_src := or (get @pr_list_links_tgt @path) (dict arg=(dict src="-"))
           known_src_path := (get @known_src "arg" | get "src")
           print "known_src_path=" @known_src_path
           //dom.element "span" (get @known_src "arg" | get "src")
 
           ds: dom.select @active_ports_select_variants input_value=@known_src_path
 
-          react @ds.value {: new_tgt |
+          react @ds.value {: new_src |
             let k = known_src.get()
             //if (k.id)
-            console.log("user select new tgt:",{new_tgt,k})
+            console.log("user select new tgt:",{new_src,k})
             // надо теперь удалить старый процесс ссылки
+            let lrapi = rapi.get()
             if (k?.id) {
-              // треш конечно эти глобальные ссылки..
-              let lrapi = rapi.get()
+              // треш конечно эти глобальные ссылки.. как это все отследить?              
               let msg = { label: "stop_process", id: k.id }
+              lrapi.msg( msg )
+            }
+            // теперь надо создать новую ссылку
+            if (new_src != "-") {
+              console.log("creating new link",new_src,"to",path.get())
+              let id = "select_link_" + Math.random()
+              let msg = { label: "start_process", type:"link_process",id, arg:{ src:new_src,tgt:path.get()} }
               lrapi.msg( msg )
             }
             :}

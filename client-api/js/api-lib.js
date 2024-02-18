@@ -291,6 +291,7 @@ export class ClientApi {
         // todo убрать это отсюда
         // note фишка что это работа с 1 значением только!
         kvant.value.arg = arg
+        //kvant.value.id_in_list = id // F-EXTERNAL-LIST-REMOVE необходимость удалять внешне
         let p = new Promise( (resolve,reject) => {
           this.deployed_items_resolve[ id ] = resolve
           return this.send( kvant )
@@ -348,6 +349,8 @@ export class ClientApi {
 
     let unsub = ()=>true
     p.stop = () => unsub() // stop = хватит читать
+
+    p.list = list // F-EXTERNAL-REMOVE
 
     list.then( (list_object) => {
 /*
