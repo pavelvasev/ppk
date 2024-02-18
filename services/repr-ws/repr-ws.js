@@ -63,6 +63,7 @@ export class RepresenterWS {
     }
 
     let queries_r = []
+    let queries_map = {}
     let shared_r = []
     
     ws.on('message', (data) => {
@@ -99,6 +100,15 @@ export class RepresenterWS {
         })
         
         queries_r.push( k )
+        queries_map[ msg.query ] = k
+      } else
+      if (msg.query_delete) {
+        let k = queries_map[ msg.query_delete ]
+        if (k) {
+          k.delete()
+          queries_r = queries_r.filter( x => x != k)
+          delete queries_map[ msg.query_delete ]
+        }
       } else
       if (msg.shared) {
         if (verbose)

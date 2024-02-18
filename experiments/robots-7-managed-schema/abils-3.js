@@ -224,20 +224,38 @@ export function main_3( rapi, id, worker_ids ) {
 
   function mkid(part_id) { return id + "/"+part_id }
 
-
   let gui = {
+    id,
     input: {
-      target_points: { class: "string" }
+      target_points_count: { class: "string" },
+      sigma: { class: "range", min: 10, max: 20, step: 1 }
+      //, input: { class: "port" }
     }
   }
 
+  let q1 = rapi.query(mkid("target_points_count(cell)")).done( msg => {
+    console.log("main_3: see new target_points_count",msg.value)
+  })
+
+  let q2 = rapi.create_cell(mkid("target_points_count"))
+  q2.submit( 50 )
+
+  //let gr1id = rapi.read_cell(mkid("target_points_count"))
+
+/*
   let gui_cell = rapi.create_cell(mkid("gui"))
   //console.log("created gui cell:",gui_cell.id)
-  gui_cell.submit( gui )  
+  gui_cell.submit( gui )
+*/
+
 
   let stop_fn = []
   let u
   let container_id = mkid("c1")
+
+  console.log("sending gui to","pr_list/gui")
+  u = rapi.shared("pr_list/gui").submit(gui)
+  stop_fn.push( u.delete ) // todo idea сделать функцию добавления в массив этот
 
   u = rapi.shared("gr_view").submit({type:"container",id:container_id})
   stop_fn.push( u.delete ) // todo idea сделать функцию добавления в массив этот

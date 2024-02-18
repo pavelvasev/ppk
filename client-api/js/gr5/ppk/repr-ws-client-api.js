@@ -49,6 +49,8 @@ class ReprWsClientApi {
   constructor( endpoint_url ) {
     console.log("ReprWsClientApi started:",endpoint_url)
 
+    this.client_id = "webclient_"+Math.random()
+
     let ppr
     this.closed = new Promise( (resolve) => {      
         ppr = resolve
@@ -93,13 +95,16 @@ class ReprWsClientApi {
   query_counter=0
   query_dic = {}
   query( crit, opts, arg ) {
-    let qid = `q_${this.query_counter++}`
-    //console.log("client sending ")
-    this.msg( {query: qid, crit,opts,arg} )
+    let qid = `${this.client_id}/q_${this.query_counter++}`
+    //console.log("client sending new query:",{query: qid, crit, opts, arg})
+    this.msg( {query: qid, crit, opts, arg} )
     let that = this
     let res = {
       done(cb) {
         that.query_dic[ qid ] = cb
+      },
+      delete() {
+        this.msg( {query_delete: qid} )
       }
     }
     return res
@@ -126,7 +131,7 @@ class ReprWsClientApi {
     let res = {
       id,
       submit(value) {
-        console.log(":shared_list_writer submits",{shared_submit: true, crit, value,opts:{id}})
+        //console.log(":shared_list_writer submits",{shared_submit: true, crit, value,opts:{id}})
         that.msg( {shared_submit: true, crit, value,opts:{id}} )
       }
     }

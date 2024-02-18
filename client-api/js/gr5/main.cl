@@ -8,6 +8,24 @@ import parts="std/parts.cl"
    - останавливать чтение если окно неактивно
 */
 
+func "map_to_arr" {: h |
+    let arr = []
+    for (let k in h) {
+      let rec = h[k]
+      rec.name = k
+      arr.push( rec )
+    }
+    return arr
+:}
+
+func "arr_to_map" {: arr key |
+    let h = {}
+    for (let k of arr) {
+      h[ k[key] ] = k
+    }
+    return h
+:}
+
 rapi := ppk.connect
 
 
@@ -70,7 +88,9 @@ process "simple_data_target" {
 
   react @input {: iv |
     let rapi = c_rapi.get()
-    rapi.msg( {label: data_port_id.get(), value: iv} )
+    let m = {label: data_port_id.get(), value: iv}
+    //console.log("simple_data_target sending",m)
+    rapi.msg( m )
     :}
 }
 
@@ -115,23 +135,7 @@ process "subgr_shadow" {
 
       b1: lib3d.buffer @datapos 3
 
-/*
-      linepos := apply {: vals | 
-        return vals.map( (val,index) => [index,val,0, index,0,0] ).flat(1)
-        :} @src.output
-      b2: lib3d.buffer @linepos 3
-*/
-
-/*
-      linepos := apply {: vals | 
-        let acc = []
-        for (let i=0; i<vals.length; i+=3)
-          acc.push( vals[i], vals[i+1],vals[i+2], vals[i], 0, vals[i+2])
-         return acc 
-        //return vals.map( (val,index) => [index,val,0, index,0,0] ).flat(1)
-        :} @datapos
-      b2: lib3d.buffer @linepos 3
-*/      
+ 
 
       scene_items := {
         p1: lib3d.points color=[0.0,0.25,0.5] 
@@ -139,12 +143,7 @@ process "subgr_shadow" {
                 ///colors=@b2.output 
                 scale=@source_subgr.scale
                 position=(list 0 0 (* @prev_datapos_lines -1))
-/*                
-        lib3d.lines color=[1,1,1] strip=false
-                //position=@p1.position
-                scale=@scale
-                positions=@b2.output //scale=(mk_scale @scale_x.value @scale_y.value) visible=@cb.value    
-*/                
+               
       }
 
 }
@@ -158,14 +157,8 @@ process "subgr" { // тут пока все вместе только для у�
     sy: cell 1
       //gtype: cell "linear"
   }
-  //alfa22: cell 111
-
-      // output := @self
 
       src: simple_data_source @rapi (+ @cell_id "/data(cell)")
-      //print "src data=" @src.output
-
-      //react @src.output {: val | console.log(555,val ) :}
       
       param_src: simple_data_source @rapi (+ @cell_id "/params(cell)")
 
@@ -208,12 +201,6 @@ process "subgr" { // тут пока все вместе только для у�
 
       b1: lib3d.buffer @datapos 3
 
-/*
-      linepos := apply {: vals | 
-        return vals.map( (val,index) => [index,val,0, index,0,0] ).flat(1)
-        :} @src.output
-      b2: lib3d.buffer @linepos 3
-*/
 
       linepos := apply {: vals | 
         let acc = []
@@ -327,116 +314,118 @@ process "do_button" {
   }
 }
 
+/////////////////////////
 
-mixin "tree_lift"
-process "create_from_records" {
-  in {
-    records: cell
-  }
-  repeater input=(read @records | filter {: val | return val.type == "gr" :}) { sv |
-    init_params := get @sv "params"
-    //print "init_params=" @init_params
-    s: subgr (get @sv "id") **init_params
-    subgr_shadow @s
-  }
-  // idea repeater input=@shared_view[type="combobox"] а хорошая штука css была. и питон молодец.
-  // типа фильтр в синтаксическом геттере.. в css такое есть. и в питоне в либах.
-  // как-то кстати питон вот в индекс умеет передать выражение.. как?
-  repeater input=(read @records | filter {: val | return val.type == "combobox" :}) { sv |
-    init_params := get @sv "params"
-    do_combobox (get @sv "id") **init_params
-  }
-  repeater input=(read @records | filter {: val | return val.type == "text" :}) { sv |
-    init_params := get @sv "params"
-    do_text (get @sv "id") **init_params
-  }
-  repeater input=(read @records | filter {: val | return val.type == "button" :}) { sv |
-    init_params := get @sv "params"
-    do_button (get @sv "id") **init_params
-  }
-  repeater input=(read @records | filter {: val | return val.type == "container" :}) { sv |    
-    apply_children @mk_container (get @sv "id")
-    /*
-    apply {: cell_id_value |
-      let k = create_do_container({})
-      k.cell_id.submit( cell_id_value )
-      console.log("container created",k,"self is",self)
-      self.append( k )
-    :} (get @sv "id")
-    */
-  }
+mixin "tree_node"
+process "proxy_proc" {
+ in {
+   p_rapi: cell
+   proc: cell // запись о процессе
+   gui_list: cell
+ }
+ // это есть выход
+ id := get @proc "id"
+ gui := get @gui_list @id
+
+ unsub: state
+
+ //print "proc_id=" @id "gui_list=" @gui_list "gui_record=" @gui
+
+ show_gui := {
+   dom.element "span" "Hello"
+ }
+
+ react @gui {: gui |  
+    let rapi = p_rapi.get()
+    let pid = id.get()
+    console.log("gui=",gui,"rapi=",rapi)
+    gui ||= {}
+    gui.input ||= {}
+    if (self.unsub) self.unsub()
+    let unsubs = []
+    for (let k in gui.input) 
+    {
+      let c = CL2.create_cell()
+      let label = pid + "/" + k + "(cell)"
+      let unsub1 = rapi.query( label ).done(msg => {
+        console.log("see remote val for param",k,msg)
+        c.submit( msg.value )
+      })
+      let unsub2 = c.subscribe( val => {
+        // todo проверять и высылать только если это новое значение
+        console.log("see local val for param",k,val)
+        rapi.msg( {label, value: val })
+      })
+      unsubs.push( unsub1 , unsub2  )
+      // добавляем созданную ячейку в объект
+      self[k] = c
+    }
+    self.unsub = () => {
+      unsubs.map( x => { if (x) x() } )  
+      unsubs = []
+    }
+ :}
+
+ react @self.release {: if (self.unsub) self.unsub() :}
+
 }
 
 mixin "tree_node"
-process "do_container" {
+process "remote_space" {
   in {
-    cell_id: cell
-    title: cell ""    
+    rapi: cell
+    space_id: cell "pr_list"
+  }
+  // ссылки еще надо
+  remote_processes_list := ppk.shared @rapi @space_id
+  remote_gui_list := ppk.shared @rapi (+ @space_id "/gui") | arr_to_map "id"
+  //print "gui id" (+ @space_id "/gui")
+
+  //output: cell [] // список процессов. каждый процесс это объект clon
+
+  repeater @remote_processes_list { proc |
+    proxy_proc @rapi @proc @remote_gui_list
   }
 
-  shared_view_my := ppk.shared @rapi @cell_id
-  
-  print "shared_view_my=" @shared_view_my
-
-  create_from_records @shared_view_my
-  
-  gui_items := {
-    dom.column {            
-      parts.create (parts.get @self.children "gui_items")
-    }
-  }
-
-  scene_items := {
-    parts.create (parts.get @self.children "scene_items")
-  }
+  //children_map := arr_to_map @self.children "id"
 }
 
-mk_container := { id | do_container @id }
-
-ppk.shared_writer @rapi "pr_gui" (dict class="link_process" 
-  fn=(apply {: x | return x.toString() :} {: pid div rapi |
-  console.log("hello from gui1",pid,div,rapi)
-  var s = '<div id="myDiv">Src:<select></select></div>';  
-  div.innerHTML = s;
-  let unsub = () => {
-    console.log("clearing gui")
-    div.innerHTML = ''
-  }
-  return unsub
-
-  :}))
+process_space: remote_space @rapi "pr_list"
 
 /////////////////////////
 
 // ну это вообще все созданные
   pr_list := ppk.shared @rapi "pr_list"
-  //gui_of_processes := ppk.shared @rapi "pr_gui"
-  //print "gui_of_processes=" @gui_of_processes
   print "pr_list=" @pr_list
-
-  active_process_gui := simple_data_source @rapi (+ @active_process_id "/gui(cell)")
-  active_process_id: cell
-
-  react @active_process_id {: active_process_gui.submit({}) :}
-
-  print "active_process_id:" @active_process_id
-  print "query gui slot:" (+ @active_process_id "/gui(cell)")
-  print "active_process_gui" @active_process_gui
+  
+  active_process: cell
 
 /////////////////////////    
 
 mixin "tree_node"
-process "show_processes_gui" {  
-  
+process "show_processes_gui" {
+
+  in {
+    arg_process_space: cell
+  }
+
+  //procs: cell []
+  //bind (get @arg_process_space "children") @procs
+  //print "XXX=" (get @arg_process_space "children" | read_value)
+
   gui_items_row2 := {    
     dom.element "span" "Процессы:"
+
+      //print "XXX=" (read (get @arg_process_space "children")) // (get @process_space "children")
     
-      repeater input = @pr_list { item |
+      repeater input = (get @arg_process_space "children" | read_value) { item |
         dom.row {
-          dom.button (get @item "id") {: 
-            console.log("item.id=",item.id,item)
-            active_process_id.submit( item.id )
-            :}
+          dom.button (get @item "id" | read_value) {:
+            active_process.submit( item )
+          :}
+        } 
+      }
+
           /*
           dom.button "x" {: 
             let lrapi = rapi.get()
@@ -445,85 +434,13 @@ process "show_processes_gui" {
             console.log("btn clicked, sending msg=",msg)
             lrapi.msg( msg )
             :}
-          */  
-        } 
-    }  
+          */      
   }
-
-  //print "active_process_gui=" @active_process_gui
-  /*
-  gui_items := {
-    print "iiii"
-  }
-  */
  
 }
 
-mixin "tree_lift"
-process "show_processes_gui2" 
-{
-
-   clear_current_gui: cell null
-    
-    //if @active_process_id {
-      dom.row style="gap:0.2em" {
-        dom.element "span" @active_process_id
-        dom.button "X" {: 
-              let lrapi = rapi.get()
-              
-              let msg = { label: "stop_process", id: active_process_id.get() }
-              console.log("btn clicked, sending msg=",msg)
-              lrapi.msg( msg )
-              active_process_id.set(null)
-              :}
-      }
-
-      gui_div: dom.element "div"
-
-      // todo: apply и print не удаляются из контекста при пересоздании gui_items
-      // и это есть баг
-      apply {: gui div rapi |          
-          let pid = gui?.pid
-          console.log("gonna deploy gui:",gui,div,rapi,pid)
-          if (clear_current_gui.is_set) {
-            let unsub = clear_current_gui.get()
-            if (unsub) unsub()
-            clear_current_gui.submit(null)
-          }
-          if (!gui) return
-          let fn = eval(gui.fn)
-          let unsub = fn( pid, div, rapi )
-          clear_current_gui.submit( unsub )
-        :} @active_process_gui @gui_div.output @rapi      
-    //}
-  
-}
 
 /*
-  process_gui:
-    {
-       input: ["a","b"], - порты
-       output: ["c","d"], - порты
-       params: { - параметры
-          "alfa" : {
-             type: "string"
-          }
-       }
-    }
-   .. либо вариант: 
-  process_gui:
-    {
-       input: {
-          "alfa" : { type: "string" },
-          "beta" : { type: "port" },
-          "restart":{ type: "command" }
-       },
-       output: {
-          "beta" : { type: "string" },
-          "c" : { type: "port" }
-       }
-    }   
-   .. либо вариант: 
   process_gui:
     {
        input: {
@@ -540,44 +457,76 @@ process "show_processes_gui2"
     }     
 */
 
-func "map_to_arr" {: h |
-    let arr = []
-    for (let k in h) {
-      let rec = h[k]
-      rec.name = k
-      arr.push( rec )
-    }
-    return arr
-:}
-
 mixin "tree_lift"
-process "show_processes_gui3" 
+process "show_process_gui3" 
 {
+   in {
+     //id: cell
+     proc: cell
+     //gui: cell
+   }
+
+   id := get @proc "id" | read_value
+   gui := or (get @proc "gui" | read_value) (dict)
 
    clear_current_gui: cell null
     
-    //if @active_process_id {
       dom.row style="gap:0.2em" {
-        dom.element "span" @active_process_id
+        dom.element "span" @id
         dom.button "X" {: 
               let lrapi = rapi.get()
               
-              let msg = { label: "stop_process", id: active_process_id.get() }
+              let msg = { label: "stop_process", id: id.get() }
               console.log("btn clicked, sending msg=",msg)
               lrapi.msg( msg )
-              active_process_id.set(null)
+              active_process.submit( null )
               :}
       }
 
-      input_params_r := dict string={ pid param_record |
-        print "hello from string" @param_record
-        dom.element "span" ( + (get @param_record "name") ":")
-        dom.input
-      } 
+      input_params_r := dict 
+        string={ pid param_record |
+          name := get @param_record "name"
+
+          dom.element "span" ( + @name "*:")
+          di: dom.input "text"
+
+          process_cell := get @proc @name
+          if @process_cell {
+          react (read_value @process_cell) {: val |
+            //console.log("DDD val=",val)
+            di.input_value.submit( val )
+          :}
+          react @di.value {: val |
+            let cell = process_cell.get()
+            cell.submit( val)
+            :}
+          }
+        }
+        range={ pid param_record |
+          name := get @param_record "name"
+
+          dom.element "span" ( + @name "*:")
+          di: dom.input "range" min=(get @param_record "min") max=(get @param_record "max") step=(get @param_record "step")
+
+          process_cell := get @proc @name
+
+          if @process_cell {
+          react (read_value @process_cell) {: val |
+            di.input_value.submit( val )
+          :}
+          react @di.value {: val |
+            let cell = process_cell.get()
+            cell.submit( val )
+            :}
+          }
+        }
+        port={ pid param_record |
+          //print "hello from string" @param_record
+          dom.element "span" ( + (get @param_record "name") " (port):")
+        }
 
       gui_div: dom.column {
-        //params := get @active_process_gui "input" | filter {: x | return x.type != "port" :}
-        input_params := get @active_process_gui "input" | map_to_arr
+        input_params := get @gui "input" | map_to_arr
         //print "input_params=" @input_params
 
         repeater input=@input_params { param_record |
@@ -585,18 +534,14 @@ process "show_processes_gui3"
           fn := get @input_params_r @type
           //print "fn=" @fn
           // todo разобраться почему 2 раза 
-          apply_children @fn @active_process_id @param_record
+          apply_children @fn @id @param_record
         }
       }
   
 }
 
 env: node {
-
-  show_processes_gui
-
-  print "shared_view_root=" @shared_view
-  create_from_records @shared_view  
+  show_processes_gui @process_space
 }
 
 /////////////
@@ -690,7 +635,8 @@ process "main" {
     output_space: dom.element "div" style="border: 1px solid grey; flex: 1;" {      
       dom.element "div" style="position: absolute; padding: 0px;" {
 
-        show_processes_gui3
+        show_process_gui3 @active_process
+
         dom.column style="gap:0.5em;" {          
           parts.create (parts.get @env.children "gui_items")
         }
