@@ -257,7 +257,7 @@ export function setup_process_engine( rapi, worker_ids,process_types_table = {} 
     stop_process_fn2[ id ] = () => { r.stop(); stop_publish_ports() }    
   }
 
-  // начальные значения
+  // начальные значения F-SPAWN-ON-START
   procs.loaded.once( initial_values => {
     console.log("loaded:",initial_values)
     for (let val of initial_values)
