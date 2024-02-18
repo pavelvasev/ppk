@@ -576,12 +576,33 @@ process "show_process_gui3"
           // todo разобраться почему 2 раза 
           apply_children @fn @proc @param_record
         }
-      }
-  
+      }  
 }
+
+gr_processes := dict gr={ record |
+    init_params := get @record "params" // todo arg?
+    //print "init_params=" @init_params
+    s: subgr (get @record "id") **init_params
+    subgr_shadow @s
+}
+
+mixin "tree_lift"
+process "create_gr_processes" {
+  in {
+    records: cell
+  }
+  repeater input= @records { record |
+    type := get @record "class"
+    fn := get @gr_processes @type
+    //print "fn=" @fn
+    // todo разобраться почему 2 раза 
+    apply_children @fn @record
+  }
+}  
 
 env: node {
   show_processes_gui @process_space
+  create_gr_processes @shared_view
 }
 
 /////////////
@@ -625,32 +646,6 @@ dom.custom "cl-main"
 mixin "tree_node"
 process "main" {
   in { style: cell }
-
-/*
-  ds: data_source
-  gr_vals := @ds.output
-  
-  //  print "gr_vals=" @gr_vals
-
-  datapos := apply {: vals | 
-    return vals.map( (val,index) => [index,val,0] ).flat(1)
-    :} @gr_vals
-  b1: lib3d.buffer @datapos 3
-
-  // F-COLORED-PARTS
-  
-  gr_vals_c2 := @ds.output_c2
-  colors := apply {: vals | 
-    
-    let mapped = vals.map( (val,index) => {
-      //if (val == 3) return [0.0,1.0,0.0]
-      return [(0.7+val)*0.234234 % 1,(val*val*0.25 + 0.2) %1,(0.853 + 2*Math.sqrt(3+val)) % 1]
-      } ).flat(1)
-    //console.log("gr_vals_c2=",vals,"mapped=",mapped)
-    return mapped
-    :} @gr_vals_c2
-  b2: lib3d.buffer @colors 3  
-  */
 
   output := dom.column style=@style {
     dom.dark_theme

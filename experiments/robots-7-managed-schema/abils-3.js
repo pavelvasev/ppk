@@ -146,16 +146,9 @@ export function main_3( rapi, id, worker_ids ) {
   u = rapi.shared("pr_list/gui").submit(gui)
   stop_fn.push( u.delete ) // todo idea сделать функцию добавления в массив этот
 
-  u = rapi.shared("gr_view").submit({type:"container",id:container_id})
-  stop_fn.push( u.delete ) // todo idea сделать функцию добавления в массив этот
-
-  u = rapi.shared(container_id).submit({type:"button",id:mkid("gr1id_b"),
-       params:{title: "Стоп", msg_on_click: {label:"stop_process", id }}})
-  stop_fn.push( u.delete )
-
   //////////////////////////// график
 
-  u = rapi.shared(container_id).submit({type:"gr",id:mkid("gr1id"),params:{sx: 10, sy: 2000}})
+  u = rapi.shared("gr_view").submit({class:"gr",id:mkid("gr1id"),params:{sx: 10, sy: 2000}})
   stop_fn.push( u.delete )
 
   let gr1id = rapi.open_cell(mkid("gr1id/data"))
