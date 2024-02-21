@@ -389,9 +389,48 @@ export class ClientApi {
       p.loaded.submit( vals )
 
       //F-LIST-ADDED-NOTIFY
-      for (let val of vals) p.added.submit( val )
+      for (let val of vals) {
+        p.added.submit( val )
+        p.setted.submit( val )
+      }
     })
 
+    return p
+  }
+
+  // список с полями name, value
+  // преобразуется в словарь с операцией open( name ) -> cell
+  shared_dict_reader( crit ) {
+    let p = this.shared_list_reader( crit )
+
+    let table = {}
+    p.open = (name) => {
+      table[name] ||= CL2.create_cell()
+      return table[name]
+    }
+    p.setted.subscribe( val => {
+      p.open_key( val.name || val.id ).submit( val.value )
+    })
+    return p
+  }
+
+  shared_dict_writer( crit ) {
+    let p = this.shared_list_writer( crit )
+    /*
+    let orig_submit = p.submit
+    p.submit = (name,value,submit_id) => {
+      return orig_submit( {name, value},submit_id )
+    }
+    */
+    // вот это вроде лучше
+    p.open = (name) => {
+      table[name] ||= CL2.create_cell()
+      let c = table[name]
+      let submit_id = this.generate_uniq_query_id("dict_key")
+      c.subscribe( value => {
+         p.submit( {name,value},submit_id )
+      })
+    }
     return p
   }
 
