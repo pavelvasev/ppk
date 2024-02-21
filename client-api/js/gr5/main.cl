@@ -246,74 +246,6 @@ process "subgr" { // тут пока все вместе только для у�
       }
 }
 
-mixin "tree_node"
-process "do_combobox" {
-  in {
-    cell_id: cell
-    input: cell // таблица значений
-    input_index: cell
-    input_value: cell
-    title: cell ""
-  }
-
-  selected_value: cell
-  simple_data_target @rapi ( + @cell_id "/value(cell)") input=@selected_value
-
-  src_input: simple_data_source @rapi ( + @cell_id "/input(cell)")
-  bind @src_input.output @input
-  // но в целом это странно и должно быть автоматом - idea 
-
-  src_input_value: simple_data_source @rapi ( + @cell_id "/value_mon(cell)")
-  bind @src_input_value.output @input_value
-  // но в целом это странно и должно быть автоматом - idea 
-
-  //print "do_combobox input_value=" @input_value
-  //print "do_combobox hello"  ( + @cell_id "/value(cell)")
-  
-  gui_items := {
-    dom.element "span" @title
-    ds: dom.select input=@input input_index=@input_index input_value=@input_value
-    bind @ds.output @selected_value
-  }
-}
-
-mixin "tree_node"
-process "do_text" { // тут пока все вместе только для упрощения. а так источник и график конечно разделить
-  in {
-    cell_id: cell
-    title: cell ""
-  }
-
-  src: simple_data_source @rapi (+ @cell_id "/data(cell)")
-  bind @src.output @title
-  
-  gui_items := {
-    dom.element "span" @title
-  }
-}
-
-mixin "tree_node"
-process "do_button" {
-  in {
-    cell_id: cell
-    title: cell ""
-    msg_on_click: cell
-  }
-
-  src: simple_data_source @rapi (+ @cell_id "/data(cell)")
-  bind @src.output @title
-  src2: simple_data_source @rapi (+ @cell_id "/msg(cell)")
-  bind @src2.output @msg_on_click
-  
-  gui_items := {
-    dom.button @title {:
-      let lrapi = rapi.get()
-      console.log("btn clicked, sending msg=",msg_on_click.get())
-      lrapi.msg( msg_on_click.get() )
-    :}
-  }
-}
-
 /////////////////////////
 
 mixin "tree_node"
@@ -338,7 +270,7 @@ process "proxy_proc" {
  react @gui {: gui |  
     let rapi = p_rapi.get()
     let pid = id.get()
-    console.log("gui=",gui,"rapi=",rapi)
+    //console.log("gui=",gui,"rapi=",rapi)
     gui ||= {}
     gui.input ||= {}
     if (self.unsub) self.unsub()
@@ -550,33 +482,37 @@ process "show_process_gui3"
    }
 
    id := get @proc "id" | read_value
-   gui := or (get @proc "gui" | read_value) (dict)
+   gui := or (get @proc "gui" | read_value) (dict input=(dict))
 
    clear_current_gui: cell null
     
-      dom.row style="gap:0.2em" {
-        dom.element "span" @id
-        dom.button "X" {: 
-              let lrapi = rapi.get()
-              let msg = { label: "stop_process", id: id.get() }
-              //console.log("btn clicked, sending msg=",msg)
-              lrapi.msg( msg )
-              active_process.submit( null )
-              :}
-      }      
+    dom.row style="gap:0.2em" {
+      dom.element "span" @id
+      dom.button "X" {: 
+            let lrapi = rapi.get()
+            let msg = { label: "stop_process", id: id.get() }
+            //console.log("btn clicked, sending msg=",msg)
+            lrapi.msg( msg )
+            active_process.submit( null )
+            :}
+    }      
 
-      gui_div: dom.column {
-        input_params := get @gui "input" | map_to_arr
-        //print "input_params=" @input_params
+    gui_div: dom.column {
+      input_params := get @gui "input" | map_to_arr
+      print "input_params=" @input_params
 
-        repeater input=@input_params { param_record |
-          type := get @param_record "class"
-          fn := get @input_params_r @type
-          //print "fn=" @fn
-          // todo разобраться почему 2 раза 
-          apply_children @fn @proc @param_record
-        }
-      }  
+      r1: repeater input=@input_params { param_record |
+        type := get @param_record "class"
+        fn := get @input_params_r @type
+        // dom.element "span" @type
+        //print "fn=" @fn
+        // todo разобраться почему 2 раза 
+        apply_children @fn @proc @param_record
+      }
+      //print "r1 children=" @r1.children
+    }  
+
+    print "gui-div children=" @gui_div.children
 }
 
 gr_processes := dict gr={ record |
