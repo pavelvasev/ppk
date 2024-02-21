@@ -104,7 +104,9 @@ export class ClientApi {
       } else if (msg.cmd_reply == 'add_item')
       {
         // это ответ от сервера что он обработал наше add_item        
-        this.deployed_items_resolve[ msg.id ] ()
+        let f = this.deployed_items_resolve[ msg.id ]
+        if (!f) console.error("this.deployed_items_resolve is null! msg.id=",msg.id)
+        f ()
       } else if (msg.opcode) {
         //console.log("msg opcode from center",msg)
         let listp = this.lists[ msg.crit ]
@@ -285,19 +287,29 @@ export class ClientApi {
         p.delete = () => fres.delete()
         return p
       },
-      submit: (arg) => { // F-MAIN-SHARED-SETS 
+      submit: (arg, submit_id ) => { // F-MAIN-SHARED-SETS 
+        // todo убрать это отсюда (перенести в списки)
         // мы просто для удобства это здесь разместили. так это к реакциям не относится.
         // размещает не функцию но значение
-        // todo убрать это отсюда
         // note фишка что это работа с 1 значением только!
+
+        // F-SUBMIT-HAS-ID чтобы было симметрично с shared-list-reader, 
+        // делаем что можно вызывать много submit у 1 экземпляра writer
+        submit_id ||= this.generate_uniq_query_id( opts.prefix || "shared_list" );
+        kvant.name = submit_id
+
         kvant.value.arg = arg
         //kvant.value.id_in_list = id // F-EXTERNAL-LIST-REMOVE необходимость удалять внешне
         let p = new Promise( (resolve,reject) => {
-          this.deployed_items_resolve[ id ] = resolve
+          this.deployed_items_resolve[ submit_id ] = resolve
           return this.send( kvant )
           // теперь ждем ответа -- resolve когда-нибудь вызовут
         })
-        p.delete = () => fres.delete()
+        p.delete = () => { // функция удаления реакции
+          //console.log("deactivating reaction call!")
+          let d_kvant = { crit, name: submit_id, cmd: "delete_item" }
+          this.send( d_kvant )
+        }
 
         return p
       },
@@ -342,10 +354,10 @@ export class ClientApi {
     let list = this.get_list( crit )
 
     p.changed  = CL2.create_cell()  // список поменялся
-    p.setted    = CL2.create_channel() // значение установлено
+    p.setted   = CL2.create_channel() // значение установлено
     p.added    = CL2.create_channel()  // значение добавлено (а раньше не было)
     p.deleted  = CL2.create_channel()  // значение удалено
-    p.loaded  = CL2.create_channel()  // начальные значения
+    p.loaded   = CL2.create_channel()  // начальные значения
 
     let unsub = ()=>true
     p.stop = () => unsub() // stop = хватит читать
@@ -375,6 +387,9 @@ export class ClientApi {
       let vals = list_object.get_values()
       p.changed.submit( vals )
       p.loaded.submit( vals )
+
+      //F-LIST-ADDED-NOTIFY
+      for (let val of vals) p.added.submit( val )
     })
 
     return p

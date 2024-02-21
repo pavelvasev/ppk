@@ -279,11 +279,13 @@ export function setup_process_engine( rapi, worker_ids,process_types_table = {} 
   }
 
   // начальные значения F-SPAWN-ON-START
+  /*
   procs.loaded.once( initial_values => {
     console.log("pr_list loaded:",initial_values)
     for (let val of initial_values)
       start_process( val )
   })
+  */
 
   procs.added.subscribe( val => {
     start_process( val.value.arg ) // чето перебор
