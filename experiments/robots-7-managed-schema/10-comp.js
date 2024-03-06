@@ -106,91 +106,83 @@ sys.then( info => PPK.connect("test",info) ).then( rapi => {
   
 })
 
-// формально и это может выдавать робота. почему нет. оно как бы такое и есть.
-// надо ток сигнатуру с полями - макро-портами.
-function compute1( rapi, id, worker_ids, n, sync ) {
-  //let data =  new Float32Array( 2 + DN / P )
+/*
+function define_subprocess_types( rapi ) {
+  let f = ( rapi,id,args, worker_ids) => {
+    return import("./robots/init.js").then( m => {
+      m.robot( rapi,id, worker_ids, arg.fn, arg )
+    })
+  }
 
-  function mkid(part_id) { return id + "/"+part_id }  
+  rapi.define( "init",f )
 
-  //let p_data = rapi.add_data( data )
+  let f2 = ( rapi,id,args, worker_ids) => {
+    return import(`./robots/${id}`).then( m => {
+      return m.robot( rapi,id, worker_ids, arg.fn, arg )
+    })
+  }
 
-  let init = INIT.robot( rapi, mkid("init1"), worker_ids, (args,index,local_rapi) => {
+  let f2s = f2.toString()
+
+  rapi.query("type_request",(msg) => {
+    rapi.reply( msg,f2s )
+  })
+}
+*/
+
+function compute2( rapi, id, args, worker_ids ) {
+
+  // rapi, имя графа, id префикса!
+  let g = GRA.open_graph( rapi, "pr_list", id)
+
+  let init = g.create_process("init",{worker_ids, DN, P,
+     fn: (args,index,local_rapi) => {
     let data = new Float32Array( args.DN / args.P )
     //return { left:0, right: 0, payload: [data]}    
     return local_rapi.submit_payload_inmem( data ).then( pi => {
       return {left:0, right:0, payload_info: [pi] }
     })
-  }, {DN,P})
+  }})
 
-  let r1 = STENCIL_1D.robot( rapi, mkid("robo1"), worker_ids, (x,left,right) => (left+right)/2 + Math.random() )
-  let pr = PASS.robot( rapi, mkid("pass1"), worker_ids, n )
+  //let r1 = STENCIL_1D.robot( rapi, mkid("robo1"), worker_ids, (x,left,right) => (left+right)/2 + Math.random() )
 
-  // нач данные
-  LINK.create( rapi, init.output, r1.input )
+  let r1 = g.create_process( "stencil-1d", {worker_ids, DN, P,
+      fn: (x,left,right) => (left+right)/2 + Math.random()
+      })
 
-  //console.log( pr.iterations )
+  let pr = g.create_process("pass",{worker_ids, n: args.n} )
 
-  // кольцо
-  /*
-  LIB.create_port_link( rapi, r1.output, pr.input )
-  LIB.create_port_link( rapi, pr.output, r1.input )
-  */
-  
-  //LINK.create( rapi, r1.output, vis_robot.input )
-  //LINK.create( rapi, vis_robot.output, pr.input )
+  g.create_link( init.port("output"), r1.port("input") )
 
-  LINK.create( rapi, r1.output, pr.input )
-  
-  if (!sync) {
-     LINK.create( rapi, pr.output, r1.input )
-  }
-  else 
-  {  // синхронизация кольца
-    // перспектива
-    //let j1 = LIB.create_port_join( rapi, pr.output, merge1.output )
-    //LIB.create_port_link( rapi, j1.output, r1.input )
+  g.create_link( r1.port("output"), pr.port("input") )
+  g.create_link( pr.port("output"), r1.port("input") )
 
-    let merge1 = REDUCE_P.robot( rapi,mkid("iters"), worker_ids,(vals,counter) => counter )
-    LINK.create( rapi, pr.iterations, merge1.input )
-
-    let sync = MAP2.robot( rapi,mkid("sync"), worker_ids, (vals) => vals[0] )
-    LINK.create( rapi, pr.output, sync.input ) 
-    LINK.create( rapi, merge1.output, sync.input2, true ) 
-    LINK.create( rapi, sync.output, r1.input, true ) 
-  }
-
-  let deployed = Promise.all( [r1.deployed, pr.deployed] )
-
-  return {output: r1.output, final: pr.finish, deployed }
+  return g.make_process()
+  // напрашивается: return g
+  // где g это subprocess некий, а не то что граф.. ммм.
 }
 
 ////////////////////////////////
-//import * as F from "./f.js"
 
-  let table= { 
-    compute: {
-      title: "Вычисление",
-      fn: (rapi, id, worker_ids) => compute1( rapi, id, worker_ids, iters, sync_mode),
-      ports: []}, 
-    vis: { 
-      title: "График",
-      fn: ABILITIES.main_3,
-      ports: {} },
-    link_process: { 
-      title: "Связь",
-      fn: ABILITIES.link_process, ports: {} } 
-  }
+function types_func(classname) {
+
+  let fallback = GRA.shared_def_reader( rapi )
+
+  return import(`./robots2/${classname}.js`).then( m => {
+      return {value: m.macro}
+  },err => {
+    return fallback( classname )
+  })
+}
 
 
 function main( rapi, worker_ids ) {
   console.log("main called")
 
-  GRA.setup_process_engine( rapi, "pr_list", worker_ids)
+  GRA.setup_process_engine( rapi, "pr_list", types_func, worker_ids)
+  rapi.define("compute", compute2 )
 
-  rapi.define("compute", compute1 )
-
-  setup_process_engine( rapi, worker_ids, table)
+  //setup_process_engine( rapi, worker_ids, table )
 
   // todo это вычислимо из tablica
   rapi.shared("abilities").submit({title:"Вычисление",msg:{label:"start_process",type:"compute",target:"pr_list"}})

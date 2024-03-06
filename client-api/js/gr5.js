@@ -20,6 +20,7 @@ export function start( open_browser=false ) {
     let args = [`http-server`] //,"--silent"] 
     // --silent = не печатать логи 
     if (open_browser) args.push("-o")
-  	let prg = cp.spawn( `npx`, args,{cwd,detached:true,stdio: ['ignore','inherit','ignore']} )
+  	let prg = cp.spawn( `npx`, args,{cwd,stdio: ['ignore','inherit','ignore']} )
+    // detached:true, если делать детачед то он остается висеть по завершению программы.
   	return prg
 }

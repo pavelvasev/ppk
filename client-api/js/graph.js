@@ -27,22 +27,44 @@ class Graph {
 }  
 */
 
+/*
+  идея. Сделать не Graph а что-то типа GraphWriter/GraphAccess.
+  который имеет метод cleanup который удаляет все созданное.
+  что удобно для создания процессов! обеспечения функции их удаления.
+*/
 
-class Graph {
+export class Graph {
 
   constructor( rapi, id ) {
   	this.rapi = rapi
   	this.id = id
   	this.writer = this.rapi.shared_list_writer(this.id)
+
+  	this.cleanup_arr = []
   }
 
-  create_process( p_class, arg, id ) {
-    let p = this.writer.submit( {type: p_class, arg, id} )
-    return p.delete
+  create_process_with_id( id, p_class, ...args_list ) {
+  	id ||= this.rapi.generate_uniq_query_id(p_class)
+    let s = this.writer.submit( {p_class, args_list, id} )
+    this.cleanup_arr.push( s.delete )
+    let p = {
+    	port: (port_id) => `${id}/${port_id}`,
+    	delete: s.delete
+    }
+    return p
   }
 
-  create_link( src, tgt, id ) {
-  	return this.create_process( "link_process", {src,tgt}, id )
+  create_process( p_class, ...args_list ) {
+  	//console.log("graph: create_process",{p_class,args_list:JSON.stringify(args_list)})
+  	return this.create_process_with_id( null, p_class, ...args_list )
+  }
+
+  js_pack( fn ) {
+  	return fn.toString()
+  }
+
+  create_link( src, tgt ) {
+  	return this.create_process( "link_process", src,tgt )
   }
 
   // ну например такое апи
@@ -50,10 +72,28 @@ class Graph {
 	let procs = this.rapi.shared_list_reader(this.id)
 	//return procs
 	let u1 = procs.added.subscribe( created )
-	let u2 = procs.deleted.subscribe( created )
-	return () => { u1(); u2(); }
+	let u2 = procs.deleted.subscribe( deleted )
+	let unsub = () => { u1(); u2(); }
+	this.cleanup_arr.push( unsub )
+	return unsub
   }
 
+  delete() {
+  	this.cleanup_arr.map( x => x() )
+  	this.cleanup_arr = []
+  }
+
+  // нам надо преобразовать граф в процесс в терминах того что ожидает process-engine
+  make_process(ports={}) {
+  	let p =ports
+  	p.delete = this.delete.bind(this)
+  	return p
+  }
+
+}
+
+export function open_graph( rapi, id ) {
+	return new Graph( rapi, id )
 }
 
 export class GraphApi {
@@ -71,7 +111,7 @@ export function shared_def_reader( rapi ) {
   let r = rapi.shared_dict_reader("defines")
 
   let f = (classname) => {
-  	return r.open( classname )
+  	return r.open( classname, true )
   }
 
   return f
@@ -82,11 +122,12 @@ export function shared_def_reader( rapi ) {
 // те.. open_graph()
 
 // опирается на defines. в которой функции имеют сигнатуру 
-export function setup_process_engine( rapi, graph_id, worker_ids, process_types_fn ) 
+export function setup_process_engine( rapi, graph_id, process_types_fn, worker_ids ) 
 {
 	graph_id ||= "pr_list"
 	process_types_fn ||= shared_def_reader( rapi )
 
+	// туду вытащить это. это вообще отдельное и 1 раз. на всех.
 	rapi.define( "link_process", link_process )
   //rapi.shared_list_writer
 
@@ -96,11 +137,12 @@ export function setup_process_engine( rapi, graph_id, worker_ids, process_types_
 
   let stop_process_fn = {}
   let id_counter = 0
+
   // todo вынести это в отдельную функцию
   rapi.query("start_process").done( val => {
     console.log("see msg for start_process! val=",val)
     let id = val.id || val.type + "_"+(id_counter++)
-    let delete_fn = rapi.start_process( val.type, val.arg, val.target || graph_id, id)
+    let delete_fn = rapi.start_process( val.target || graph_id, id, val.type, val.arg )
     stop_process_fn[ id ] = delete_fn
   })
 
@@ -135,26 +177,30 @@ export function setup_process_engine( rapi, graph_id, worker_ids, process_types_
 
   function start_process( record ) {
     //console.log("see process request",val)
-    let {type,arg,id} = record 
-    console.log("pr_list: see process request",{type,arg,id})
+    let {p_class,id,args_list} = record 
+    //console.log("pr_list: see process request",{p_class,id,args_list})
 
-    id ||= type + "_p_"+(id_counter++)
+    id ||= p_class + "_p_"+(id_counter++)
 
-    process_types_fn( type ).then( record => {    	
-    	if (typeof(record.value) === "string") record.value = eval( record.value )
-    	let fn = record.value
-        // todo это уже 3й раз эта логика с таблицами операций..
+    process_types_fn( p_class ).then( fn => {    	
 
         if (!fn) {
-	      console.error("process start funciton not found for type",fn)
+	      console.error("process start function is null for p_class",{p_class,fn})
 	      return
 	    }
 
-	    let r = fn( rapi, id, worker_ids, arg )
+	    console.log("calling",{p_class,fn})
 
-	    if (!r.stop) {
-	      console.error("no stop record for type ",type)
-	      r.stop = () => {}
+	    let r = fn( rapi, id, ...args_list )
+
+	    if (!r) {
+	      console.error("null result from object of p_class ",p_class,"r=",r)
+	      r = {}
+	    }
+
+	    if (!r.delete) {
+	      console.error("no delete record for created object of p_class ",p_class)
+	      r.delete = () => {}
 	    }
 
 	    // публикуем порты созданного процесса
@@ -162,7 +208,9 @@ export function setup_process_engine( rapi, graph_id, worker_ids, process_types_
 
 	    stop_process_fn2[ id ] = () => {
 	      //console.log('stop_process_fn2',id)
-	      r.stop(); stop_publish_ports(); delete stop_process_fn2[ id ] 
+	      r.delete(); 
+	      stop_publish_ports(); 
+	      delete stop_process_fn2[ id ] 
 	    }
 
     })
@@ -199,7 +247,7 @@ function publish_ports( rapi, id, ports_record ) {
   for (let k in ports_record) {
     let r = ports_record[k]
     if (Array.isArray(r)) {
-      console.log("found port:",id+"/"+k,r)
+      //console.log("found port:",id+"/"+k,r)
       // id: id-процесса / порт
       // channels: перечень каналов 
       let unsub = rapi.shared_list_writer("ports").submit({id:id+"/"+k,channels:r})
@@ -217,7 +265,7 @@ function publish_ports( rapi, id, ports_record ) {
 
 
 
-export function link_process( rapi, id, worker_ids, arg ) 
+let link_process = ( rapi, id, src_port_id, tgt_port_id ) =>
 {
   //console.log("link_process arg=",arg)
   function mkid(part_id) { return id + "/"+part_id }
@@ -260,10 +308,10 @@ export function link_process( rapi, id, worker_ids, arg )
   let ports = rapi.shared_list_reader("ports")
 
   let u = ports.changed.subscribe( val => {    
-    let src_port_info = val.find( x => x.id == arg.src )
-    let tgt_port_info = val.find( x => x.id == arg.tgt )    
+    let src_port_info = val.find( x => x.id == src_port_id )
+    let tgt_port_info = val.find( x => x.id == tgt_port_id )    
     if (src_port_info && tgt_port_info) {
-      console.log("link_process: creating real link for ",arg)
+      console.log("link_process: creating real link for ",{src_port_id, tgt_port_id})
       //link = LINK.create( rapi, src_port_info.channels, tgt_port_info.channels, true )
       link = create_link( rapi, src_port_info.channels, tgt_port_info.channels, true )
       u(); u = () => {}
@@ -271,7 +319,7 @@ export function link_process( rapi, id, worker_ids, arg )
     }
   })
 
-  return {stop: () => {
+  return {delete: () => {
     u()
     if (link) link.destroy()
   }}

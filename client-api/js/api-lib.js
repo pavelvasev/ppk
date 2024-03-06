@@ -404,12 +404,22 @@ export class ClientApi {
     let p = this.shared_list_reader( crit )
 
     let table = {}
-    p.open = (name) => {
-      table[name] ||= CL2.create_cell()
-      return table[name]
+    p.open = (name, must_exist) => {
+      let q = table[name]
+      if (!q) {
+        if (must_exist) {
+          console.error("shared_dict_reader: RECORD NOT FOUND but should exist. Will wait.",{crit,name})
+        }
+        q = CL2.create_cell()  
+        //if (!during_set) console.log("dict reader:",crit," new table entry",name,", returning new cell",q)
+        table[name] = q
+      }
+      return q
     }
     p.setted.subscribe( val => {
-      p.open_key( val.name || val.id ).submit( val.value )
+      // todo вот что сюда подавать? val.value или просто val?
+      // надо разобраться - для совсместимости и с list-reader
+      p.open( val.name || val.id ).submit( val.value )
     })
     return p
   }
@@ -520,8 +530,9 @@ export class ClientApi {
   ///// запуск процессов
 
   // возвращает функцию остановки
-  start_process( type, arg, target_worker_id, id) {
-    let p = this.shared_list_writer(target_worker_id).submit( {type, arg, id} )
+  start_process( target_worker_id, id, p_class, ...args_list ) 
+  {
+    let p = this.shared_list_writer(target_worker_id).submit( {p_class, args_list, id} )
     return p.delete
   }
 
@@ -677,6 +688,8 @@ export class ClientApi {
    */
   define(name,s_expr,opts={})
   { 
+    if (s_expr.bind) s_expr = s_expr.toString() // встроенный адаптер
+
     return this.shared("defines").submit( {name, value:s_expr} )
 
     return
@@ -735,13 +748,18 @@ export class ClientApi {
   // возвращает s_expr - ниду
   compile_js(code){ 
     let need_id 
-    if (!code.need_id) {
-      // это мега баг: т.о. разные процессы клиентов начинают использовать одинаковые id      
-      // code.need_id = `js-client-api:js:${this.operation_counter++}`      
-      // это норм версия:
-      code.need_id = this.generate_uniq_query_id('compile-js')
+    if (typeof(code) == "string")
+    {
+      need_id = this.generate_uniq_query_id('compile-js2'); // мб из arg брать. которые на самом деле - opts
+    } else {
+      if (!code.need_id) {
+        // это мега баг: т.о. разные процессы клиентов начинают использовать одинаковые id      
+        // code.need_id = `js-client-api:js:${this.operation_counter++}`      
+        // это норм версия:
+        code.need_id = this.generate_uniq_query_id('compile-js')
+      }
+      need_id = code.need_id 
     }
-    need_id = code.need_id; // мб из arg брать. которые на самом деле - opts
 
     let js_code = code.bind ? code.toString() : code
 

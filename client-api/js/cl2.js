@@ -61,7 +61,25 @@ export class Base {
 
 export class Comm extends Base {
 
-	constructor() { super() }
+	constructor() { 
+		super() 
+		// совместимость с then-протоколом
+		// ну и по смыслу then однократен.. всюду так ожидается
+		// поэтому не будем удивлять.
+		this.then = (cb) => {
+			let p_res, p_rej
+			let p = new Promise( (res,rej) => {
+				p_res = res
+				p_rej = rej
+			})
+
+			let unsub = this.once( (val) => {
+				Promise.resolve( cb(val) ).then( p_res, p_rej )
+			} )
+			
+			return p
+		}
+	}
 
 	// становится потребна
 	// subscribe на однократное срабатывание.

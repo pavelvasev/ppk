@@ -3,7 +3,7 @@
 // produce? init!
 // arg?
 
-export function robot( rapi, id, workers,f, f_arg ) {
+export function robot( rapi, id, workers, f, f_arg ) {
   let output_port = workers.map( (x,index) => rapi.open_cell( `${id}/output/${index}` ) )
   
   let count = workers.length  
