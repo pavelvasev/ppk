@@ -33,11 +33,12 @@ class Graph {
   что удобно для создания процессов! обеспечения функции их удаления.
 */
 
+// по факту это есть GraphWriter
 export class Graph {
 
   constructor( rapi, id ) {
   	this.rapi = rapi
-  	this.id = id
+  	this.id = id // id целевого графа, например pr_list
   	this.writer = this.rapi.shared_list_writer(this.id)
 
   	this.cleanup_arr = []
@@ -85,7 +86,8 @@ export class Graph {
 
   // нам надо преобразовать граф в процесс в терминах того что ожидает process-engine
   make_process(ports={}) {
-  	let p =ports
+  	let p = ports
+  	p.port = (port_id) => `${this.id}/${port_id}`,
   	p.delete = this.delete.bind(this)
   	return p
   }

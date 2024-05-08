@@ -11,6 +11,7 @@ import traceback
 import inspect
 # вообще спорно. ну ладно. для get_payload надо
 import numpy as np
+import sys
 
 # 4 байта длина строки, 4 байта длина attach, и далее строка с json и массив байт attach
 class QueryTcp:
@@ -70,6 +71,7 @@ class QueryTcp:
         return pp.result()
 
     # todo идея: with
+    # это кстати неплохая идея
     # т.е. async with ppk.query("some") as msg:
     # ну или кстати сделать как итератор, for ...
     async def query( self, crit, callback, N=-1):
@@ -80,7 +82,7 @@ class QueryTcp:
 
             host = os.environ.get('PPK_PUBLIC_ADDR')
             if host is None:
-                host = "127.0.0.1"            
+                host = "127.0.0.1"
 
             self.server = await asyncio.start_server( self.on_connected,host )
 
@@ -95,15 +97,30 @@ class QueryTcp:
             self.results_url_promise.set_result( {"url":sadr,"host":adr[0],"port":adr[1],"client_id":self.rapi.client_id} )
             
             task = asyncio.create_task( self.server.serve_forever() )
+            #print("created task ttt",task)
             async def close_site():
-                #print("stopping q")
+                """
+                print("stopping q", task)
+                print("stopping server",dir(self.server), self.server.sockets )
+                for s in self.server.sockets:
+                    print("s=",dir(s))
+                    s.shutdown()
+                """    
                 task.cancel()
-                #try:
-                #    await task
-                #except asyncio.CancelledError:
-                #    return
-                #print("stopping q done")
+                try:
+                    #print("enter task await")                    
+                    await task
+                    self.server.close()
+                    await self.server.wait_closed()
+                    #print("task await done is_serving()=",self.server.is_serving())
+                except asyncio.CancelledError:                    
+                    #print("stopping q done")
+                    return
+
             self.rapi.atexit( close_site )
+            # см также 
+            # https://www.roguelynn.com/words/asyncio-graceful-shutdowns/
+
 
         await self.results_url_promise # ибо там нре сразу же
 
@@ -115,7 +132,10 @@ class QueryTcp:
 
         return await self.rapi.reaction( crit, self.rapi.operation("do_query_send",query_id=query_id,results_url=url) )
 
+    # присоединился новый клиент
     async def on_connected(self,reader, writer):
+        #print("connected",dir(reader))
+
         while True:
             try:
                 data = await reader.readexactly(4)
@@ -124,12 +144,20 @@ class QueryTcp:
                 if not reader.at_eof():
                     print("error reading reader. at eof=",reader.at_eof(),"err=",ex)
                 return
-            #except asyncio.CancelledError:
-                #print('cancel_me(): cancel sleep')                
-            #    return
+            except GeneratorExit as ex:
+                #print("GeneratorExit")
+                return
+            except asyncio.CancelledError:
+                #print("Got CancelledError")
+                return
+            except:
+                #print("Caught it!")
+                #print("Unexpected error:", sys.exc_info()[0])
+                return
 
             len = int.from_bytes(data,"big")
             len_att = int.from_bytes(data2,"big")
+            #print("len=",len,"len_att=",len_att)
                         
             if len == 0:
                 print("strange incoming len=0! data=",data)

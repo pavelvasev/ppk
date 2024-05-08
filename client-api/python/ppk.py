@@ -30,12 +30,14 @@ from ppk_starter import *
 
 ########################################## рабочее
 
+# 1 запуск системы или не надо - 2 подключение к системе и переход к функции
+# , main_url="ws://127.0.0.1:10000"
 def ppk_run(main_fn, main_url="ws://127.0.0.1:10000"):
     c = Client( main_url )
     asyncio.run( ppk_run_a(main_fn,c) )
 
 async def ppk_run_a(main_fn, client):
-    t1 = await client.connect()
+    t1 = await client.connect()    
     #t1 = asyncio.create_task( client.run() )
     t2 = asyncio.create_task( main_fn(client) )
     await asyncio.gather( t1,t2 )
@@ -600,7 +602,7 @@ class Client:
             if hasattr( self.operations, code ):
                 operation_fn = getattr( self.operations, code )
             else:
-                operation_fn = lambda a,b: print("operation ",code,"not defined!")
+                operation_fn = lambda a,b: print("operation not defined! code=",code)
             #print("qqqq!",operation_fn)
             action["fn"] = lambda msg : operation_fn(msg, arg)
         return e
