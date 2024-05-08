@@ -22,6 +22,7 @@ class QueryTcp:
         self.verbose = rapi.verbose
         self.rapi = rapi
         rapi.query = self.query
+        rapi.query_for = self.query_for
 
         self.clients = {}
         rapi.operations.do_query_send = self.do_query_send
@@ -70,10 +71,22 @@ class QueryTcp:
         await pp
         return pp.result()
 
+    # https://peps.python.org/pep-0525/
+    async def query_for( self, crit, N=-1):
+
+        if False: # хак Питона
+            yield 1
+
+        def on_data(msg):
+            yield msg
+
+        await self.query( crit, on_data, N)
+
     # todo идея: with
     # это кстати неплохая идея
-    # т.е. async with ppk.query("some") as msg:
-    # ну или кстати сделать как итератор, for ...
+    # т.е. async with ppk.query("some") as msg:    
+    # или скорее: async for msg in rapi.query("data1",100)
+    # см query_for
     async def query( self, crit, callback, N=-1):
         #print("query called",crit)
         if self.results_url_promise is None:

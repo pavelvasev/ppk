@@ -28,6 +28,8 @@ import ppk_payloads_shmem2 as ppk_payloads
 
 from ppk_starter import *
 
+from ppk_cells import *
+
 ########################################## рабочее
 
 # 1 запуск системы или не надо - 2 подключение к системе и переход к функции
