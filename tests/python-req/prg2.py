@@ -1,5 +1,5 @@
 #!/bin/env python3.9
-
+# клиент
 
 import asyncio
 import ppk
@@ -11,19 +11,23 @@ s = ppk.LocalServer()
 # идея - не RemoteSlurm а RemoteServer - ну подумаешь запустили где-то сервер
 # а слурм не-слурм дело другое.
 
+def qcb(msg):
+    print("qcb! msg=",msg)
+
 async def main():
     print("starting system")
     #s1 = await s.start()
     t1 = await c.connect( url=s.url )
     # print("connected",t1)
-    
-    rapi = c
-    # await rapi.reaction( "test", rapi.python( f ))
-    # await c.query( "test",qcb )
+
+    def on_m3(msg):
+        print("python: reply arrived",msg)
 
     for i in range(1,100):
         print("calling msg")
-        await rapi.msg( {"label":"test","alfa":i} )    
+
+        print("sending request test3")
+        await c.request({"label":"test","alfa":i}, on_m3)
         await asyncio.sleep( 1 )
 
     print("Exiting")

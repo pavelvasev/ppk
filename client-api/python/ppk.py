@@ -337,10 +337,12 @@ class RequestReply:
         self.reply_label = None
 
         self.rapi = rapi        
-        rapi.request = self.request
+        rapi.request = self.request        
         rapi.reply = self.reply            
+        rapi.request_p = self.request_p
+        rapi.request_pp = self.request_pp
 
-    async def request( self, msg, callback,N=1 ):
+    async def request( self, msg, callback ):
         self.request_counter = self.request_counter + 1
         request_id = self.request_counter
         self.reply_callbacks[ request_id ] = callback
@@ -352,6 +354,21 @@ class RequestReply:
 
         msg["reply_msg"] = {"label": self.reply_label, "request_id": request_id }
         return await self.rapi.msg( msg ) # а нужен ли тут await?
+
+    # версия с обещаниями        
+    async def request_p( self,msg ):
+        f = asyncio.Future()
+        def on_response(value):
+            f.set_result( value )
+
+        await self.request( msg, on_response )
+        return f
+
+    # версия с результатом обещания сразу же
+    async def request_pp( self,msg ):        
+        f = await self.request_p( msg )
+        await f
+        return f.result()
 
     # пришел реплай на наш запрос    
     async def on_reply( self, reply_msg ):

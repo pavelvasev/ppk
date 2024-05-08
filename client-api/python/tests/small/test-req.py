@@ -24,13 +24,13 @@ async def main():
 	async def on_m2(msg):
 		print("python: test3 request arrived",msg)
 		await c.reply( msg, 333 )
-	r1 = await c.query( "test3",on_m2 )  
+	r1 = await c.query( "test3",on_m2 )
 	print("r1=",r1)
 
 	def on_m3(msg):
 	  print("python: test3 reply arrived",msg)
 
-	print("sensding request test3")
+	print("sending request test3")
 	await c.request({"label":"test3"}, on_m3)
 
 	#await t1 # это засада - явно так его ждать.. я с ходу снизу приписал другие алгоритмы.. хех
