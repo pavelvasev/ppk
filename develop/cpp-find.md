@@ -37,11 +37,29 @@ https://github.com/Theldus/wsServer
 https://github.com/uNetworking/uWebSockets
 с++ перебор
 
+----
+https://github.com/zaphoyd/websocketpp
+нет поддержки чистого tcp
+или не надо? но нам нужна винда.. но мб другая бибилотека подойдет?
+https://github.com/zaphoyd/websocketpp/blob/master/examples/echo_client/echo_client.cpp
+но это сложнее в понимании чем mongoose
+
 ------
 https://github.com/ithewei/libhv
 очень неплохо.. как вариант вместо монгуся
 но там много неявного кстати, вот потоки например. хотя мб это и удобно будет
 
+и китайское отсутствие документации
+
 -----
 https://github.com/tatsuhiro-t/wslay
 нет tcp
+
+----
+qtwebsocket
+тянет за собой qt-расширения (надо писать про слоты и тп) и это явный перебор для мелких проектов
+но можно реализовать отдельно, только для qt
+
+----
+https://github.com/machinezone/IXWebSocket
+по дизайну похоже на Монгусь. Нет tcp, в принципе приятное
