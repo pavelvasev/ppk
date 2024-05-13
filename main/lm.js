@@ -1,3 +1,5 @@
+// словарь crit -> список реакций
+// где список реакций это словарь guid-реакции -> описание реакции
 export class ListManager {
 	lists = {}
 	constructor() {
@@ -12,6 +14,7 @@ export class ListManager {
 	}
 }
 
+// список реакций -- это словарь guid-реакции -> описание реакции
 export class List {
 	records = new Map()
 	constructor() {

@@ -13,8 +13,13 @@ import inspect
 import numpy as np
 import sys
 
-# 4 байта длина строки, 4 байта длина attach, и далее строка с json и массив байт attach
+# old: s--- 4 байта длина строки, 4 байта длина attach, и далее строка с json и массив байт attach
+# 4 байта query_id, 4 байта длина строки, и далее строка с json 
 class QueryTcp:
+
+    def make_query_id(self):
+        self.query_id_cnt = self.query_id_cnt + 1
+        return self.query_id_cnt
 
     def __init__(self,rapi):
         self.query_callbacks = {}
@@ -23,6 +28,8 @@ class QueryTcp:
         self.rapi = rapi
         rapi.query = self.query
         rapi.query_for = self.query_for
+
+        self.query_id_cnt = 0
 
         self.clients = {}
         rapi.operations.do_query_send = self.do_query_send
@@ -38,8 +45,9 @@ class QueryTcp:
             #if "tobytes" in attach:
                 #attach = attach.tobytes()
             del msg["attach"]
-        packet = {"query_id": arg["query_id"],  "m": msg }
-        s = json.dumps( packet )
+        query_id_bytes = arg["query_id"].to_bytes(4,"big")
+        #packet = {"query_id": arg["query_id"],  "m": msg } ыыы
+        s = json.dumps( msg )
         bytes = s.encode()
         #print("bytes="=)
         msglen = len(bytes)
@@ -51,10 +59,12 @@ class QueryTcp:
         client = await self.get_client_tcp( target_url )
         #print("sending as tcp client",target_url,len_bytes,"=",len(len_bytes),"attach=",attach_len_bytes)
         
+        client.write( query_id_bytes )
         client.write( len_bytes )
-        client.write( attach_len_bytes )
+        #client.write( attach_len_bytes )
         client.write( bytes )
         if attach is not None:
+            print("FAIL! attaches not supported")
             client.write( attach )
         #client.write( b''.join([len_bytes,bytes]) )
         await client.drain()  
@@ -70,6 +80,8 @@ class QueryTcp:
         pp = self.clients[ surl ]
         await pp
         return pp.result()
+
+
 
     # https://peps.python.org/pep-0525/
     async def query_for( self, crit, N=-1):
@@ -139,7 +151,7 @@ class QueryTcp:
 
         url = self.results_url_promise.result()
         #print("url resolved",url)
-        query_id = self.rapi.mkguid()
+        query_id = self.make_query_id()
 
         self.query_callbacks[query_id] = callback
 
@@ -168,9 +180,11 @@ class QueryTcp:
                 #print("Unexpected error:", sys.exc_info()[0])
                 return
 
-            len = int.from_bytes(data,"big")
-            len_att = int.from_bytes(data2,"big")
-            #print("len=",len,"len_att=",len_att)
+            query_id = int.from_bytes(data,"big")
+            len = int.from_bytes(data2,"big")
+            #len_att = int.from_bytes(data2,"big")
+            len_att = 0
+            print("query_id=",query_id,"len=",len,hex(len),"len_att=",len_att)
                         
             if len == 0:
                 print("strange incoming len=0! data=",data)
@@ -185,14 +199,14 @@ class QueryTcp:
             if len_att > 0:
                 attach = await reader.readexactly(len_att)
 
-            await self.on_message( s,attach )
+            await self.on_message( query_id, s,attach )
 
     # пришел ответ на квери
-    async def on_message(self,msg_text,attach=None):
+    async def on_message(self,query_id, msg_text,attach=None):
         packet = json.loads(msg_text)
 
-        cb = self.query_callbacks[ packet["query_id"] ]
-        m = packet["m"]
+        cb = self.query_callbacks[ query_id ]
+        m = msg_text
         if attach is not None:
             m["attach"] = attach
         

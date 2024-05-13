@@ -35,7 +35,8 @@ export class PPKWebsocketServer {
     ws.on('message', (data) => {
       let msg = JSON.parse( data )
       if (verbose) console.log("incoming msg:",msg)
-      let resp = {status:'ok', cmd_reply: msg.cmd, crit: msg.crit }
+      let resp = {status:'ok', opcode: msg.cmd+"_reply", cmd_reply: msg.cmd, crit: msg.crit }
+      // todo cmd_reply лишнее
       let list = lm.get( msg.crit )
       if (msg.cmd == 'begin_listen_list') {
         // начинаем слушать (клиент начинает)
@@ -44,6 +45,7 @@ export class PPKWebsocketServer {
 
         let unlisten = list.add_listener( (opcode,arg) => {
           //console.log('listener called! sending:',{opcode,arg,crit:msg.crit})
+          // если в этот список присылают изменение - уведомляем этого клиента
           send( {opcode,arg,crit:msg.crit} ) /// уведомление об изменениях
         })
         listening.set( msg.crit, unlisten )
@@ -70,6 +72,7 @@ export class PPKWebsocketServer {
       } else if (msg.cmd == 'delete_item') {
         // уберем
         list.delete( msg.name )
+        // элемент удален явно, сообразно удалять его потом уже не надо
         listening.delete( `${msg.crit}/${msg.name}` ) // мы ему сказали, что итема удалилась, больше говорить не надо будет
       } 
 /*      else if (msg.cmd == 'get_time') {
@@ -81,6 +84,7 @@ export class PPKWebsocketServer {
     ws.on('close', () => {
       for (let unlisten of listening.values()) {
         //console.log("calling unlisten",unlisten)
+        // очищаем все что добавил этот клиент, и все что он слушал
         unlisten()
       }
     } )

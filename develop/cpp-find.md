@@ -63,3 +63,5 @@ qtwebsocket
 ----
 https://github.com/machinezone/IXWebSocket
 по дизайну похоже на Монгусь. Нет tcp, в принципе приятное
+
+p.s. mongoose оказалось при записи копирует данные. нам не подходит.

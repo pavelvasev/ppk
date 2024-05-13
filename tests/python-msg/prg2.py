@@ -23,7 +23,7 @@ async def main():
 
     for i in range(1,100):
         print("calling msg")
-        await rapi.msg( {"label":"test","alfa":i} )    
+        await rapi.msg( {"label":"test","alfa":i} )
         await asyncio.sleep( 1 )
 
     print("Exiting")
