@@ -31,7 +31,7 @@ async def main():
     print("installed query")
     await c.query( "test",qcb )
     
-    await c.query( "test",qcb2 )
+    await c.query( "test42",qcb2 )
     
     await asyncio.sleep( 1*100000 )
     print("Exiting")

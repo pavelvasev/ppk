@@ -117,10 +117,10 @@ public:
 		TcpReceiver *obj = (TcpReceiver *)c->fn_data;
 
 		if (ev == MG_EV_CONNECT) {
-			printf("TcpRecv: connected! to c=%p\n",c);
+			//printf("TcpRecv: connected! to c=%p\n",c);
 		}
 		else if (ev == MG_EV_READ) {
-			printf("TcpRecv: MG_EV_READ! len=%d\n",c->recv.len);
+			//printf("TcpRecv: MG_EV_READ! len=%d\n",c->recv.len);
 			unsigned char *data = c->recv.buf;
 			int query_id = htonl( *(int*)data );
 			int data_len = htonl( *( ((int*)data) + 1) );
@@ -137,25 +137,30 @@ public:
 			// 1 случай
 			if (c->recv.len < summary_msg_len) {
 				// данных мало - подождем
-				printf("TcpRecv:case 1 data too small, waiting next\n");
+				//printf("TcpRecv:case 1 data too small, waiting next\n");
 				return;
 			}
+
 			
-			// todo там нет завершающего 0
-			printf(">>> QID=%d\n data_len=%d summary_msg_len=%d data in buf=%d\n",query_id,data_len,summary_msg_len,c->recv.len);
-			obj->client->packet_received( query_id, (const char*) msg_data );
+			// там нет завершающего 0
+			// поэтому приходится реаллоцировать чтобы добавился этот 0
+			// ну либо - посылать указатель и длинну данных. todo подумать
+			std::string reallocated( (const char*)msg_data, data_len );
+			//printf(">>> QID=%d\n data_len=%d summary_msg_len=%d data in buf=%d\n",query_id,data_len,summary_msg_len,c->recv.len);
+			// и получается указатель живет только пока отрабатывает каллбека.
+			obj->client->packet_received( query_id, (const char*) reallocated.c_str() );
     		//mg_send(c, c->recv.buf, c->recv.len);   // Implement echo server
 
 			// 2 случай - данных много
 			if (c->recv.len > summary_msg_len) {
-				printf("TcpRecv:case 2 data too big, cutting\n");
+				//printf("TcpRecv:case 2 data too big, cutting\n");
 				mg_iobuf_del(&c->recv,0,summary_msg_len);
 				// уходим в рекурсию
 				// todo это все очень неоптимальное - переносы буфера
 				return server_event_static( c,ev,ev_data);
 			}
 
-			printf("TcpRecv:case 3 all ok\n");
+			//printf("TcpRecv:case 3 all ok\n");
 
     		c->recv.len = 0;                        // Delete received data    		
 		}
@@ -578,7 +583,7 @@ public:
 
 	virtual void packet_received( int query_id, const char *buf ) {
 		// это в другом потоке все
-		printf("message_arrived: query_id=%d\n",query_id);
+		// printf("message_arrived: query_id=%d\n",query_id);
 		auto fn = query_callbacks[ query_id ];
 		fn( buf );
 	}
