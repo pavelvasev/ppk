@@ -1,3 +1,5 @@
-test.cpp отправляет
-prg2.py тоже отправляет
+test-send.cpp отправляет
 test-recv.cpp получает
+
+prg2.py тоже отправляет
+prg1.py принимает

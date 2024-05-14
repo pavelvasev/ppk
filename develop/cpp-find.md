@@ -70,3 +70,5 @@ p.s. mongoose оказалось при записи копирует данны
 mongoose вообще не вариант. mg-wakeup проходит по списку всех соединений, и не только он.
 
 asio вроде вариант.
+
+p.s. и далее https://docs.nvidia.com/doca/archive/doca-v1.5.0/ucx-programming-guide/index.html

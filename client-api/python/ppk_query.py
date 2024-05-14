@@ -184,7 +184,7 @@ class QueryTcp:
             len = int.from_bytes(data2,"big")
             #len_att = int.from_bytes(data2,"big")
             len_att = 0
-            print("query_id=",query_id,"len=",len,hex(len),"len_att=",len_att)
+            #print("query_id=",query_id,"len=",len,hex(len),"len_att=",len_att)
                         
             if len == 0:
                 print("strange incoming len=0! data=",data)
