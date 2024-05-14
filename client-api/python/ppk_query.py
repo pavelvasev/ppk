@@ -74,7 +74,7 @@ class QueryTcp:
         if surl not in self.clients:
             p = asyncio.Future()
             self.clients[ surl ] = p
-            #print("create client tcp, url=",url)
+            print("create client tcp, url=",url)
             reader, writer = await asyncio.open_connection(url["host"], url["port"])
             p.set_result( writer )
         pp = self.clients[ surl ]
