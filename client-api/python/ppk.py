@@ -344,6 +344,7 @@ class RequestReply:
         rapi.request_p = self.request_p
         rapi.request_pp = self.request_pp
 
+    # версия с callback
     async def request( self, msg, callback ):
         self.request_counter = self.request_counter + 1
         request_id = self.request_counter
@@ -358,6 +359,7 @@ class RequestReply:
         return await self.rapi.msg( msg ) # а нужен ли тут await?
 
     # версия с обещаниями        
+    # возвращает обещание
     async def request_p( self,msg ):
         f = asyncio.Future()
         def on_response(value):
@@ -367,6 +369,7 @@ class RequestReply:
         return f
 
     # версия с результатом обещания сразу же
+    # возвращает результат обещания, т.е. ответ от сервера
     async def request_pp( self,msg ):        
         f = await self.request_p( msg )
         await f

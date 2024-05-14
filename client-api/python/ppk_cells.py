@@ -3,8 +3,8 @@ import asyncio
 """
 todo
 - канал на чтение и на запись
-- отмена чтения
-- объект-связь! и сообразно операция пересылки
+- операция отмены чтения
+- объект-связь! и сообразно операция пересылки, по аналогии с do_query_send
 """
 
 # по мотивам WritingCell
@@ -31,33 +31,20 @@ class ReadingChannel:
 			yield msg
 
 
-"""
-	async def read(self):
-		#for i in range(10,-10):
-			# имитация асинхронной задачи, например, запроса к веб-сервису
-			#await asyncio.sleep(1)
-		# похоже тут какой-то генератор	
-		if False:
-			yield 1
+class Channel:
 
-		def on_data(msg):
-			yield msg
+	def __init__(self,rapi,id):
+		self.rapi = rapi
+		self.id = id
 
-		await self.rapi.query( self.id, on_data)
-"""
-			
-
-"""
-	async def next( self, value ):
+	async def submit( self, value ):
 		await self.rapi.msg( { "label": self.id, "value": value})
 
-	async def read( self ):
-		def on_data(msg):
+	async def read(self):
+		async for msg in self.rapi.query_for( self.id ):
 			yield msg
-
-		self.rapi.query( self.id,on_data )
-
-    	for i in range(to):
-	        yield i
-        	await asyncio.sleep(delay)
+ 
+""" пример:
+    async for msg in obj.clicked.read():
+        print("clicked! ",msg)
 """        	
