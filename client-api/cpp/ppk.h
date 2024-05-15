@@ -36,7 +36,8 @@ typedef std::map<std::string, Reaction> ReactionsList;
 
 class ClientP {
 public:		
-	virtual void packet_received( int query_id, const char *buf ) = 0;
+	// %DD передаем буфер и его длину. причина - нет завершающего нуля во входящих пакетах а копировать не хочется
+	virtual void packet_received( int query_id, const char *buf, int len ) = 0;
 };
 
 
@@ -129,7 +130,7 @@ public:
 			unsigned char *data = c->recv.buf;
 			int query_id = htonl( *(int*)data );
 			int data_len = htonl( *( ((int*)data) + 1) );
-			unsigned char * msg_data = data + 8;
+			const char * msg_data = ((const char*)data) + 8;
 
 			/* 3 случая
 			   1) в буфере еще не все
@@ -150,10 +151,10 @@ public:
 			// там нет завершающего 0
 			// поэтому приходится реаллоцировать чтобы добавился этот 0
 			// ну либо - посылать указатель и длинну данных. todo подумать
-			std::string reallocated( (const char*)msg_data, data_len );
+			// std::string reallocated( (const char*)msg_data, data_len );
 			//printf(">>> QID=%d\n data_len=%d summary_msg_len=%d data in buf=%d\n",query_id,data_len,summary_msg_len,c->recv.len);
 			// и получается указатель живет только пока отрабатывает каллбека.
-			obj->client->packet_received( query_id, (const char*) reallocated.c_str() );
+			obj->client->packet_received( query_id, msg_data, data_len );
     		//mg_send(c, c->recv.buf, c->recv.len);   // Implement echo server
 
 			// 2 случай - данных много
@@ -580,9 +581,9 @@ public:
 	// идея а что если эта штука вернет процесс в форме объекта?
 	// из которого например торчит очередь или какой-то поток
 	int query_id_counter = 0;
-	std::map<int, std::function<void (const char*)>> query_callbacks;
+	std::map<int, std::function<void (const char*,int)>> query_callbacks;
 
-	void query( const char *topic, std::function<void (const char*)> callback ) {
+	void query( const char *topic, std::function<void (const char*, int)> callback ) {
 
 		//callback( topic, "one" );
 		char reaction_guid_buf[1024];
@@ -598,11 +599,11 @@ public:
 		main->add_item( topic, reaction_guid_buf, reaction_buf );
 	}
 
-	virtual void packet_received( int query_id, const char *buf ) {
+	virtual void packet_received( int query_id, const char *buf, int len ) {
 		// это в другом потоке все
 		// printf("message_arrived: query_id=%d\n",query_id);
 		auto fn = query_callbacks[ query_id ];
-		fn( buf );
+		fn( buf, len );
 	}
 
 };

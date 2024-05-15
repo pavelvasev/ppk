@@ -12,8 +12,8 @@ int main(void) {
 	ppk.connect("ws://127.0.0.1:10000","127.0.0.1");
 	printf("connected\n");
 
-	auto cb = [&](const char *msg) { 
-		printf("msg recv: %s\n",msg);
+	auto cb = [&](const char *msg, int len) { 
+		printf("msg recv: %.*s\n",len,msg);
 	};
 
 	printf("sending query\n");
