@@ -72,3 +72,7 @@ mongoose вообще не вариант. mg-wakeup проходит по сп�
 asio вроде вариант.
 
 p.s. и далее https://docs.nvidia.com/doca/archive/doca-v1.5.0/ucx-programming-guide/index.html
+
++ rcplib
+http://rpclib.net/internals/
+http://rpclib.net/spec/
