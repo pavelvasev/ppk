@@ -71,6 +71,11 @@ public:
   	std::string publish_host; // тоже надо оказалось
   	int publish_port;
 
+  	bool init( ClientP *_client ) {
+  		client = _client;
+  		return true;
+  	}
+
 	void listen( const char *arg_ip ) {
 		
 		//url = arg_url;
@@ -385,7 +390,7 @@ private:
 class ReactionsStore {
 	public:	
 
-	TcpSender *msg_sender;
+	TcpSender *msg_sender = 0;
 
 	std::map<std::string, ReactionsList*> rmap;
 	std::mutex mutex;
@@ -400,7 +405,13 @@ class ReactionsStore {
 		send = arg_send;
 	}
 */	
-	ConnectorToMain *conn;
+	ConnectorToMain *conn = 0;
+
+	bool init( ConnectorToMain *_conn, TcpSender * _msg_sender) {
+		msg_sender = _msg_sender;
+		conn = _conn;
+		return true;
+	}	
 
 	ReactionsList* get_list_no_block( const char *topic ) {
 		auto iter = rmap.find( topic );
@@ -533,12 +544,18 @@ public:
 
 	std::string client_id;
 
-	Client(ReactionsStore *arg_rstore)  {
-		rstore = arg_rstore;
+	Client()  {
 		// todo: add host
 		client_id = "cpp_client_" + std::to_string( pthread_self() );
-		//, TcpSender *arg_msg_sender
-		//msg_sender = arg_msg_sender;
+	}
+
+	bool init( ReactionsStore *_rstore, ConnectorToMain *_main, TcpSender *_msg_sender, TcpReceiver *_msg_receiver )
+	{
+		main = _main;
+		rstore  =_rstore;
+		msg_sender = _msg_sender;
+		msg_receiver = _msg_receiver;
+		return true;
 	}
 
 	void msg( const char *topic, const char* msg ) {		
@@ -608,17 +625,22 @@ public:
 	///////////////////////////
 
 	struct mg_mgr mgr;        // Event manager  
-  	struct mg_connection *c;  // Client connection
+  	struct mg_connection *c = 0;  // Client connection
   	bool done = false;        // Event handler flips it to true
 
-  	ReactionsStore *rstore;
+  	ReactionsStore *rstore = 0;
 
   	std::thread thread;
   	std::string url;
 
   	std::promise<void> connected;
 
-	void connect( const char *arg_url ) {
+  	bool init( ReactionsStore *_rstore ) {
+  		rstore = _rstore;
+  		return true;
+  	}
+
+	bool connect( const char *arg_url ) {
 		//printf("CO1 url=%s\n",url);
 		//rstore = arg_rstore;
 		url = arg_url;
@@ -627,6 +649,7 @@ public:
 	    //thread.detach();
 		
 	    connected.get_future().wait();
+	    return true;
 	}
 
 	void do_connect() {
@@ -822,4 +845,42 @@ public:
 		send( buf );
 	}	
 
+};
+
+class PPKConnect {
+public:
+	TcpSender msg_sender;
+	TcpReceiver msg_receiver;
+	WSConnectorToMain conn;
+	ReactionsStore rstore;
+	Client client;
+
+	PPKConnect() {}
+
+	bool init() {
+		client.init( &rstore, &conn,&msg_sender,&msg_receiver );
+		rstore.init( &conn, &msg_sender );
+		conn.init( &rstore );
+		msg_receiver.init( &client );
+		msg_sender.init();
+		return true;
+	}
+
+	bool stop() {
+		conn.stop();	
+		msg_sender.stop();
+		msg_receiver.stop();
+		return true;
+	}
+
+	// main_url: "ws://127.0.0.1:10000"
+	// msg_recv_bind_to_interface: 127.0.0.1
+	bool connect( const char *main_url=0, const char *msg_recv_bind_to_interface=0 ) 
+	{
+		if (!main_url) main_url = "ws://127.0.0.1:10000";
+		if (!msg_recv_bind_to_interface) msg_recv_bind_to_interface = "127.0.0.1";
+
+		msg_receiver.listen(msg_recv_bind_to_interface);
+		return conn.connect(main_url);
+	}
 };
