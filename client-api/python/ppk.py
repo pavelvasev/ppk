@@ -23,6 +23,7 @@ import inspect
 import numpy as np
 
 import ppk_query
+import ppk_query_for
 #import ppk_payloads
 import ppk_payloads_shmem2 as ppk_payloads
 
@@ -356,6 +357,7 @@ class RequestReply:
             await self.reply_query_promise
 
         msg["reply_msg"] = {"label": self.reply_label, "request_id": request_id }
+        #print("debug meth",msg)
         return await self.rapi.msg( msg ) # а нужен ли тут await?
 
     # версия с обещаниями        
@@ -377,8 +379,11 @@ class RequestReply:
 
     # пришел реплай на наш запрос    
     async def on_reply( self, reply_msg ):
+        print("reply_msg",reply_msg,type(reply_msg))
+        k = reply_msg["request_id"]
+        print("k=",k)
         cb = self.reply_callbacks[ reply_msg["request_id"] ]
-        #print("reply_msg",reply_msg)
+
         if cb is None:
             print("warning: reply_callback not found for reply msg",reply_msg)
         if "attach" in reply_msg:
@@ -427,7 +432,8 @@ DEFAULT_EXTENSIONS = {
     "payloads": ppk_payloads.Payloads,
     "payloads_inmem": ppk_payloads.PayloadsInmem,
     "request" : RequestReply,
-    "query": ppk_query.QueryTcp
+    "query": ppk_query.QueryTcp,
+    "query_for": ppk_query_for.QueryFor
 }
 
 class Client:

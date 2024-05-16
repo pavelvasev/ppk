@@ -27,7 +27,6 @@ class QueryTcp:
         self.verbose = rapi.verbose
         self.rapi = rapi
         rapi.query = self.query
-        rapi.query_for = self.query_for
 
         self.query_id_cnt = 0
 
@@ -74,33 +73,15 @@ class QueryTcp:
         if surl not in self.clients:
             p = asyncio.Future()
             self.clients[ surl ] = p
-            print("create client tcp, url=",url)
+            #print("create client tcp, url=",url)
             reader, writer = await asyncio.open_connection(url["host"], url["port"])
             p.set_result( writer )
         pp = self.clients[ surl ]
         await pp
         return pp.result()
 
-
-
-    # https://peps.python.org/pep-0525/
-    async def query_for( self, crit, N=-1):
-
-        if False: # хак Питона
-            yield 1
-
-        def on_data(msg):
-            yield msg
-
-        await self.query( crit, on_data, N)
-
-    # todo идея: with
-    # это кстати неплохая идея
-    # т.е. async with ppk.query("some") as msg:    
-    # или скорее: async for msg in rapi.query("data1",100)
-    # см query_for
     async def query( self, crit, callback, N=-1):
-        #print("query called",crit)
+        print("query called",crit)
         if self.results_url_promise is None:
             #print("b1")
             self.results_url_promise = asyncio.Future()
@@ -206,15 +187,18 @@ class QueryTcp:
         packet = json.loads(msg_text)
 
         cb = self.query_callbacks[ query_id ]
-        m = msg_text
+        m = packet
         if attach is not None:
             m["attach"] = attach
         
         if self.rapi.verbose:
             print("query got message:",packet,"cb=",cb)
+        #print("query got message:",packet,"cb=",cb)    
         res = cb(m)
+        #print("cb called, res=",res)
         # а нам ето надо?
         if inspect.isawaitable(res):
+            #print("it is awaitable, entering await")
             await res
 
 """

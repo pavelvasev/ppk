@@ -848,6 +848,7 @@ public:
 
 };
 
+// Простой клиент с tcp-отправкой и приемом сообщений
 class PPKConnect {
 public:
 	TcpSender msg_sender;
