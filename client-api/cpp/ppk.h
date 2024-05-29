@@ -98,11 +98,12 @@ public:
 		int port = (srv_c->loc.port >> 8) | ((srv_c->loc.port << 8) & 0xff00);
 		snprintf( buf,sizeof(buf),"tcp://%s:%d",arg_ip,port);
 		publish_url = std::string(buf);
+		//printf("case qq: arg_ip=%s\n",arg_ip); fflush(stdout);
 		publish_host = std::string(arg_ip);
 		publish_port = port;
 
 		//mg_snprintf(buf, sizeof(buf), "%M", mg_print_ip_port, &srv_c->loc);         // 97.98.99.100:1234
-		printf("CO L2 %s\n",publish_url.c_str());
+		//printf("CO L2 %s\n",publish_url.c_str());
 
 		mgr_thread = std::thread([this]() {
 			//printf("CO thread started\n");
@@ -322,7 +323,8 @@ private:
                 int msgsize_network = htonl( task.message.size() ); // конвертация в биг ендиан
                 int attachsize = 0;
                 int query_id_network = htonl( task.query_id );
-                printf("sending msg size=%d, task.query_id %d, content %s\n", task.message.size(),task.query_id,task.message.c_str());
+                //printf("TcpSender: sending msg size=%d, task.query_id %d, content %s to %s\n", task.message.size(),task.query_id,task.message.c_str(), task.host.c_str());
+                //fflush( stdout );
                 mg_send(conn, &query_id_network, 4 );
                 mg_send(conn, &msgsize_network, 4 );
                 if (mg_send(conn, task.message.c_str(), task.message.size()))
@@ -425,22 +427,19 @@ class ReactionsStore {
 		return 0;		
 	}
 
-	void release_list() 
-	{
-		mutex.unlock();
-	}
+	
 
 	ReactionsList* get_list( const char *topic ) {
-
-		mutex.lock();
-
-		//printf("get-list 1 %s\n",topic);
+		
 		{
-			//std::lock_guard<std::recursive_mutex> guard(mutex);
+			printf("get-list 1 %s\n",topic);
+			std::lock_guard<std::recursive_mutex> guard(mutex);
+			printf("get-list 1 ok\n");
 
 			auto iter = rmap.find( topic );
 			if (iter != rmap.end()) {
-				return iter->second;
+				ReactionsList *result = new ReactionsList(*iter->second);
+				return result;
 			}
 	    }
 
@@ -453,21 +452,27 @@ class ReactionsStore {
 		/// но как ток станет неблокирующее надо вести список обещаний отдельно
 		// и shared_promise/future их сделать
 		{
+			printf("mutex-2\n");
 			std::lock_guard<std::recursive_mutex> guard(mutex_pending);
 			rmap_pending[ topic ] = std::move(p1);
+			printf("mutex-2 done\n");
 		}
-		//printf("get-list 3\n");
-		mutex.unlock(); // там могут начать править
 		conn->begin_listen_list( topic );
-		
+		printf("get-list 3.2\n"); fflush(stdout);
 		f.wait();
+		printf("get-list 3 done\n"); fflush(stdout);
 
-		mutex.lock(); // теперь надо обратно забрать себе т.к. будут вызывать release_list
+		{
+			printf("get-list 4 %s\n",topic);	
+			std::lock_guard<std::recursive_mutex> guard(mutex);
+			printf("get-list 4 ok\n");
 
-		auto iter2 = rmap.find( topic );
-		if (iter2 != rmap.end()) {
-			return iter2->second;
-		}
+			auto iter = rmap.find( topic );
+			if (iter != rmap.end()) {
+				ReactionsList *result = new ReactionsList(*iter->second);
+				return result;
+			}
+	    }
 		printf("get_list fatal error\n");
 
 		return 0;
@@ -486,14 +491,15 @@ class ReactionsStore {
 
 	void begin_listen_list_reply( const char *topic, ReactionsList *list ) 
 	{
-		//printf("called begin_listen_list_reply, topic=%s, list size=%d self=%p\n",topic,list->size(),this);
+		printf("called begin_listen_list_reply, topic=%s, list size=%d self=%p\n",topic,list->size(),this);
 		
-		//printf("entering mutex-1\n");
+		printf("entering mutex-1\n"); fflush(stdout);
 		std::lock_guard<std::recursive_mutex> guard(mutex);
 		rmap[ std::string(topic) ] = list;
 
-		//printf("entering mutex-2\n");
+		printf("entering mutex-2\n"); fflush(stdout);
 		std::lock_guard<std::recursive_mutex> guard2(mutex_pending);
+		printf("resolving future\n"); fflush(stdout);
 		rmap_pending[ topic ].set_value();
 
 		//printf("begin_listen_list finish\n");
@@ -567,8 +573,11 @@ public:
 	}
 
 	virtual void msg( const char *topic, const char* msg ) {		
-
+		//printf("client msg called, topic %s, getting list\n",topic);
+		//fflush(stdout);
 		auto list = rstore->get_list( topic );
+		//printf("list got\n");
+		//fflush(stdout);
 		/*
 		rstore->get_list( topic,[&](ReactionsList* list) {
 			// iterate, call
@@ -583,7 +592,9 @@ public:
 		} else {
 			//printf("msg: no list!\n");
 		}
-		rstore->release_list();
+
+		delete list;		
+
 	}
 	// todo: N
 	// идея а что если эта штука вернет процесс в форме объекта?
@@ -746,7 +757,7 @@ public:
 
 	Reaction json_to_reaction( mg_str val )
 	{
-		  //printf("json_to_reaction called. val=%.*s\n",val.len, val.buf );
+		  printf("json_to_reaction called. val=%.*s\n",val.len, val.buf );
 
 		  char *action_code = mg_json_get_str(val, "$.action.code");
 		  if (!action_code) action_code = strdup("$.action.code NOT_FOUND");
@@ -761,7 +772,7 @@ public:
 			  
 			  //printf("qid is: %s\n",qid );
 			  char *rurl_c = mg_json_get_str(val, "$.action.arg.results_url.url");
-			  //printf("case 1! rurl_c=%s\n",rurl_c);
+			  //printf("case 1! rurl_c=%s\n",rurl_c); fflush(stdout);
 			  std::string rurl = rurl_c;
 			  free( rurl_c );
 			  
@@ -786,15 +797,19 @@ public:
 		  	free( action_code );
 		  	
 		  	char *target_label_c = mg_json_get_str(val, "$.action.arg.target_label");
-		  	//printf("case 2! target_label_c=%s\n",target_label_c);
+		  	//printf("case 2! target_label_c=%s\n",target_label_c); fflush(stdout);
 		  	std::string target_label = target_label_c;
 		  	free( target_label_c );
 
 		  	//std::string target_topic_s = target_topic;
 		  	//printf("target_label is: %s\n",target_label.c_str() );
 
-		  	auto f = [=](const char *buf) {				
+		  	auto f = [=](const char *buf) {
+		  		//printf("do_forward: forwarding to topic: %s\n",target_label.c_str());
+		  		//fflush(stdout);
 				client->msg( target_label.c_str(), buf );
+				//printf("do_forward: done\n");
+				//fflush(stdout);
 			};
 			return f;
 
@@ -854,30 +869,33 @@ public:
 		 	char *crit = mg_json_get_str(json, "$.crit");
 		 	//printf("crit=%s\n",crit);
 		 	char *id = mg_json_get_str(json, "$.arg.name");
+		 	//printf("got set, crit=%s, id=$s\n",crit,id); fflush(stdout);
+
 		 	mg_str arg = mg_json_get_tok(json, "$.arg.value");
 		 	//printf("step1 id=%s\n",id);
 		 	Reaction r = json_to_reaction( arg );	 	
 		 	//printf("step2\n");
 
-		 	ReactionsList *list = rstore->get_list( crit );
+		 	// жестокий хак
+		 	ReactionsList *list = rstore->get_list_no_block( crit );
 		 	rstore->add_list_reaction( list, id, r );
 		 	free( crit );
-		 	free( id );
-		 	rstore->release_list();
+		 	free( id );		 	
 		 	
 		 	return;
 		 }
 
 		 if (0 == mg_strcmp( val, mg_str("\"delete\""))) {
-		 	//printf("got delete\n");
-		 	char *crit = mg_json_get_str(json, "$.crit");
-		 	char *id = mg_json_get_str(val, "$.arg.name");
 		 	
-		 	ReactionsList *list = rstore->get_list( crit );
+		 	char *crit = mg_json_get_str(json, "$.crit");
+		 	char *id = mg_json_get_str(json, "$.arg.name");
+		 	//printf("got delete, crit=%s, id=%s\n",crit,id); fflush(stdout);
+		 	
+		 	ReactionsList *list = rstore->get_list_no_block( crit );
 		 	rstore->remove_list_reaction( list, id );
 		 	free( crit );
 		 	free( id );
-		 	rstore->release_list();
+		 	
 		 	return;
 		 }
 

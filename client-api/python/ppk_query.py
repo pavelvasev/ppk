@@ -81,7 +81,7 @@ class QueryTcp:
         return pp.result()
 
     async def query( self, crit, callback, N=-1):
-        print("query called",crit)
+        #print("query called",crit)
         if self.results_url_promise is None:
             #print("b1")
             self.results_url_promise = asyncio.Future()
