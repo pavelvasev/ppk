@@ -121,9 +121,6 @@ class Operations:
     def __init__(self,rapi):
         self.rapi = rapi
         self.clients = {}
-      
-
-
 
 
 ###################################################
@@ -297,6 +294,7 @@ class Client:
 
 ########################## rapi
 
+    # todo разнести надо msg и тему
     async def msg( self, msg ):
         if self.verbose:
             print("msg operation. msg=",msg)

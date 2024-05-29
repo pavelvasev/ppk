@@ -28,6 +28,8 @@ async def main():
     print("installed query")
     await c.query( "test",qcb )
     
+    await c.link("test42","test")
+    
     await asyncio.sleep( 1*100000 )
     print("Exiting")
     await c.exit()
