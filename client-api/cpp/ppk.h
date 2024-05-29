@@ -38,6 +38,8 @@ class ClientP {
 public:		
 	// %DD передаем буфер и его длину. причина - нет завершающего нуля во входящих пакетах а копировать не хочется
 	virtual void packet_received( int query_id, const char *buf, int len ) = 0;
+
+	virtual void msg( const char *topic, const char* msg ) = 0;
 };
 
 
@@ -391,13 +393,13 @@ private:
 class ReactionsStore {
 	public:	
 
-	TcpSender *msg_sender = 0;
+	//TcpSender *msg_sender = 0;
 
 	std::map<std::string, ReactionsList*> rmap;
-	std::mutex mutex;
+	std::recursive_mutex mutex;
 
 	std::map<std::string, std::promise<void>> rmap_pending;
-	std::mutex mutex_pending;
+	std::recursive_mutex mutex_pending;
 
 /*
 	std::function<void (const char*)> send;
@@ -407,9 +409,10 @@ class ReactionsStore {
 	}
 */	
 	ConnectorToMain *conn = 0;
+	//ClientP *client = 0;
 
-	bool init( ConnectorToMain *_conn, TcpSender * _msg_sender) {
-		msg_sender = _msg_sender;
+	bool init( ConnectorToMain *_conn) {
+		//msg_sender = _msg_sender;
 		conn = _conn;
 		return true;
 	}	
@@ -422,11 +425,18 @@ class ReactionsStore {
 		return 0;		
 	}
 
+	void release_list() 
+	{
+		mutex.unlock();
+	}
+
 	ReactionsList* get_list( const char *topic ) {
+
+		mutex.lock();
 
 		//printf("get-list 1 %s\n",topic);
 		{
-			std::lock_guard<std::mutex> guard(mutex);
+			//std::lock_guard<std::recursive_mutex> guard(mutex);
 
 			auto iter = rmap.find( topic );
 			if (iter != rmap.end()) {
@@ -443,13 +453,17 @@ class ReactionsStore {
 		/// но как ток станет неблокирующее надо вести список обещаний отдельно
 		// и shared_promise/future их сделать
 		{
-			std::lock_guard<std::mutex> guard(mutex_pending);
+			std::lock_guard<std::recursive_mutex> guard(mutex_pending);
 			rmap_pending[ topic ] = std::move(p1);
 		}
 		//printf("get-list 3\n");
+		mutex.unlock(); // там могут начать править
 		conn->begin_listen_list( topic );
 		
 		f.wait();
+
+		mutex.lock(); // теперь надо обратно забрать себе т.к. будут вызывать release_list
+
 		auto iter2 = rmap.find( topic );
 		if (iter2 != rmap.end()) {
 			return iter2->second;
@@ -459,21 +473,10 @@ class ReactionsStore {
 		return 0;
 	}
 
-	// методы построения списка.. прямо здесь размещены.. хотя конечно можно и в отдельный метод вытащить
-	// добавляет реакцию отправки сообщения по сети
-	// в список реакций list
-	void add_list_reaction_send( ReactionsList *list, std::string reaction_uid, std::string rurl, int query_id ) 
-	{
-		auto f = [=](const char *buf) {
-			//printf("GONNA SEND: %s to url %s (%d), reaction_uid=%s conn=%p\n",buf, rurl.c_str(),rurl.size(),reaction_uid.c_str(), this->conn);
-			
-			//std::string msg_buf = "{\"query_id\":\"" + query_id + "\", \"m\": " + std::string(buf) + "}";
 
-			msg_sender->send( rurl, query_id, buf, []() {
-		        std::cout << "Сообщение успешно отправлено! (каллбека tcp-sender)" << std::endl;
-		    });
-		};
-		(*list)[ reaction_uid ] = f;
+	void add_list_reaction( ReactionsList *list, std::string reaction_uid, Reaction &reaction) 
+	{
+		(*list)[ reaction_uid ] = reaction;
 	}
 
 	void remove_list_reaction( ReactionsList *list, const char *reaction_uid ) 
@@ -483,18 +486,21 @@ class ReactionsStore {
 
 	void begin_listen_list_reply( const char *topic, ReactionsList *list ) 
 	{
-		printf("called begin_listen_list, topic=%s, list size=%d self=%p\n",topic,list->size(),this);
+		//printf("called begin_listen_list_reply, topic=%s, list size=%d self=%p\n",topic,list->size(),this);
 		
-		std::lock_guard<std::mutex> guard(mutex);
+		//printf("entering mutex-1\n");
+		std::lock_guard<std::recursive_mutex> guard(mutex);
 		rmap[ std::string(topic) ] = list;
 
-		std::lock_guard<std::mutex> guard2(mutex_pending);
+		//printf("entering mutex-2\n");
+		std::lock_guard<std::recursive_mutex> guard2(mutex_pending);
 		rmap_pending[ topic ].set_value();
 
-		printf("begin_listen_list finish\n");
+		//printf("begin_listen_list finish\n");
 	}
 
     // а эти вообще не нужны т.к. списки теперь вон там где модифицируются отдельно
+    /*
 	void set( mg_str crit, mg_str arg ) 
 	{
 		std::lock_guard<std::mutex> guard(mutex);
@@ -526,6 +532,7 @@ class ReactionsStore {
 
 		// todo fill list
 	}
+	*/
 };
 
 /*
@@ -559,7 +566,7 @@ public:
 		return true;
 	}
 
-	void msg( const char *topic, const char* msg ) {		
+	virtual void msg( const char *topic, const char* msg ) {		
 
 		auto list = rstore->get_list( topic );
 		/*
@@ -576,6 +583,7 @@ public:
 		} else {
 			//printf("msg: no list!\n");
 		}
+		rstore->release_list();
 	}
 	// todo: N
 	// идея а что если эта штука вернет процесс в форме объекта?
@@ -583,6 +591,7 @@ public:
 	int query_id_counter = 0;
 	std::map<int, std::function<void (const char*,int)>> query_callbacks;
 
+	// todo: функция отмены
 	void query( const char *topic, std::function<void (const char*, int)> callback ) {
 
 		//callback( topic, "one" );
@@ -597,7 +606,7 @@ public:
 					this_query_id, msg_receiver->publish_url.c_str(),msg_receiver->publish_host.c_str(),msg_receiver->publish_port );
 
 		main->add_item( topic, reaction_guid_buf, reaction_buf );
-	}
+	}	
 
 	virtual void packet_received( int query_id, const char *buf, int len ) {
 		// это в другом потоке все
@@ -605,6 +614,19 @@ public:
 		auto fn = query_callbacks[ query_id ];
 		fn( buf, len );
 	}
+
+	// todo: функция отмены
+	void link( const char *src_topic, const char *tgt_topic ) {
+		char reaction_guid_buf[1024];
+		int this_query_id = query_id_counter++;
+
+		snprintf( reaction_guid_buf, sizeof(reaction_guid_buf),"%s_id_%d",client_id.c_str(), this_query_id );
+		char reaction_buf[1024];
+		snprintf( reaction_buf, sizeof(reaction_buf),"{ \"action\": {\"code\":\"do_forward\",\"arg\":{\"target_label\":\"%s\"}}}",
+					tgt_topic );
+
+		main->add_item( src_topic, reaction_guid_buf, reaction_buf );
+	}	
 
 };
 
@@ -636,8 +658,13 @@ public:
 
   	std::promise<void> connected;
 
-  	bool init( ReactionsStore *_rstore ) {
+  	Client *client = 0;
+    TcpSender *msg_sender = 0;  	
+
+  	bool init( ReactionsStore *_rstore, Client *_client, TcpSender *_msg_sender) {
   		rstore = _rstore;
+  		client = _client;
+  		msg_sender = _msg_sender;
   		return true;
   	}
 
@@ -717,6 +744,73 @@ public:
 	  }
 	}
 
+	Reaction json_to_reaction( mg_str val )
+	{
+		  //printf("json_to_reaction called. val=%.*s\n",val.len, val.buf );
+
+		  char *action_code = mg_json_get_str(val, "$.action.code");
+		  if (!action_code) action_code = strdup("$.action.code NOT_FOUND");
+		  //printf("action_code is: %s\n",action_code );
+		  
+		  //Reaction r;
+		  if (strcmp(action_code,"do_query_send") == 0) {
+		  	  
+		  	  free( action_code );
+		  	  
+			  int qid = mg_json_get_long(val, "$.action.arg.query_id",0);
+			  
+			  //printf("qid is: %s\n",qid );
+			  char *rurl_c = mg_json_get_str(val, "$.action.arg.results_url.url");
+			  //printf("case 1! rurl_c=%s\n",rurl_c);
+			  std::string rurl = rurl_c;
+			  free( rurl_c );
+			  
+			  //printf("rurl is: %s\n",rurl.c_str() );
+
+			  //rstore->add_list_reaction_send( rlist, id, rurl, qid);
+
+			  auto f = [=](const char *buf) {
+					//printf("GONNA SEND: %s to url %s (%d), reaction_uid=%s conn=%p\n",buf, rurl.c_str(),rurl.size(),reaction_uid.c_str(), this->conn);
+					
+					//std::string msg_buf = "{\"query_id\":\"" + query_id + "\", \"m\": " + std::string(buf) + "}";
+
+					msg_sender->send( rurl, qid, buf, []() {
+				        std::cout << "Сообщение успешно отправлено! (каллбека tcp-sender)" << std::endl;
+				    });
+				};
+			  
+			  return f;
+		  }
+		  else
+		  if (strcmp(action_code,"do_forward") == 0) {
+		  	free( action_code );
+		  	
+		  	char *target_label_c = mg_json_get_str(val, "$.action.arg.target_label");
+		  	//printf("case 2! target_label_c=%s\n",target_label_c);
+		  	std::string target_label = target_label_c;
+		  	free( target_label_c );
+
+		  	//std::string target_topic_s = target_topic;
+		  	//printf("target_label is: %s\n",target_label.c_str() );
+
+		  	auto f = [=](const char *buf) {				
+				client->msg( target_label.c_str(), buf );
+			};
+			return f;
+
+		  }
+		  else {
+		  	printf("fatalllll, action_code=%s\n",action_code);
+		  	free( action_code );
+		  	auto f = [=](const char *buf) {				
+				printf("undefined action_code\n");
+			};
+			return f;
+		  }
+		  
+		  
+	};
+
 	void on_message( mg_ws_message *wm ) {
 		 mg_str json = wm->data;
 		 mg_str val = mg_json_get_tok(json, "$.opcode");
@@ -736,42 +830,18 @@ public:
 
 			//printf("EEE1\n");
 			while ((ofs = mg_json_next(entries, ofs, &key, &val)) > 0) {
-				//printf("EEE2\n");
-			  //printf("KEY %.*s -> VALUE %.*s\n", (int) key.len, key.buf, (int) val.len, val.buf);
-
 			  char *id = mg_json_get_str(val, "$[0]");
-			  //printf("id is: %s\n",id );
-			  char *action_code = mg_json_get_str(val, "$[1].action.code");
-			  //printf("action_code is: %s\n",action_code );
-			  
-			  Reaction r;
-			  if (strcmp(action_code,"do_query_send") == 0) {
-				  int qid = mg_json_get_long(val, "$[1].action.arg.query_id",0);
-				  //printf("qid is: %s\n",qid );
-				  char *rurl = mg_json_get_str(val, "$[1].action.arg.results_url.url");
-				  //printf("rurl is: %s\n",rurl );
-
-				  rstore->add_list_reaction_send( rlist, id, rurl, qid);
-
-				  free( rurl );
-			  	  //free( qid );
-			  }
-			  else
-			  if (strcmp(action_code,"forward") == 0) {
-			  	char *next_label = mg_json_get_str(val, "$[1].action.arg.next_label");
-				printf("next_label is: %s\n",next_label );
-			  	printf("unimplemented\n");
-			  	free( next_label);
-			  }
-			  else {
-			  	printf("fatalllll\n");
-			  }			  	
-			  
+			  struct mg_str reaction_definition = mg_json_get_tok(val, "$[1]");
+			  //printf("calling json_to_reaction, reaction_definition=%.*s\n",reaction_definition.len,reaction_definition.buf);
+			  Reaction r = json_to_reaction( reaction_definition );
+			  //printf("adding reaction id=%s",id);
+			  rstore->add_list_reaction( rlist, id, r );
 			  free( id );
-			  free( action_code );
 			}
+
 		 	char *crit = mg_json_get_str(json, "$.crit");
-		 	printf("EEE3 %s %p\n",crit, rstore);
+		 	//printf("ok list received, crit=%s\n",crit);
+		 	//printf("EEE3 %s %p\n",crit, rstore);
 		 	//printf("json crit is: %s\n",crit );
 		 	rstore->begin_listen_list_reply( crit,rlist );
 		 	free( crit );
@@ -779,21 +849,39 @@ public:
 		 }
 		 //printf("not begin_listen_list_reply\n");
 
-		 if (0 == mg_strcmp( val, mg_str("set"))) {
-		 	printf("got set\n");
-		 	mg_str crit = mg_json_get_tok(json, "$.crit");
-		 	mg_str arg = mg_json_get_tok(json, "$.arg");
-		 	rstore->set( crit, arg );
+		 if (0 == mg_strcmp( val, mg_str("\"set\""))) {
+		 	//printf("got set\n");
+		 	char *crit = mg_json_get_str(json, "$.crit");
+		 	//printf("crit=%s\n",crit);
+		 	char *id = mg_json_get_str(json, "$.arg.name");
+		 	mg_str arg = mg_json_get_tok(json, "$.arg.value");
+		 	//printf("step1 id=%s\n",id);
+		 	Reaction r = json_to_reaction( arg );	 	
+		 	//printf("step2\n");
+
+		 	ReactionsList *list = rstore->get_list( crit );
+		 	rstore->add_list_reaction( list, id, r );
+		 	free( crit );
+		 	free( id );
+		 	rstore->release_list();
+		 	
 		 	return;
 		 }
 
-		 if (0 == mg_strcmp( val, mg_str("delete"))) {
-		 	printf("got delete\n");
-		 	mg_str crit = mg_json_get_tok(json, "$.crit");
-		 	mg_str arg = mg_json_get_tok(json, "$.arg");
-		 	rstore->remove( crit, arg );
+		 if (0 == mg_strcmp( val, mg_str("\"delete\""))) {
+		 	//printf("got delete\n");
+		 	char *crit = mg_json_get_str(json, "$.crit");
+		 	char *id = mg_json_get_str(val, "$.arg.name");
+		 	
+		 	ReactionsList *list = rstore->get_list( crit );
+		 	rstore->remove_list_reaction( list, id );
+		 	free( crit );
+		 	free( id );
+		 	rstore->release_list();
 		 	return;
-		 }		 
+		 }
+
+		 //printf("got unknown opcode! %d\n",mg_strcmp( val, mg_str("set")));
 
 		 
 		 /*
@@ -816,7 +904,7 @@ public:
 
 	void send( const char *buf ) {
 		// прикол в том что оно там копирует зачем-то
-		//printf("!!! sending wakup to mgr, %s\n",buf);
+		//printf("=================== !!! sending wakup to mgr, %s\n",buf);
 		mg_wakeup(&mgr, c->id, buf, strlen(buf));
 		//mg_send
 		//mg_ws_send(c, buf, strlen(buf), WEBSOCKET_OP_TEXT);
@@ -861,8 +949,8 @@ public:
 
 	bool init() {
 		client.init( &rstore, &conn,&msg_sender,&msg_receiver );
-		rstore.init( &conn, &msg_sender );
-		conn.init( &rstore );
+		rstore.init( &conn );
+		conn.init( &rstore,&client,&msg_sender );
 		msg_receiver.init( &client );
 		msg_sender.init();
 		return true;

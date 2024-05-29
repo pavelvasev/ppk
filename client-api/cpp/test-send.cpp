@@ -23,7 +23,12 @@ int main(void) {
 	for (int i=0; i<10; i++)
 		c.msg("test",(std::string("{\"a\":") + std::to_string(i) + "}").c_str());	
 
-	c.msg("test42","{\"b\":42}");	
+	c.msg("test42","{\"b\":42}");
+	
+	printf("creating link\n");
+	//c.link("test","test42");
+	//sleep(1);
+	//c.msg("test","{\"b\":333}");
 
 	printf("-------------- enter sleep\n");
 	sleep(5);
