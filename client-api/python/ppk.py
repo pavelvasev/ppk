@@ -26,10 +26,13 @@ import ppk_query
 import ppk_query_for
 #import ppk_payloads
 import ppk_payloads_shmem2 as ppk_payloads
+import ppk_link
+import ppk_task
+import ppk_request
 
 from ppk_starter import *
-
 from ppk_cells import *
+
 
 ########################################## рабочее
 
@@ -120,305 +123,7 @@ class Operations:
         self.clients = {}
       
 
-### асинхр задачи
 
-"""
-# два варианта
-# 1 пихаем все операции в rapi, типа rapi.add_task 2 группируем под своим именем напр rapi.tasks.add
-class AsyncTasks0:
-
-    def __init__(self,rapi):
-        self.rapi = rapi
-        #rapi.tasks = self
-        rapi.add_data = self.add_data
-        rapi.get_data = self.get_data
-        rapi.exec_request = self.exec_request
-
-    async def add_data( self,data ):
-        p = self.rapi.create_promise()
-        if "tobytes" in dir(data):
-            if self.rapi.verbose:
-                print("auto submit payload")
-            k = await self.rapi.submit_payload( data )
-            k["add_data_flag"] = True
-            data = k
-        await self.rapi.resolve_promise( p, data )
-        return p
-
-    async def get_data( self,promise ):
-        # todo: если прислали массив то..
-        f = await self.rapi.wait_promise( promise )
-        #print("get_data called, promise=",promise,"wait_promise returned f=",f)
-        data = await f
-        #print("Get_data data=",data,isinstance(data, dict),type(data),"numpy" in data)
-        # автоматизация подгрузки данных
-        # но вообще наверное для всех пейлоадов а не только для этой..
-        if isinstance(data, dict) and "numpy" in data:
-            return await self.rapi.get_payload( data )
-        # а что если там массив пейлоадов?    
-        return data
-
-    # вопрос как лучше 
-    # exec_request(self,action,args):
-    # exec_request(self,task): # где task=(action,args) или даже (code,arg) по старинке.
-    async def exec_request(self,task):
-
-        p = self.rapi.create_promise()
-
-        #t = asyncio.create_task( self.rapi.request( {"label":"exec-request","promise":p,"id":p["id"],
-        #     "action":task["code"],"arg":task["arg"]}, lambda x: True ) )
-        #print("sending",{"label":"exec-request-ready","promise":p,"id":p["id"],
-        #     "action":task["code"],"arg":task["arg"]})
-
-        await self.rapi.msg( {"label":"exec-request-ready","promise":p,"id":p["id"],
-             "action":task["code"],"arg":task["arg"]} )
-
-        #await self.rapi.request( {"label":"exec-request","promise":p,"id":p["id"],
-        #     "action":task["code"],"arg":task["arg"]}, lambda x: True )       
-
-        #await self.request( {"label":"exec-request","promise":p,"action":action,"arg":args}, lambda x: True )
-        return p
-"""
-
-# оптимизированная версия. Но - тогда сервер проседает и тормозит с назначением заданий.
-# Но если делать 1 воркера то это просто постановка задач как бы в параллельном потоке получается..
-class AsyncTasks:
-
-    def __init__(self,rapi):
-        self.rapi = rapi
-        #rapi.tasks = self
-        rapi.add_data = self.add_data
-        rapi.get_data = self.get_data
-        rapi.exec_request = self.exec_request
-        self.worker_tasks = [] # надо инициализировать а иначе при закрытии будет ошибка если не было воркеров
-
-        self.queue = None
-        self.rapi.atexit( self.close_workers )
-
-    async def close_workers(self):
-        for t in self.worker_tasks:
-            t.cancel()
-
-    def init_queue(self):
-        if self.queue is not None:
-            return    
-        self.queue = asyncio.Queue()
-        tasks = []
-        for i in range(1):
-            task = asyncio.create_task(self.worker(f'worker-{i}', self.queue))
-            tasks.append(task)
-        self.worker_tasks = tasks
-
-    async def worker(self, name, queue):
-        while True:
-            # Get a "work item" out of the queue.
-            t = await queue.get()
-            await t
-
-    # мысль а что если data разрешить иметь .payload поле? как в сообщениях.
-    async def add_data( self,data,hint=None ):
-        p = self.rapi.create_promise()
-        if hint is not None:
-            p["hint"] = hint 
-        p["add_data"] = True
-
-        if "tobytes" in dir(data):
-            if self.rapi.verbose:
-                print("auto submit payload")
-            k = await self.rapi.submit_payload( data )
-            data = { "single_payload": True, "payload_info":[k]}
-        # todo вот эту проверку на байты.. верояно стоит в resolve_promise утащить..    
-        await self.rapi.resolve_promise( p, data )
-        return p
-
-    async def get_data( self,promise ):
-        f = await self.rapi.wait_promise( promise )
-        #print("get_data called, promise=",promise,"wait_promise returned f=",f)
-        data = await f
-        #print("Get_data data=",data,isinstance(data, dict),type(data),"numpy" in data)
-        # автоматизация подгрузки данных
-        # но вообще наверное для всех пейлоадов а не только для этой..
-        # мы тут numpu еще проверяли
-        if isinstance(data, dict) and "payload_info" in data:
-            if "single_payload" in data:
-                return await self.rapi.get_payload( data["payload_info"][0] )
-            return await self.rapi.get_payloads( data["payload_info"] )    
-        return data
-
-    # вопрос как лучше 
-    # exec_request(self,action,args):
-    # exec_request(self,task): # где task=(action,args) или даже (code,arg) по старинке.
-    async def exec_request(self,task,simple=False,hint=None):
-        p = self.rapi.create_promise()
-        p["simple"] = simple
-
-        m = {"label":"exec-request-ready","promise":p,"id":p["id"],
-             "code":task["code"],"arg":task["arg"], "lang_env":task["lang_env"]}
-        if hint is not None:
-            m["hint"] = hint # тут словарь с информацией для визуализации, в произвольной форме
-
-        k = self.rapi.msg( m )
-
-        self.init_queue()
-        self.queue.put_nowait( k )
-
-        #t = asyncio.create_task( self.rapi.request( {"label":"exec-request","promise":p,"id":p["id"],
-        #     "action":task["code"],"arg":task["arg"]}, lambda x: True ) )
-
-        #await self.rapi.request( {"label":"exec-request","promise":p,"id":p["id"],
-        #     "action":task["code"],"arg":task["arg"]}, lambda x: True )       
-
-        #await self.request( {"label":"exec-request","promise":p,"action":action,"arg":args}, lambda x: True )
-        return p        
-
-### обещания
-class Promises:    
-    def __init__(self,rapi):
-        self.rapi = rapi
-        #rapi.promises = self
-        rapi.create_promise = self.create_promise
-        rapi.resolve_promise = self.resolve_promise
-        rapi.wait_promise = self.wait_promise
-        rapi.wait = self.wait_promise # удобное
-        rapi.when_all = self.when_all
-        rapi.when_any = self.when_any
-        rapi.when_all_reduce = self.when_all_reduce
-
-    def create_promise( self, id=None ):
-        if id is None:
-            id = self.rapi.mkguid()
-        return { "p_promise": True, "id": id }
-
-    async def resolve_promise( self,promise, value):
-        return await self.rapi.msg( {"label":"resolve-promise","promise":promise,"value":value})
-        # типа а зачем нам ответ?
-        #return await self.rapi.request( {"label":"resolve-promise","promise":promise,"value":value}, lambda x: True )
-
-    async def wait_promise( self,promise ):
-        f = asyncio.Future()
-        def on_response(value):
-            # вопрос а надо ли нам тут payload преобразовывать обратно?
-            if "p_error" in dir(value):
-                f.set_exception( value.error )
-            else:
-                f.set_result( value )
-        await self.rapi.request( {"label":"wait-promise","promise":promise}, on_response )
-        return f
-
-    async def when_all(self,list):
-        p = self.create_promise()
-        p["simple"] = True
-        await self.rapi.msg( {"label":"when-all","promise":p,"list":list} )
-        # ну вот это вроде точно на тасках можно делать
-        # кстати таски.. может и rapi предоставить..
-        #await self.rapi.request( {"label":"when-all","promise":p,"list":list}, lambda x: True )
-        return p
-
-    async def when_any(self,list):
-        p = self.create_promise()
-        p["simple"] = True
-        await self.rapi.msg( {"label":"when-any","promise":p,"list":list} )
-        #await self.rapi.request( {"label":"when-any","promise":p,"list":list}, lambda x: True )
-        return p
-
-    async def when_all_reduce(self,list):
-        p = self.create_promise()
-        p["simple"] = True
-        await self.rapi.msg( {"label":"when-all-reduce","promise":p,"list":list} )
-        # ну вот это вроде точно на тасках можно делать
-        # кстати таски.. может и rapi предоставить..
-        #await self.rapi.request( {"label":"when-all","promise":p,"list":list}, lambda x: True )
-        return p        
-
-
-class RequestReply:
-    #### request
-    def __init__(self,rapi):
-        self.reply_query_promise = None
-        self.reply_callbacks = {}
-        self.request_counter = 0
-        self.reply_label = None
-
-        self.rapi = rapi        
-        rapi.request = self.request        
-        rapi.reply = self.reply            
-        rapi.request_p = self.request_p
-        rapi.request_pp = self.request_pp
-
-    # версия с callback
-    async def request( self, msg, callback ):
-        self.request_counter = self.request_counter + 1
-        request_id = self.request_counter
-        self.reply_callbacks[ request_id ] = callback
-
-        if self.reply_query_promise == None:
-            self.reply_label = "py_replies_" + self.rapi.mkguid()
-            self.reply_query_promise = self.rapi.query( self.reply_label, self.on_reply )
-            await self.reply_query_promise
-
-        msg["reply_msg"] = {"label": self.reply_label, "request_id": request_id }
-        #print("debug meth",msg)
-        return await self.rapi.msg( msg ) # а нужен ли тут await?
-
-    # версия с обещаниями        
-    # возвращает обещание
-    async def request_p( self,msg ):
-        f = asyncio.Future()
-        def on_response(value):
-            f.set_result( value )
-
-        await self.request( msg, on_response )
-        return f
-
-    # версия с результатом обещания сразу же
-    # возвращает результат обещания, т.е. ответ от сервера
-    async def request_pp( self,msg ):        
-        f = await self.request_p( msg )
-        await f
-        return f.result()
-
-    # пришел реплай на наш запрос    
-    async def on_reply( self, reply_msg ):
-        print("reply_msg",reply_msg,type(reply_msg))
-        k = reply_msg["request_id"]
-        print("k=",k)
-        cb = self.reply_callbacks[ reply_msg["request_id"] ]
-
-        if cb is None:
-            print("warning: reply_callback not found for reply msg",reply_msg)
-        if "attach" in reply_msg:
-            reply_msg["result"]["attach"] = reply_msg["attach"]
-        res = cb( reply_msg["result"] )
-        if inspect.isawaitable(res): 
-            await res
-        #
-        lambda msg: callback( msg["result"] )
-           
-
-    async def reply( self, input_msg, data ):
-        # для юзабилити. надоело просто снаружи это проверять
-        # как вариант, можно какой-то флаг вернуть
-        if not "reply_msg" in input_msg:
-            return
-
-        output_msg = dict(input_msg["reply_msg"])
-        
-        output_msg["result"] = data
-        if isinstance( data,dict ) and "attach" in data:
-            output_msg["attach"] = data["attach"]
-            del data["attach"]
-        """    
-        if "tobytes" in data:
-            output_msg["attach"] = data
-        else:    
-            
-        """    
-        return await self.rapi.msg( output_msg )
-
-### query
-""" Http
-
-"""
 
 
 ###################################################
@@ -427,13 +132,14 @@ class RequestReply:
 
 # идея https://github.com/dask/distributed/blob/main/distributed/scheduler.py#L161
 DEFAULT_EXTENSIONS = {
-    "tasks": AsyncTasks,
-    "promises": Promises,
+    "tasks": ppk_task.AsyncTasksFeature,
+    "promises": ppk_task.PromisesFeature,
     "payloads": ppk_payloads.Payloads,
     "payloads_inmem": ppk_payloads.PayloadsInmem,
-    "request" : RequestReply,
+    "request" : ppk_request.RequestReplyFeature,
     "query": ppk_query.QueryTcp,
-    "query_for": ppk_query_for.QueryFor
+    "query_for": ppk_query_for.QueryFor,
+    "link": ppk_link.LinkFeature
 }
 
 class Client:
