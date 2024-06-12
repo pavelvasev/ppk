@@ -198,6 +198,7 @@ class QueryTcp:
         res = cb(m)
         #print("cb called, res=",res)
         # а нам ето надо?
+        # хм видимо res это вызывает ожидание
         if inspect.isawaitable(res):
             #print("it is awaitable, entering await")
             await res
