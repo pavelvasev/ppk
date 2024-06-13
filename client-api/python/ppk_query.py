@@ -47,6 +47,7 @@ class QueryTcp:
         query_id_bytes = arg["query_id"].to_bytes(4,"big")
         #packet = {"query_id": arg["query_id"],  "m": msg } ыыы
         s = json.dumps( msg )
+        # print("do_query_send: encoded packet is len:",len(s))
         bytes = s.encode()
         #print("bytes="=)
         msglen = len(bytes)
