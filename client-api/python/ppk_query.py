@@ -36,8 +36,19 @@ class QueryTcp:
     async def do_query_send( self,msg, arg):
 
         target_url = arg["results_url"]
+
+        #print("do_query_send called, arg=",arg)
+        # Локальная передача данных в своем процессе
+        recepient_client_id = target_url["client_id"] if "client_id" in target_url else None
+        #print("recepient_client_id=",recepient_client_id,"self.rapi.client_id=",self.rapi.client_id)
+        if recepient_client_id == self.rapi.client_id:
+            #cb = self.query_callbacks[ arg["query_id"] ]
+            #print("TARGET IS SAME!")
+            await self.on_packet( arg["query_id"], msg )
+            return
         
         # print("do_query_send called",msg,arg)
+        
         attach = None
         if "attach" in msg:
             attach = msg["attach"]
@@ -186,6 +197,9 @@ class QueryTcp:
     # пришел ответ на квери
     async def on_message(self,query_id, msg_text,attach=None):
         packet = json.loads(msg_text)
+        await self.on_packet( query_id, packet, attach )
+
+    async def on_packet( self, query_id, packet, attach=None):
 
         cb = self.query_callbacks[ query_id ]
         m = packet
