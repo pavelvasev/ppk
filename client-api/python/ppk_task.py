@@ -222,4 +222,4 @@ class PromisesFeature:
         # ну вот это вроде точно на тасках можно делать
         # кстати таски.. может и rapi предоставить..
         #await self.rapi.request( {"label":"when-all","promise":p,"list":list}, lambda x: True )
-        return p        
+        return p
