@@ -64,7 +64,7 @@ class RequestReplyFeature:
     async def on_reply( self, reply_msg ):
         #print("reply_msg",reply_msg,type(reply_msg))
         k = reply_msg["request_id"]
-        print("k=",k)
+        #print("k=",k)
         cb = self.reply_callbacks[ reply_msg["request_id"] ]
 
         if cb is None:
