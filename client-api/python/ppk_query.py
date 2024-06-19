@@ -68,7 +68,7 @@ class QueryTcp:
         attach_len_bytes = attach_len.to_bytes(4,"big")
 
         client = await self.get_client_tcp( target_url )
-        #print("sending as tcp client",target_url,len_bytes,"=",len(len_bytes),"attach=",attach_len_bytes)
+        print("sending as tcp client",target_url,msglen)#,"=",len(len_bytes),"attach=",attach_len_bytes)
         
         client.write( query_id_bytes )
         client.write( len_bytes )
@@ -78,7 +78,8 @@ class QueryTcp:
             print("FAIL! attaches not supported")
             client.write( attach )
         #client.write( b''.join([len_bytes,bytes]) )
-        await client.drain()  
+        # было, убрали
+        #await client.drain()
 
     async def get_client_tcp( self,url ):
         surl = url["url"]
