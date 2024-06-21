@@ -1,6 +1,10 @@
+#ifndef PPK_H
+#define PPK_H
 
 #include <functional>
 #include "mongoose.h"
+
+//#define PPK_DEBUG
 
 #include <string>
 #include <map>
@@ -83,7 +87,9 @@ public:
 		
 		//url = arg_url;
 		mg_mgr_init(&mgr);        // Initialise event manager
+		#ifdef PPK_DEBUG
 		mg_log_set(MG_LL_DEBUG);  // Set log level
+		#endif
 		//mg_wakeup_init(&mgr);
 		//printf("CO url=%s\n",url.c_str());
 		char buf[512];
@@ -374,11 +380,11 @@ private:
     static void event_handler(mg_connection* c, int ev, void* ev_data) {
         // Предоставленный обработчик событий (пример)
         if (ev == MG_EV_CONNECT) {
-        	printf("@@@ MG_EV_CONNECT\n");
+        	// printf("@@@ MG_EV_CONNECT\n");
             // Здесь можно обрабатывать подтверждение успешной отправки
         }
         if (ev == MG_EV_WRITE) {
-        	printf("@@@ MG_EV_WRITE %d\n", *(int*)ev_data);
+        	// printf("@@@ MG_EV_WRITE %d\n", *(int*)ev_data);
             // Здесь можно обрабатывать подтверждение успешной отправки
 
         }
@@ -427,17 +433,27 @@ class ReactionsStore {
 		return 0;		
 	}
 
-	
+	void block_lists() {
+		printf("block_lists: enter\n");fflush(stdout);
+		mutex.lock();
+		printf("block_lists: entered\n");fflush(stdout);
+	}	
+	void unblock_lists() {
+		printf("unblock_lists: enter\n");fflush(stdout);
+		mutex.unlock();
+		printf("unblock_lists: entered\n");fflush(stdout);
+	}
 
 	ReactionsList* get_list( const char *topic ) {
 		
 		{
-			printf("get-list 1 %s\n",topic);
+			//printf("get-list 1 %s\n",topic);
 			std::lock_guard<std::recursive_mutex> guard(mutex);
-			printf("get-list 1 ok\n");
+			//printf("get-list 1 ok\n");
 
 			auto iter = rmap.find( topic );
-			if (iter != rmap.end()) {
+			if (iter != rmap.end()) 
+			{
 				ReactionsList *result = new ReactionsList(*iter->second);
 				return result;
 			}
@@ -694,7 +710,9 @@ public:
 	void do_connect() {
 		
 		mg_mgr_init(&mgr);        // Initialise event manager
+		#ifdef PPK_DEBUG
 		mg_log_set(MG_LL_DEBUG);  // Set log level
+		#endif
 		mg_wakeup_init(&mgr);
 		//printf("CO url=%s\n",url.c_str());
 		c = mg_ws_connect(&mgr, url.c_str(), ws_event_static, this, NULL);     // Create client
@@ -740,7 +758,7 @@ public:
 	  } else if (ev == MG_EV_WS_MSG) {
 	    // When we get echo response, print it
 	    struct mg_ws_message *wm = (struct mg_ws_message *) ev_data;	    
-	    printf("GOT MSG: [%.*s]\n", (int) wm->data.len, wm->data.buf);
+	    //printf("GOT MSG: [%.*s]\n", (int) wm->data.len, wm->data.buf);
 	    on_message( wm );
 	  }
 	  else if (ev == MG_EV_WAKEUP) {
@@ -757,7 +775,7 @@ public:
 
 	Reaction json_to_reaction( mg_str val )
 	{
-		  printf("json_to_reaction called. val=%.*s\n",val.len, val.buf );
+		  //printf("json_to_reaction called. val=%.*s\n",val.len, val.buf );
 
 		  char *action_code = mg_json_get_str(val, "$.action.code");
 		  if (!action_code) action_code = strdup("$.action.code NOT_FOUND");
@@ -786,7 +804,7 @@ public:
 					//std::string msg_buf = "{\"query_id\":\"" + query_id + "\", \"m\": " + std::string(buf) + "}";
 
 					msg_sender->send( rurl, qid, buf, []() {
-				        std::cout << "Сообщение успешно отправлено! (каллбека tcp-sender)" << std::endl;
+				        //std::cout << "Сообщение успешно отправлено! (каллбека tcp-sender)" << std::endl;
 				    });
 				};
 			  
@@ -877,8 +895,10 @@ public:
 		 	//printf("step2\n");
 
 		 	// жестокий хак
+		 	rstore->block_lists();
 		 	ReactionsList *list = rstore->get_list_no_block( crit );
 		 	rstore->add_list_reaction( list, id, r );
+		 	rstore->unblock_lists();
 		 	free( crit );
 		 	free( id );		 	
 		 	
@@ -891,8 +911,10 @@ public:
 		 	char *id = mg_json_get_str(json, "$.arg.name");
 		 	//printf("got delete, crit=%s, id=%s\n",crit,id); fflush(stdout);
 		 	
+		 	rstore->block_lists();	
 		 	ReactionsList *list = rstore->get_list_no_block( crit );
 		 	rstore->remove_list_reaction( list, id );
+		 	rstore->unblock_lists();
 		 	free( crit );
 		 	free( id );
 		 	
@@ -992,3 +1014,5 @@ public:
 		return conn.connect(main_url);
 	}
 };
+
+#endif
