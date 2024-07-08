@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
-import * as PPK from "../../../client-api/client-api.js"
+// todo что за непонятная фуункция action у квери?
+
+import * as PPK from "ppk";
 
 PPK.connect("test",undefined,true).then(rapi => {
   console.log("connected")
