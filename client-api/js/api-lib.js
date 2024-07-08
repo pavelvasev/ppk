@@ -104,8 +104,8 @@ export class ClientApi {
       } else if (msg.cmd_reply == 'add_item')
       {
         // это ответ от сервера что он обработал наше add_item        
-        let f = this.deployed_items_resolve[ msg.id ]
-        if (!f) console.error("this.deployed_items_resolve is null! msg.id=",msg.id)
+        let f = this.deployed_items_resolve[ msg.name ]
+        if (!f) console.error("this.deployed_items_resolve is null! msg.name=",msg.name)
         f ()
       } else if (msg.opcode) {
         //console.log("msg opcode from center",msg)

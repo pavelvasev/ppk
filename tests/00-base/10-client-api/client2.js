@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import * as PPK from "../../../client-api/client-api.js"
+import * as PPK from "ppk";
 
 PPK.connect("test",undefined,true).then(rapi => {
   console.log("connected")

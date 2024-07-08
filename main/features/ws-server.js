@@ -68,7 +68,7 @@ export class PPKWebsocketServer {
         }
         // вот тут можно было бы подождать пока произойдет рассылка (отработают листенеры)
         //console.log("thus entries are",list.entries(),list)
-        resp.id = msg.name
+        resp.name = msg.name
       } else if (msg.cmd == 'delete_item') {
         // уберем
         list.delete( msg.name )
