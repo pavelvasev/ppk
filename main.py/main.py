@@ -163,13 +163,48 @@ class WebsocketSrv:
             print("main: client finished")
             for fn in client_finish_funcs.values():
                 await fn()
-            self.rl.print()
+            #self.rl.print()
 
 
-    async def main(self,port):
+    # запуск ws-сервера
+    # finish_future как выставят - сервер остановится
+    async def main(self,port,finish_future=None):
+        if finish_future is None:
+            finish_future = asyncio.Future()
         print("main: server started")
         async with serve(self.echo, "0.0.0.0", port):
-            await asyncio.Future() # ждем окончания вечности
+            await finish_future # ждем окончания вечности
 
-ws = WebsocketSrv( ReactionsList() )
-asyncio.run(ws.main(10000))
+############### api в духе ppk_starter
+import atexit 
+class EmbeddedServer:
+
+    def __init__(self):
+        #self.worker_tasks = []
+        #self.processes = []
+        #self.jobs_counter = 0
+        self.url = "ws://127.0.0.1:10000"
+        atexit.register(self.cleanup) # это системное..
+
+    def cleanup(self):
+        if not self.finish_future.done():
+            self.finish_future.set_result(1)
+        pass
+
+    async def exit( self ):
+        #self.finish_future.set_result(1)
+        self.cleanup()
+        # пододжать пока отработает
+        await asyncio.sleep( 0.1 )
+
+    async def start( self ):
+        ws = WebsocketSrv( ReactionsList() )
+        self.finish_future = asyncio.Future()
+        self.task = asyncio.create_task(ws.main(10000,self.finish_future))
+        # пододжать пока отработает
+        await asyncio.sleep( 0.1 )
+        return self.task
+
+if __name__ == "__main__":
+    ws = WebsocketSrv( ReactionsList() )
+    asyncio.run(ws.main(10000))
