@@ -68,7 +68,7 @@ class QueryTcp:
         attach_len_bytes = attach_len.to_bytes(4,"big")
 
         client = await self.get_client_tcp( target_url )
-        print("sending as tcp client",target_url,msglen)#,"=",len(len_bytes),"attach=",attach_len_bytes)
+        # print("sending as tcp client",target_url,msglen)#,"=",len(len_bytes),"attach=",attach_len_bytes)
         
         client.write( query_id_bytes )
         client.write( len_bytes )
