@@ -48,7 +48,16 @@ class RequestReplyFeature:
     async def request_p( self,msg ):
         f = asyncio.Future()
         def on_response(value):
+            """
+            print("GOT RESPONSE< SETTING F",f,"value=",value)
+            if f.done():
+                print("BTW IT RESOLVED! ",f.result())
+            else:
+                print("f is not finished")
+            """   
+
             f.set_result( value )
+
 
         await self.request( msg, on_response )
         return f

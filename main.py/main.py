@@ -168,12 +168,24 @@ class WebsocketSrv:
 
     # запуск ws-сервера
     # finish_future как выставят - сервер остановится
-    async def main(self,port,finish_future=None):
+    async def main(self,port,finish_future=None,urls_future=None):
         if finish_future is None:
             finish_future = asyncio.Future()
-        print("main: server started")
-        async with serve(self.echo, "0.0.0.0", port):
-            await finish_future # ждем окончания вечности
+        print("main: server start..")
+        async with serve(self.echo, "0.0.0.0", port) as s:
+            if urls_future is not None:
+                urls = []
+                for x in s.sockets:
+                    name = x.getsockname()
+                    #print("see sock name",name)
+                    if name[0] == '0.0.0.0':
+                        urls.append( f"ws://127.0.0.1:{name[1]}")
+                    else:
+                        urls.append( f"ws://{name[0]}:{name[1]}")
+                print("main: server started",urls)
+                urls_future.set_result( urls )
+                await finish_future # ждем окончания вечности
+            pass
 
 ############### api в духе ppk_starter
 import atexit 
@@ -183,7 +195,7 @@ class EmbeddedServer:
         #self.worker_tasks = []
         #self.processes = []
         #self.jobs_counter = 0
-        self.url = "ws://127.0.0.1:10000"
+        #self.url = "ws://127.0.0.1:10000"
         atexit.register(self.cleanup) # это системное..
 
     def cleanup(self):
@@ -197,10 +209,12 @@ class EmbeddedServer:
         # пододжать пока отработает
         await asyncio.sleep( 0.1 )
 
-    async def start( self ):
+    async def start( self,port=0 ):
         ws = WebsocketSrv( ReactionsList() )
         self.finish_future = asyncio.Future()
-        self.task = asyncio.create_task(ws.main(10000,self.finish_future))
+        self.urls_future = asyncio.Future()
+        # urls_future это возможность получить порт
+        self.task = asyncio.create_task(ws.main(port,self.finish_future, self.urls_future))
         # пододжать пока отработает
         await asyncio.sleep( 0.1 )
         return self.task
