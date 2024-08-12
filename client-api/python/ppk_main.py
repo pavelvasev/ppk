@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# перенесен в client-api т.к. тогда удобно импортировать embeddedserver
+
 import asyncio
 import websockets
 from websockets.server import serve
@@ -212,6 +214,8 @@ class EmbeddedServer:
     async def start( self,port=0 ):
         ws = WebsocketSrv( ReactionsList() )
         self.finish_future = asyncio.Future()
+        # todo убрать это и заменить обратно на url - так удобнее клиентский вид
+        # а там уже пусть connect await делает внутрях
         self.urls_future = asyncio.Future()
         # urls_future это возможность получить порт
         self.task = asyncio.create_task(ws.main(port,self.finish_future, self.urls_future))
