@@ -39,12 +39,17 @@ class ReadingChannel:
             yield msg
 
 
+# вообще странный это объект.. подписывается много раз на одно и то же
+# и не подписывается если нет вызова subscribe.. что это за зверь?
 class Channel:
 
     def __init__(self,rapi,id):
         self.rapi = rapi
         self.id = id
         self.value = None # эксмперимент.. переход к ячейкам
+        # update но это не ячейковость а просто кеш прочитанного значения
+        # с удобным аксессором на чтение
+        # можно было бы просто и спец-функцию сделать
 
     async def submit( self, value ):
         await self.rapi.msg( { "label": self.id, "value": value})
@@ -66,6 +71,18 @@ class Channel:
           else:
             cb(msg)
         await self.rapi.query( self.id,cba,N )
+
+    # синхронные версии submit, subscribe
+    # idea - мб возвращать промису по которой можно узнать что дело сделано
+    # хотя на первое время достаточно будет просто submit-ов
+    # F-PYTHON-SYNC
+    def put( self, value ):
+        t = self.submit( value )
+        self.rapi.add_async_item( t )
+
+    def react( self, cb, N=-1 ):
+        t = self.subscribe( cb,N )
+        self.rapi.add_async_item( t )
  
 """ пример:
     async for msg in obj.clicked.read():
@@ -75,6 +92,8 @@ class Channel:
 ################################################
 # эксперимент
 # channels есть объекты
+# а это точно whenall а не when-any? ))))
+# all то это подразумевает синхронность подачи а у нас нет модели времени тут
 class WhenAll():
     def __init__( self, rapi, id, *channels ):
         #self.rapi = rapi

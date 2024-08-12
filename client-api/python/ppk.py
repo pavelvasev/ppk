@@ -29,6 +29,7 @@ import ppk_payloads_shmem2 as ppk_payloads
 import ppk_link
 import ppk_task
 import ppk_request
+import sync_async_queue
 
 from ppk_starter import *
 from ppk_cells import *
@@ -129,6 +130,7 @@ class Operations:
 
 # идея https://github.com/dask/distributed/blob/main/distributed/scheduler.py#L161
 DEFAULT_EXTENSIONS = {
+    "sync_async_queue": sync_async_queue.Feature,
     "tasks": ppk_task.AsyncTasksFeature,
     "promises": ppk_task.PromisesFeature,
     "payloads": ppk_payloads.Payloads,
@@ -160,13 +162,7 @@ class Client:
 
         #self.loop = self.connect()
         self.extensions = {}
-        """
-        self.extensions["tasks"] = AsyncTasks( self )
-        self.extensions["promises"] = Promises( self )
-        self.extensions["payloads"] = Payloads( self )
-        self.extensions["request"] = RequestReply( self )
-        self.extensions["query"] = Query( self )
-        """
+
         # ну пока по сути я просто задал возможность определения таблицы внешним образом.. ну ок..
         for name, extension in extensions_list.items():
             self.extend( name, extension )            
@@ -228,6 +224,10 @@ class Client:
         return self.t1
 
     async def run(self):
+
+        for e in self.extensions.values():
+            if hasattr(e, 'run') and callable(e.run):
+                e.run()
 
         if self.verbose:
             print("run: entering loop")        
