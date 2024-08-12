@@ -1,9 +1,13 @@
 #ifndef PPK_C_H
 #define PPK_C_H
 
+// PPK channels (c) Pavel Vasev, 2024
+
 #include <functional>
 #include <vector>
 #include <map>
+
+namespace ppk {
 
 /* делаем каналы. локальные.
 
@@ -12,6 +16,14 @@
 */
 
 // канал
+/*  пример
+
+    ppk::channel<float> c1;   
+    c1.subscribe( [this](float val) {
+	    printf("val is %f\n",val);
+    });
+    c1.submit( 10.0 );    
+*/
 template<typename T>
 class channel {
 
@@ -65,7 +77,13 @@ public:
 	}
 };
 
+// todo при удалении каналов - проводить отписку. ну хотя бы получателя
 // связь
+/*  пример
+
+    ppk::link<float> link1;
+    link1.init( input, target_channel );
+*/
 template<typename T>
 class link {
 
@@ -90,6 +108,10 @@ public:
 	std::function<void()> unsub = 0;
 
 	void init( channel<T> &a, channel<T> &b ) {
+		if (unsub) {
+			printf("link: warning! initing link that is already inited!\n");
+			// todo сюда бы имена и т.п.
+		};
 		stop();
 		auto f = [&b](T val) {
 			b.submit( val );
@@ -99,6 +121,19 @@ public:
 };
 
 // реакция
+/*  пример
+
+    ppk::react<float> r1;
+    r1.init( input, [this](float val) {
+	    printf("val is %f\n",val);
+    } );
+
+    интересно что по факту я реакциями что-то вообще не пользуюсь
+    т.к. есть subscribe.
+    но это похоже потому что у меня нет модели времени тут, а точнее она тривиальна.
+    также интересно что реакция по сигнатуре совпадает с link
+    только цель не канал а функция.    
+*/
 template<typename T>
 class react {
 
@@ -129,6 +164,8 @@ public:
 		stop();
 		unsub = a.subscribe( f );
 	};
+};
+
 };
 
 #endif

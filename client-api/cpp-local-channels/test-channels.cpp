@@ -2,6 +2,8 @@
 
 #include "channels.h"
 
+using namespace ppk;
+
 class alfa 
 {
 public:
