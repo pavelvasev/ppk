@@ -131,14 +131,17 @@ class Operations:
 # идея https://github.com/dask/distributed/blob/main/distributed/scheduler.py#L161
 DEFAULT_EXTENSIONS = {
     "sync_async_queue": sync_async_queue.Feature,
+    "channels": ChannelFeature,
+    "link": ppk_link.LinkFeature,
+
     "tasks": ppk_task.AsyncTasksFeature,
     "promises": ppk_task.PromisesFeature,
     "payloads": ppk_payloads.Payloads,
     "payloads_inmem": ppk_payloads.PayloadsInmem,
-    "request" : ppk_request.RequestReplyFeature,
+
     "query": ppk_query.QueryTcp,
-    "query_for": ppk_query_for.QueryFor,
-    "link": ppk_link.LinkFeature
+    "request" : ppk_request.RequestReplyFeature,    
+    "query_for": ppk_query_for.QueryFor,    
 }
 
 class Client:

@@ -17,6 +17,7 @@ class LinkFeature:
         self.rapi = rapi
         rapi.link = self.link
         rapi.bind = self.link_sync
+        # create_link ? в js так
         rapi.operations.do_forward = self.do_forward
 
     # todo добавить отмену

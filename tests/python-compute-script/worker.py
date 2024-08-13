@@ -8,20 +8,21 @@ import os
 
 rapi = ppk.Client()
 
-def qcb(msg):
-    print("qcb! msg=",msg)
-
 async def main():
-    channel_id = os.environ["PPK_WRK_CHANNEL"]
     url = os.environ["PPK_URL"]
-    print("worker",channel_id,": connecting to",url)
+    print("worker connecting to",url)
     await rapi.connect( url=url )
     print("connected")
-    
-    # await rapi.reaction( "test", rapi.python( f ))
-    print("installing query",channel_id)
-    await rapi.query( channel_id,qcb )
-    
+
+    input = rapi.channel( os.environ["PPK_INPUT_CHANNEL"] )
+    output = rapi.channel( os.environ["PPK_OUTPUT_CHANNEL"] )
+
+    def qcb(msg):
+        print("worker has message! msg=",msg)
+        output.put( msg * 2)
+
+    input.react( qcb )
+
     await asyncio.sleep( 1*100000 )
     print("Exiting")
     await c.exit()

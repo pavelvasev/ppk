@@ -15,6 +15,19 @@ REASON
 а в subscribe словари какие-то приходят
 """
 
+class ChannelFeature:
+    def __init__(self,rapi):
+        self.rapi = rapi
+        rapi.channel = self.channel
+
+    def channel( self, id ):
+        c = Channel( self.rapi, id )
+        return c
+
+    def cell( self,id ):
+        c = Cell( self.rapi, id )
+        return c
+
 # по мотивам WritingCell
 class WritingChannel:
 
@@ -41,6 +54,7 @@ class ReadingChannel:
 
 # вообще странный это объект.. подписывается много раз на одно и то же
 # и не подписывается если нет вызова subscribe.. что это за зверь?
+# но он на то и сделан универсальный.. чтобы избежать ReadingChannel, WritingChannel
 class Channel:
 
     def __init__(self,rapi,id):
