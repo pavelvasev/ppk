@@ -17,10 +17,10 @@ s = ppk_main.EmbeddedServer()
 def on_worker_msg(msg):
     print("msg from worker: ",msg)
 
-async def start_worker_process(url, worker_id, input_channel_id, output_channel_id):
+async def start_worker_process(url, worker_id, input_channel_id, output_channel_id,logdir):
     env = os.environ.copy() | {"PPK_INPUT_CHANNEL":input_channel_id,"PPK_OUTPUT_CHANNEL":output_channel_id,"PPK_URL":url}
-    log = os.open(f"{worker_id}.log",os.O_WRONLY | os.O_CREAT,0o644)
-    logerr = os.open(f"{worker_id}.err.log",os.O_WRONLY | os.O_CREAT,0o644)
+    log = os.open(f"{logdir}/{worker_id}.log",os.O_WRONLY | os.O_CREAT,0o644)
+    logerr = os.open(f"{logdir}/{worker_id}.err.log",os.O_WRONLY | os.O_CREAT,0o644)
 
     # subprocess.popen уместнее было бы
     p = await asyncio.create_subprocess_exec(sys.executable,"worker.py",env=env,stdin=subprocess.DEVNULL,stderr=logerr,stdout=log)
@@ -56,16 +56,17 @@ async def main():
     workers_output_channel.react( on_worker_msg )
 
     worker_channels = []
+    os.mkdir("log",0o755)
     for x in range(0,4):
         ch = rapi.channel( f"wrk_{x}" )
         worker_channels.append(ch)
-        await start_worker_process( s_urls[0], f"wrk_{x}", ch.id, workers_output_channel.id )
+        await start_worker_process( s_urls[0], f"wrk_{x}", ch.id, workers_output_channel.id,"log" )
 
     await asyncio.sleep( 1 )
     print("workers: started..")
 
     for w in worker_channels:
-        w.put(42)
+        w.put( [10,20,42] )
     
     await asyncio.sleep( 1*100000 )
     print("Exiting")

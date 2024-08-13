@@ -25,6 +25,13 @@ class ChannelFeature:
         return c
 
     def cell( self,id ):
+        # todo
+        """
+        и второй вопрос стоит это поведение ячейки:
+            - ресабмит при подключении других
+            - не сабмит если значение не поменялось..
+            - хранит ли она очередь сообщений? в js хранит..
+        """
         c = Cell( self.rapi, id )
         return c
 
@@ -94,6 +101,7 @@ class Channel:
         t = self.submit( value )
         self.rapi.add_async_item( t )
 
+    # idea если N закончилось - отдельное сообщение в некий канал..
     def react( self, cb, N=-1 ):
         t = self.subscribe( cb,N )
         self.rapi.add_async_item( t )
