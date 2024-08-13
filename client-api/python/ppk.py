@@ -63,6 +63,7 @@ ppk_run( main )
 
 ###########################################
 
+# необходимо чтобы переиспользвать имеющиеся подключения
 class SessionGenerator:
 
     def __init__(self,rapi):
@@ -155,9 +156,7 @@ class Client:
         self.client_id = sender+self.mkguid()
 
         self.function_counter = 0
-        self.exit_callbacks = []
-
-        self.session_generator = SessionGenerator( self )
+        self.exit_callbacks = []        
         
         # а вообще странно. мы идем всегда локально. так может таки пусть пуша нам говорит свой урль?
         # а не мы за нее решаем
@@ -227,6 +226,9 @@ class Client:
         return self.t1
 
     async def run(self):
+        # это было в конструкторе но перенесено сюда
+        # потому что в питоне 3.12 уже требуется loop для TcpConnector
+        self.session_generator = SessionGenerator( self )
 
         for e in self.extensions.values():
             if hasattr(e, 'run') and callable(e.run):
