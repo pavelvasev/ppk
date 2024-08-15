@@ -194,6 +194,7 @@ import atexit
 class EmbeddedServer:
 
     def __init__(self):
+        #print(333)
         #self.worker_tasks = []
         #self.processes = []
         #self.jobs_counter = 0

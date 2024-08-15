@@ -29,5 +29,9 @@ class Feature:
             #print("sync_async_queue: getting item")
             item = await self.rapi.sync_async_queue.get()
             #print("sync_async_queue: got item, awaiting")
-            await item
+            try:
+                await item
+            except Exception as error:
+                # handle the exception
+                print("ppk: exception occurred:", error) # An exception occurred: division by zero
             #print("sync_async_queue: item await DONE")
