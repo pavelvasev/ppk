@@ -30,8 +30,9 @@ let verbose=false
 export class RepresenterWS {
   constructor( port )
   {
+    let tgt = process.env["PPK_URL"] || "ws://127.0.0.1:10000"
     // сначала соединиться с главным, потом предоставлять сервисы
-    PPK.connect("repr-ws").then(rapi => {
+    PPK.connect("repr-ws",tgt).then(rapi => {
 
       let wss = new WebSocketServer({
         host: "0.0.0.0",

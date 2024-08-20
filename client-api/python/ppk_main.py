@@ -144,7 +144,7 @@ class WebsocketSrv:
 
                 elif cmd == "delete_item":
                     name = msg["name"]
-                    await self.rl.delete_item( name, crit, msg["value"] )
+                    await self.rl.delete_item( name, crit )
                     if name in client_finish_funcs:
                         del client_finish_funcs[ name ]
                 else:

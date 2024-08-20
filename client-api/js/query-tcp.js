@@ -34,7 +34,7 @@ export default function init( rapi ) {
       //console.log("query: some message arrived","query_id=",query_id,"msg=",msg)
       let q = query_cb_dic.get( query_id )
       if (!q) {
-        console.log('incoming msg label doesnt match to any query',{msg_query_id:query_id,type:typeof(query_id),query_cb_dic,client_id:rapi.client_id})
+        console.log('incoming msg query_id doesnt match to any query',{msg_query_id:query_id,type:typeof(query_id),query_cb_dic,client_id:rapi.client_id})
         return
       }
       let f = q.fn

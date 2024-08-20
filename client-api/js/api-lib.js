@@ -107,8 +107,12 @@ export class ClientApi {
         let f = this.deployed_items_resolve[ msg.name ]
         if (!f) console.error("this.deployed_items_resolve is null! msg.name=",msg.name)
         f ()
-      } else if (msg.opcode) {
-        //console.log("msg opcode from center",msg)
+      } else if (msg.cmd_reply == 'delete_item')
+      {
+         ;
+      }
+      else if (msg.opcode) {
+        //console.log("msg opcode from main",msg)
         let listp = this.lists[ msg.crit ]
         if (!listp) {
           // бывает..
