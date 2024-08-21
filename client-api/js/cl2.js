@@ -61,25 +61,7 @@ export class Base {
 
 export class Comm extends Base {
 
-	constructor() { 
-		super() 
-		// совместимость с then-протоколом
-		// ну и по смыслу then однократен.. всюду так ожидается
-		// поэтому не будем удивлять.
-		this.then = (cb) => {
-			let p_res, p_rej
-			let p = new Promise( (res,rej) => {
-				p_res = res
-				p_rej = rej
-			})
-
-			let unsub = this.once( (val) => {
-				Promise.resolve( cb(val) ).then( p_res, p_rej )
-			} )
-			
-			return p
-		}
-	}
+	constructor() { super() }
 
 	// становится потребна
 	// subscribe на однократное срабатывание.
@@ -94,6 +76,11 @@ export class Comm extends Base {
 		})
 		if (need_unsub) { unsub(); return () => {} }
 		return unsub
+	}
+
+	// F-THENABLE
+	then( fn ) {
+		return this.once( fn )
 	}
 
 	// F-COHERENT-MIND
@@ -126,12 +113,8 @@ export class Channel extends Comm {
 		//console.channel_verbose( "Port submit:",this+"","value=",value instanceof Comm ? value + "" : value,typeof(value) )
 
 		console.channel_verbose( "Port submit:",this+"","value=",fmtval(value) )
-		//console.error( "Port submit:",this+"","value=",value )
-		//console.error(this.subscribers)
-		this.subscribers.forEach( fn => {
-			//console.error("port ",this+"","calling subscribed fn",fn)
-			fn(value) 
-		})
+		//console.log(this.subscribers)
+		this.subscribers.forEach( fn => fn(value) )
 		//this.is_cell = true
 	}
 	destroy() {
@@ -302,6 +285,14 @@ export class Cell extends Comm {
 	}
 	get() {
 		return this.value
+	
+	}
+	// удобное
+	// но название то плохое. надо или просто get(), но тогда там - get_fast.
+	// или еще как-то. todo
+	get_default( default_value ) {
+		if (this.is_set) return this.value
+		return default_value;
 	}
 }
 
@@ -494,14 +485,25 @@ export class Binding {
 		//if (tgt instanceof Function)
 		if (!src)
 			console.error("binding src is null! tgt=", tgt + "")
-		if (!src.subscribe)
-			console.error("binding src have no subscribe method. src=", src + "","tgt=", tgt + "")
 		if (!tgt)
-			console.error("binding tgt is null! src=", src + "","tgt=", tgt + "")					
+			console.error("binding tgt is null! src=", src + "","tgt=", tgt + "")
 		if (!tgt.submit)
-			console.error("binding tgt have no submit method. src=", src + "","tgt=", tgt + "")		
+			console.error("binding tgt have no submit method. src=", src + "","tgt=", tgt + "")
+   
+    // это пока для теста
+    // мб лучше кстати уметь связывать 2 объекта и это значит их input-output
+    if (src instanceof ClObject) {
+      // F-MAY-BIND-TO-OBJECT
+      this.unsub = () => {}
+      //console.log("Case 2", src, tgt );
+      tgt.submit( src );
+    }
+    else {
+      if (!src.subscribe)
+          console.error("binding src have no subscribe method. src=", src + "","tgt=", tgt + "")    
+      this.unsub = src.subscribe( tgt.submit.bind(tgt) )
+    }
 
-		this.unsub = src.subscribe( tgt.submit.bind(tgt) )
 
 		tgt.set_m_priority( src )
 
@@ -575,11 +577,15 @@ export function create_binding_when_any( list, q ) {
 	//let q = create_channel()
 	//SSconsole.log("create_binding_when_any, list=",list)
 	let barr = []
+	//let index = 0;
 	for (let k of list) {
 		//console.log("connnecting ",k,"to",q)
 		let b = create_binding( k, q )
 		barr.push( b )
-		//k.changed.on( () => console.log("k is changed ",k.get()) )
+		//k.subscribe( x => console.log("bwha change!",x,"k=",k))
+		//let mindex = index;
+		//k.changed.on( () => console.log("k is changed! index=",mindex,"val=",k.get(),"clid=",k.$cl_id) )
+		//index++
 	}
 	let unsub = () => {
 		//console.log("unsub called")
@@ -770,9 +776,12 @@ export function schedule( fn, priority_holder_object, force_priority ) {
 
 	// попробуем вставкой мб так побыстрее таки.. 
 	let i = 0
-	while (i < next_tick.length && fn_priority < next_tick[i].priority) {
+	// в этом выражении <= очень важно. т.к. оно означает - запихиваем в очередь максимально далеко
+	// это позволяет сохранить порядок обработки
+	while (i < next_tick.length && fn_priority <= next_tick[i].priority) {
 		i++
 	}
+	//console.log("schedule: inserted at pos",i)
 	//console.log("next_tick before insert",next_tick.map( x => x.priority))
 	next_tick = [...next_tick.slice(0,i), fn, ...next_tick.slice(i) ]
 	//console.log("next_tick after insert",next_tick.map( x => x.priority))
@@ -851,8 +860,8 @@ export class DelayedEater() {
 // tgt - целевой канал куда слать
 // что делает. считывает src рассчитывая увидеть там массив ячеек
 // и при изменении значений этих ячеек - собирает их в массив
-// и кладет его в tgt
-// проблема - если в src не ячейки а другие примитивы, то сборка ломается
+// и кладет его в tgt. при этом применяет дедубликацию сообщений.
+// если в src не ячейки а другие примитивы, то сборка ломается
 export function monitor_rest_values( src,tgt ) {
 
 	//console.log("monitor_rest_values inner!")
@@ -863,6 +872,8 @@ export function monitor_rest_values( src,tgt ) {
 	dtgt.$title = "create_binding_any(dtgt)"
 	dtgt.attached_to = src
 	let db = create_binding_delayed( dtgt, tgt )
+
+	let had_sent = false;
 
 		//src.changed.subscribe( f )
 
@@ -908,7 +919,7 @@ export function monitor_rest_values( src,tgt ) {
 			
 			//consoleА.log("all - subscribing")
 			all.subscribe( () => {
-				//console.log("all.subscribe ticked")
+				//if (had_sent) console.log("mon-rest all.subscribe ticked NON-FIRST",src.$cl_id, src.$locinfo)
 				let have_not_setted = false
 				let values = cells.map( x => x.is_set ? x.get() : have_not_setted = x+"" )
 				if (have_not_setted) {
@@ -925,7 +936,8 @@ export function monitor_rest_values( src,tgt ) {
 					values = result
 				}
 
-				//console.log("emitting collected",values)
+				//if (had_sent)console.log("emitting collected",values)
+				had_sent = true
 				dtgt.emit( values )
 			})
 

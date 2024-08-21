@@ -34,6 +34,7 @@ import sync_async_queue
 from ppk_starter import *
 from ppk_cells import *
 
+import gr6.lib as grlib
 
 ########################################## рабочее
 
