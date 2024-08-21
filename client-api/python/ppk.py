@@ -148,13 +148,13 @@ DEFAULT_EXTENSIONS = {
 
 class Client:
 
-    def __init__(self,sender="python", extensions_list=DEFAULT_EXTENSIONS):
+    def __init__(self,sender=None, extensions_list=DEFAULT_EXTENSIONS):
         #self.main_url = url
         self.sender = sender
         self.lists = {}
         self.operations = Operations( self )
         self.verbose = False
-        self.client_id = sender+self.mkguid()
+        self.client_id = "python"+self.mkguid() if sender is None else sender 
 
         self.function_counter = 0
         self.exit_callbacks = []        

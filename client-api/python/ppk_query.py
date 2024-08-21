@@ -12,6 +12,7 @@ import inspect
 # вообще спорно. ну ладно. для get_payload надо
 import numpy as np
 import sys
+import time
 
 # old: s--- 4 байта длина строки, 4 байта длина attach, и далее строка с json и массив байт attach
 # 4 байта query_id, 4 байта длина строки, и далее строка с json 
@@ -29,6 +30,7 @@ class QueryTcp:
         rapi.query = self.query
 
         self.query_id_cnt = 0
+        self.send_cnt = 0
 
         self.clients = {}
         rapi.operations.do_query_send = self.do_query_send
@@ -36,6 +38,13 @@ class QueryTcp:
     async def do_query_send( self,msg, arg):
 
         target_url = arg["results_url"]
+
+        # F-TRACK-MSG
+        if msg["label"] != "online_logging_msg" and msg["label"] != "online_logging":
+            msg["tr_id"] = {"actor":self.rapi.client_id, "msgid":f"{self.rapi.client_id}#{self.send_cnt}", "t":time.time()}
+            print("ppk: added tr_id mark",msg["tr_id"])
+            #msg["tr_tm"] = time.time()
+            self.send_cnt = self.send_cnt + 1
 
         #print("do_query_send called, arg=",arg)
         # Локальная передача данных в своем процессе
@@ -46,7 +55,7 @@ class QueryTcp:
             #print("TARGET IS SAME!")
             await self.on_packet( arg["query_id"], msg )
             return
-        
+
         # print("do_query_send called",msg,arg)
         
         attach = None
@@ -209,6 +218,13 @@ class QueryTcp:
         
         if self.rapi.verbose:
             print("query got message:",packet,"cb=",cb)
+
+        if "tr_id" in m:
+            trid = m["tr_id"]
+            print("ppk: see tr_id mark",trid)
+            tlen = time.time() - trid["t"]
+            await self.rapi.msg({"label":"online_logging_msg","value":{"task":"send","actor":trid["actor"],"actor_tgt":self.rapi.client_id,"tlen":tlen,"t1":trid["t"],"dy":0}})
+
         #print("query got message:",packet,"cb=",cb)    
         res = cb(m)
         #print("cb called, res=",res)
