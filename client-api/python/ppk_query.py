@@ -42,7 +42,7 @@ class QueryTcp:
         # F-TRACK-MSG
         if msg["label"] != "online_logging_msg" and msg["label"] != "online_logging":
             msg["tr_id"] = {"actor":self.rapi.client_id, "msgid":f"{self.rapi.client_id}#{self.send_cnt}", "t":time.time()}
-            print("ppk: added tr_id mark",msg["tr_id"])
+            #print("ppk: added tr_id mark",msg["tr_id"])
             #msg["tr_tm"] = time.time()
             self.send_cnt = self.send_cnt + 1
 
@@ -221,7 +221,7 @@ class QueryTcp:
 
         if "tr_id" in m:
             trid = m["tr_id"]
-            print("ppk: see tr_id mark",trid)
+            #print("ppk: see tr_id mark",trid)
             tlen = time.time() - trid["t"]
             await self.rapi.msg({"label":"online_logging_msg","value":{"task":"send","actor":trid["actor"],"actor_tgt":self.rapi.client_id,"tlen":tlen,"t1":trid["t"],"dy":0}})
 

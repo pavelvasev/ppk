@@ -41,6 +41,7 @@ async def start_repr(url):
         if p.returncode is None:
             print("repr term")
             p.terminate()
+            time.sleep(0.1)
     atexit.register(cleanup)
     return p
 
@@ -55,5 +56,6 @@ async def start_browser(url):
         if p.returncode is None:
             print("webdev term")
             p.terminate()
+            time.sleep(0.1)
     atexit.register(cleanup)
     return p

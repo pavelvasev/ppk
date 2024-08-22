@@ -177,7 +177,7 @@ process "main" {
     dom.dark_theme
 
     dom.row style="gap:0.5em;" {
-        dom.element "span" "PPO"
+        dom.element "span" "PPK"
     }
 
     output_space: dom.element "div" style="border: 1px solid grey; flex: 1;" {
