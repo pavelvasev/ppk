@@ -1,4 +1,4 @@
-#!/bin/bash -e
+ #!/bin/bash -e
 
 DIR="$(dirname "$(realpath "$0")")"
 
