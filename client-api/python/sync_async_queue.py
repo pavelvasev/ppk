@@ -4,6 +4,7 @@ F-PYTHON-SYNC
 """
 
 import asyncio
+import traceback
 
 class Feature:
 
@@ -34,4 +35,5 @@ class Feature:
             except Exception as error:
                 # handle the exception
                 print("ppk: exception occurred:", error) # An exception occurred: division by zero
+                print("traceback:",traceback.format_exc())
             #print("sync_async_queue: item await DONE")

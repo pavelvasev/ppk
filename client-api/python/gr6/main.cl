@@ -67,7 +67,7 @@ func "create_component" {: rapi descr attach_to my_id |
           })          
         }
       })
-    }    
+    }
 
     // items
     for (var x of (descr.items || [])) {

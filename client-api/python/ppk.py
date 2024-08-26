@@ -326,7 +326,7 @@ class Client:
         if self.verbose:
             print("sending reaction msg",k)
         await self.send( k )
-        rhandle = { "cmd": "delete_item", "name": name }
+        rhandle = { "cmd": "delete_item", "name": name, "crit":crit }
         return rhandle
 
     async def delete( self, handle ):

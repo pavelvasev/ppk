@@ -36,13 +36,16 @@ class WebsocketReprSrv:
 
                 if "query" in msg:
                     N = msg["opts"]["N"]
+                    #outer_query_id = msg["query"]
                     crit = msg["crit"]
-                    async def on_query_reply(inmsg):
-                        resp= {"query_reply": msg["query"], "m": inmsg}
-                        resp_txt = json.dumps( resp )
-                        await websocket.send(resp_txt)
+                    def mk_reply(outer_query_id):
+                        async def on_query_reply(inmsg):
+                            resp= {"query_reply": outer_query_id, "m": inmsg}
+                            resp_txt = json.dumps( resp )
+                            await websocket.send(resp_txt)
+                        return on_query_reply
 
-                    q = await self.rapi.query( crit,on_query_reply, N)
+                    q = await self.rapi.query( crit,mk_reply(msg["query"]), N)
                     active_queries[ msg["query"] ] = q
                 elif "query_delete" in msg:
                     q = active_queries[ msg["query"] ]

@@ -83,8 +83,12 @@ async def main():
         print("putting message to test create3",m)
         gui_ch.put( m )
 
+        text_id = "info_text1"
+        m = {"description":{"type":"text","params":{"value":"hello! -- "}},"target_id":"root","id":text_id}
+        gui_ch.put( m )
+
         text_id = "info_text"
-        m = {"description":{"type":"text","params":{"value":"starting..."}},"target_id":"output_space/inner_space1","id":text_id}
+        m = {"description":{"type":"text","params":{"value":"starting..."},"links_in": {"value":["test"]}},"target_id":"root","id":text_id}
         gui_ch.put( m )
 
         """
