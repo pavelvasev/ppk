@@ -21,7 +21,7 @@ func "create_component" {: rapi descr attach_to my_id |
     let params = descr.params;
     let fn = eval(fn_name)
     let result = fn( params );
-    //console.log("created component: ",result);
+    console.log("created component: ",result);
     //let robj = root_obj.get()
     //console.log("btw root_obj=",robj)
     //console.log("btw self=",self)
@@ -35,12 +35,15 @@ func "create_component" {: rapi descr attach_to my_id |
       например некоего корня, а все остальное уже локально маршрутизировать...
     */
     //let tgt = root_obj[ target_id ];
-    //console.log("attaching to:",attach_to)
+    console.log("attaching to:",attach_to)
+    if (attach_to.host)
+      attach_to = attach_to.host;
     attach_to.append( result )
 
     // входные каналы
-    if (result.inputs) {
-      result.inputs.once( list_of_names => {
+    let input_channels = result.inputs;
+    if (input_channels) {
+      input_channels.once( list_of_names => {
         for (var name of list_of_names) {          
           let lname = name;
           let cname = my_id + "/" + name;
@@ -85,7 +88,18 @@ process "component_creator" {
   react @q2 {: msg |
     console.log("see msg gui/create_component:",msg)
     let root_obj = self.attached_to;
-    let attach_to = root_obj[ msg.value.target_id ]
+    let parts = msg.value.target_id.split("/");
+    let attach_to = root_obj[ parts[0] ];
+    for (let i=1; i<parts.length; i++) {
+        let childs = attach_to.children.get();
+        attach_to = childs.find( c => c.$title = parts[i] )
+
+        if (!attach_to) {
+          console.error("component_creator: failed to find part i=",i,"in parts",parts)
+          console.error(" root_obj=",root_obj)
+          return;
+        }
+    }
     let descr = msg.value.description;
     create_component( rapi.get(),descr,attach_to, msg.value.id );
   :}
@@ -101,8 +115,17 @@ process "component_creator" {
 }
 
 mixin "tree_node"
+process "text" {
+  in {
+    value: cell
+  }
+  inputs := list "value"
+  output := dom.element "span" innerHTML=@value
+}
+
+mixin "tree_node"
 process "lines" {
-  in { 
+  in {
     colors: cell
     color: cell
     positions: cell
@@ -176,15 +199,17 @@ process "main" {
   output := qqq: dom.column style=@style {
     dom.dark_theme
 
-    dom.row style="gap:0.5em;" {
+    topline: dom.row style="gap:0.5em;" {
         dom.element "span" "PPK"
     }
 
     output_space: dom.element "div" style="border: 1px solid grey; flex: 1;" {
-      dom.element "div" style="position: absolute; padding: 0px;" {      
+      inner_space1: dom.element "div" style="position: absolute; padding: 10px;" {      
         dom.element "span" ""
       }
     }
+
+    //inner_space: const @inner_space1
 
     // todo эта сцена по идее тож динамически, равно как и render.. ну ладно пока
     s: lib3d.scene {

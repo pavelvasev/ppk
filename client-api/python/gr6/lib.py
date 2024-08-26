@@ -59,3 +59,4 @@ async def start_browser(url):
             time.sleep(0.1)
     atexit.register(cleanup)
     return p
+    

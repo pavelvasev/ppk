@@ -3,6 +3,8 @@
 import asyncio
 import ppk
 import ppk_main
+import ppk_ws_bridge
+import ppk_web
 import os
 import time
 import sys
@@ -13,10 +15,12 @@ import math
 
 mdir = os.path.join( os.path.dirname(__file__), ".." )
 sys.path.insert(0,mdir)
-import lib
+#import lib
 
 rapi = ppk.Client()
-s = ppk_main.EmbeddedServer()
+s = ppk_main.Server()
+q = ppk_ws_bridge.Server()
+w = ppk_web.Server()
 # s = ppk.RemoteSlurm()
 # sw = ppk.LocalServer()
 
@@ -24,12 +28,14 @@ def on_worker_msg(msg):
     print("msg from worker: ",msg)
 
 
-import lib
+#import lib
 
 import string
 import random
 def id_generator(size=10, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))    
+
+import webbrowser
 
 async def main():
     print("starting system")
@@ -40,6 +46,14 @@ async def main():
     t1 = await rapi.connect( url=s_urls[0] )
     print("connected",t1)
 
+    print("starting ws bridge")
+    await q.start()
+    print("ws bridge started, url=",q.url)
+
+    await w.start(os.path.join( os.path.dirname(__file__), "public" ))
+    print("webserver started, url=",w.url)
+    # https://docs.python.org/3/library/webbrowser.html
+    webbrowser.open(w.url + "/index.html", new = 2)
 
     gui_attached_ch = rapi.channel("gui_attached")
     lines_id = "main_lines"
@@ -87,8 +101,7 @@ async def main():
     #await start_browser( s_urls[0] )
 
     print("starting bro..")
-    await lib.start_visual( s_urls[0] )
-
+    #await lib.start_visual( s_urls[0] )
 
     test_channel = rapi.channel("test")
     for i in range(1000):
@@ -105,6 +118,7 @@ async def main():
     print("Exiting")
     await c.exit()
     await s.exit()
+    await w.exit()
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete( main() )

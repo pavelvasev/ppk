@@ -68,6 +68,7 @@ class ReactionsList:
 import json
 
 class WebsocketSrv:
+    # rl = объект reactions list
     def __init__(self,rl):
         self.rl = rl
 
@@ -190,8 +191,10 @@ class WebsocketSrv:
             pass
 
 ############### api в духе ppk_starter
+# специальный класс, для удобства запуска WebsocketSrv изнутри процессов программ
+# в принципе, можно обходиться и без этого класса
 import atexit
-class EmbeddedServer:
+class Server:
 
     def __init__(self):
         #print(333)
@@ -199,6 +202,7 @@ class EmbeddedServer:
         #self.processes = []
         #self.jobs_counter = 0
         #self.url = "ws://127.0.0.1:10000"
+        self.finish_future = asyncio.Future()
         atexit.register(self.cleanup) # это системное..
 
     def cleanup(self):
@@ -213,8 +217,7 @@ class EmbeddedServer:
         await asyncio.sleep( 0.1 )
 
     async def start( self,port=0 ):
-        ws = WebsocketSrv( ReactionsList() )
-        self.finish_future = asyncio.Future()
+        ws = WebsocketSrv( ReactionsList() )        
         # todo убрать это и заменить обратно на url - так удобнее клиентский вид
         # а там уже пусть connect await делает внутрях
         self.urls_future = asyncio.Future()
@@ -224,6 +227,9 @@ class EmbeddedServer:
         await asyncio.sleep( 0.1 )
         return self.task
 
+EmbeddedServer = Server
+
 if __name__ == "__main__":
     ws = WebsocketSrv( ReactionsList() )
     asyncio.run(ws.main(10000))
+

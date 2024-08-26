@@ -34,6 +34,7 @@ class QueryTcp:
 
         self.clients = {}
         rapi.operations.do_query_send = self.do_query_send
+        rapi.get_incoming_endpoint = self.get_incoming_endpoint
 
     async def do_query_send( self,msg, arg):
 
@@ -104,10 +105,10 @@ class QueryTcp:
         await pp
         return pp.result()
 
-    async def query( self, crit, callback, N=-1):
-        #print("query called",crit)
-        if self.results_url_promise is None:
-            #print("b1")
+    # запускает сервер входящих сообщений
+    # возвращает endpoint для получения сообщений
+    async def get_incoming_endpoint(self):
+        if self.results_url_promise is None:    
             self.results_url_promise = asyncio.Future()
 
             host = os.environ.get('PPK_PUBLIC_ADDR')
@@ -149,17 +150,16 @@ class QueryTcp:
 
             self.rapi.atexit( close_site )
             # см также 
-            # https://www.roguelynn.com/words/asyncio-graceful-shutdowns/
+            # https://www.roguelynn.com/words/asyncio-graceful-shutdowns/            
 
+        result = await self.results_url_promise
+        return result
 
-        await self.results_url_promise # ибо там нре сразу же
-
-        url = self.results_url_promise.result()
-        #print("url resolved",url)
+    async def query( self, crit, callback, N=-1):
+        #print("query called",crit)
+        url = await self.get_incoming_endpoint()
         query_id = self.make_query_id()
-
         self.query_callbacks[query_id] = callback
-
         return await self.rapi.reaction( crit, self.rapi.operation("do_query_send",query_id=query_id,results_url=url) )
 
     # присоединился новый клиент
@@ -212,7 +212,6 @@ class QueryTcp:
         await self.on_packet( query_id, packet, attach )
 
     async def on_packet( self, query_id, packet, attach=None):
-
         cb = self.query_callbacks[ query_id ]
         m = packet
         if attach is not None:
