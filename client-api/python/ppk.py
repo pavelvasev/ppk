@@ -318,13 +318,19 @@ class Client:
 
         await asyncio.gather( *res_arr )
 
+    # todo обратная операция по удалению реакции?
     async def reaction( self, crit, action ):
         name = self.mkguid()
         #print("name=",name)
         k = { "cmd": "add_item", "crit": crit, "name": name, "value": { "action": action } }
         if self.verbose:
             print("sending reaction msg",k)
-        return await self.send( k )
+        await self.send( k )
+        rhandle = { "cmd": "delete_item", "name": name }
+        return rhandle
+
+    async def delete( self, handle ):
+        await self.send( handle )
 
     def entry_to_reaction( self,e ):
         action = e["action"]

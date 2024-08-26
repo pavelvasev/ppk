@@ -224,7 +224,9 @@ class Server:
         # urls_future это возможность получить порт
         self.task = asyncio.create_task(ws.main(port,self.finish_future, self.urls_future))
         # пододжать пока отработает
-        await asyncio.sleep( 0.1 )
+        #await asyncio.sleep( 0.1 )
+        await self.urls_future
+        self.url = self.urls_future.result() [0]
         return self.task
 
 EmbeddedServer = Server

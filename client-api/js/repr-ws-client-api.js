@@ -32,28 +32,53 @@ export function connect( sender, url = "ws://127.0.0.1:12000", verbose, submit_p
       console.log('ws connected')
       resolve(rapi)
     })
+    rapi.ws.addEventListener('close', (data) => {
+      console.log('ws disconnected')
+      rapi.closed.resolve( data )
+    })
     rapi.ws.addEventListener('error', (data) => {
       console.log('ws error',data)
+      //resolve(rapi)
+      //rapi.closed.resolve( data )
       reject(rapi)
-    })    
+    })
   })
 }
 
 class ReprWsClientApi {
   constructor( endpoint_url ) {
     console.log("ReprWsClientApi started:",endpoint_url)
+
+    this.client_id = "webclient_"+Math.random()
+
+    let ppr
+    this.closed = new Promise( (resolve) => {      
+        ppr = resolve
+    })
+    this.closed.resolve = ppr
+
     this.ws = new WebSocket( endpoint_url )
     
     this.ws.addEventListener('message', (event) => {
+       //console.log("client got message",event)
+
        let data = event.data
        let json = JSON.parse(data)
        if (json.query_reply) {
-         //json.m.timestamp ||= this.server_t0 + performance.now() // но может это и не здесь надо..
+         json.m.timestamp ||= this.server_t0 + performance.now() // но может это и не здесь надо..
          let cb=  this.query_dic[json.query_reply]
          if (cb) 
             cb( json.m ) 
           else console.error('no query with id ',json.query_reply)
-       } 
+       } else
+       if (json.shared_reply) {
+         // это обновление значений списков
+         json.m.timestamp ||= this.server_t0 + performance.now() // но может это и не здесь надо..
+         let cb=  this.shared_dic[json.shared_reply]
+         if (cb) 
+            cb( json.m )
+          else console.error('no share with id ',json.shared_reply)
+       }
        else if (json.hello) {
          this.server_t0 = json.server_t0
        }
@@ -68,15 +93,49 @@ class ReprWsClientApi {
   }
 
   query_counter=0
-  query_dic = {} // todo Map
+  query_dic = {}
   query( crit, opts, arg ) {
-    let qid = `q_${this.query_counter++}`
-    //console.log("client sending ")
-    this.msg( {query: qid, crit,opts,arg})
+    let qid = `${this.client_id}/q_${this.query_counter++}`
+    //console.log("client sending new query:",{query: qid, crit, opts, arg})
+    opts ||= {}
+    opts["N"] ||= -1
+    this.msg( {query: qid, crit, opts, arg} )
     let that = this
     let res = {
       done(cb) {
         that.query_dic[ qid ] = cb
+        return res
+      },
+      delete() {
+        this.msg( {query_delete: qid} )
+      }
+    }
+    return res
+  }
+
+  shared_dic = {}
+  shared( crit ) {
+    let qid = `${this.client_id}/s_${this.query_counter++}`
+    //console.log("client sending ")
+    this.msg( {shared: qid, crit} )
+    let that = this
+    let res = {
+      subscribe(cb) {
+        that.shared_dic[ qid ] = cb
+      }
+    }
+    return res
+  }
+
+  shared_writer_dic = {}  
+  shared_list_writer( crit,id ) {
+    id ||= `${this.client_id}/sw_${this.query_counter++}`    
+    let that = this
+    let res = {
+      id,
+      submit(value) {
+        //console.log(":shared_list_writer submits",{shared_submit: true, crit, value,opts:{id}})
+        that.msg( {shared_submit: true, crit, value,opts:{id}} )
       }
     }
     return res

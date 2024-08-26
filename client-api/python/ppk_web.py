@@ -36,6 +36,12 @@ class Server:
     async def start( self,path_to_static_folder, port=0 ):
         app = web.Application()
         # https://docs.aiohttp.org/en/stable/web_reference.html#aiohttp.web.UrlDispatcher.add_static
+
+        # приоритет
+        js_api = os.path.abspath( os.path.join( os.path.dirname(__file__), "../js" ) )
+        print("js_api=",js_api)
+        app.router.add_static('/jsapi', js_api, append_version=True,show_index=True)
+
         app.router.add_static('/', path_to_static_folder, append_version=True,show_index=True)
 
         # https://docs.aiohttp.org/en/stable/web_reference.html#running-applications

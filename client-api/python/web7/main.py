@@ -3,7 +3,8 @@
 import asyncio
 import ppk
 import ppk_main
-import ppk_ws_bridge
+#import ppk_ws_bridge
+import ppk_ws_repr
 import ppk_web
 import os
 import time
@@ -19,7 +20,8 @@ sys.path.insert(0,mdir)
 
 rapi = ppk.Client()
 s = ppk_main.Server()
-q = ppk_ws_bridge.Server()
+#q = ppk_ws_bridge.Server()
+q = ppk_ws_repr.Server()
 w = ppk_web.Server()
 # s = ppk.RemoteSlurm()
 # sw = ppk.LocalServer()
@@ -41,19 +43,19 @@ async def main():
     print("starting system")
     s1 = await s.start()
     print("system started, connecting")
-    s_urls = s.urls_future.result()
     
-    t1 = await rapi.connect( url=s_urls[0] )
+    t1 = await rapi.connect( url=s.url )
     print("connected",t1)
 
-    print("starting ws bridge")
-    await q.start()
-    print("ws bridge started, url=",q.url)
+    print("starting ws repr")
+    await q.start(rapi)
+    #print("ws bridge started, url=",q.url)
 
+    print("starting web server")
     await w.start(os.path.join( os.path.dirname(__file__), "public" ))
-    print("webserver started, url=",w.url)
+    print("webserver started, url=",w.url  )
     # https://docs.python.org/3/library/webbrowser.html
-    webbrowser.open(w.url + "/index.html", new = 2)
+    webbrowser.open(w.url + "/index.html?repr_url="+q.url, new = 2)
 
     gui_attached_ch = rapi.channel("gui_attached")
     lines_id = "main_lines"
@@ -107,7 +109,7 @@ async def main():
     for i in range(1000):
       print("python: put to test")
       test_channel.put(i)
-      await asyncio.sleep( 1000000 )
+      await asyncio.sleep( 1 )
       #print("lines_id=",lines_id)
       x = random.sample(range(1, 100), 3*2*1)
       y = (np.random.randint(255, size=3*2*1) / 255.0).tolist()        

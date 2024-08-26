@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# 
+# упрощенная версия моста
 
 import asyncio
 import websockets
@@ -10,62 +10,68 @@ import ppk
 ####################### вебсокеты + main
 import json
 
-class WebsocketBridgeSrv:
-    def __init__(self):
-        self.rapi = ppk.Client()
+class WebsocketReprSrv:
+    def __init__(self,rapi):
+        #self.rapi = ppk.Client()
+        self.rapi = rapi
         self.ws_clients = {}
         self.ws_cnt = 0
 
-    # реализация операции recv_from_net
-    async def on_packet( self, query_id, packet, attach=None):
-        for websocket in self.ws_clients.values():
-            packet["query_id"] = query_id
-            resp_txt = json.dumps( packet )
-            await websocket.send( resp_txt )
-
     async def echo(self,websocket):
         # список функций, которые надо вызвать при отключении клиента
-        client_finish_funcs = dict()
+        #client_finish_funcs = dict()
         # список идентификаторов процессов отслеживания
-        listening_processes = dict()
+        #listening_processes = dict()
 
         this_ws_id = self.ws_cnt
         self.ws_cnt = self.ws_cnt + 1
         self.ws_clients[ this_ws_id ] = websocket
 
+        active_queries = dict()
+
         try:
             async for message in websocket:
                 msg = json.loads(message)
-                cmd = msg["cmd"]
+                #cmd = msg["cmd"]
 
-                if cmd == "send_to_net":
-                    msg_to_send = msg["msg"]
-                    target_list = msg["target_list"]
-                    for t in target_list:
-                        await rapi.operations.do_query_send( msg_to_send,t )                    
-                elif cmd == "register_web_client":
-                    r_url = rapi.get_incoming_endpoint()
-                    resp = {"reply":"register_web_client","r_url":r_url,"main_url":rapi.main_url}
-                    resp_txt = json.dumps( resp )
-                    await websocket.send(resp_txt)
-                else:
-                    print("ws_bridge: invalid cmd:",cmd)
+                if "query" in msg:
+                    N = msg["opts"]["N"]
+                    crit = msg["crit"]
+                    async def on_query_reply(inmsg):
+                        resp= {"query_reply": msg["query"], "m": inmsg}
+                        resp_txt = json.dumps( resp )
+                        await websocket.send(resp_txt)
+
+                    q = await self.rapi.query( crit,on_query_reply, N)
+                    active_queries[ msg["query"] ] = q
+                elif "query_delete" in msg:
+                    q = active_queries[ msg["query"] ]
+                    await self.rapi.delete( q )
+                    del active_queries[ msg["query"] ]
+
+                    #print("query_delete: not implemented")
+                #elif cmd == "put":
+                    #msg_to_send = msg["msg"]
+                    #await self.rapi.msg( msg_to_send )
+                else:                    
+                    await self.rapi.msg( msg )
+                    #print("ws_repr: invalid cmd:",cmd)
 
                 #resp_txt = json.dumps( resp )
                 #await websocket.send(resp_txt)
         except websockets.exceptions.ConnectionClosedOK as e:
-            print(f'ws_bridge: client closed ok: {e}')
+            print(f'ws_repr: client closed ok: {e}')
 
         except websockets.exceptions.ConnectionClosedError as e:
-            print(f'ws_bridge: client closed error: {e}')            
+            print(f'ws_repr: client closed error: {e}')            
 
         #except Exception as e:
         #    print(f'main: unexpected exception: {e}')
 
         finally:
-            print("ws_bridge: client finished")
-            for fn in client_finish_funcs.values():
-                await fn()
+            print("ws_repr: client finished")
+            for q in active_queries.values():
+                await self.rapi.delete(q)
             del self.ws_clients[ this_ws_id ]
             #self.rl.print()
 
@@ -78,7 +84,7 @@ class WebsocketBridgeSrv:
 
         if finish_future is None:
             finish_future = asyncio.Future()
-        print("ws_bridge: server start.., port=",port)
+        print("ws_repr: server start.., port=",port)
         async with serve(self.echo, "0.0.0.0", port) as s:
             if urls_future is not None:
                 urls = []
@@ -89,7 +95,7 @@ class WebsocketBridgeSrv:
                         urls.append( f"ws://127.0.0.1:{name[1]}")
                     else:
                         urls.append( f"ws://{name[0]}:{name[1]}")
-                print("ws_bridge: server started",urls)
+                print("ws_repr: server started",urls)
                 urls_future.set_result( urls )
 
             await finish_future # ждем окончания вечности
@@ -101,7 +107,7 @@ class WebsocketBridgeSrv:
 import atexit
 class Server:
 
-    def __init__(self ):
+    def __init__(self):
         self.finish_future = asyncio.Future()
         atexit.register(self.cleanup) # это системное..
         #self.rapi = rapi
@@ -117,8 +123,8 @@ class Server:
         # пододжать пока отработает
         await asyncio.sleep( 0.1 )
 
-    async def start( self,port=0 ):
-        ws = WebsocketBridgeSrv()
+    async def start( self,rapi,port=0 ):
+        ws = WebsocketReprSrv(rapi)
         # todo убрать это и заменить обратно на url - так удобнее клиентский вид
         # а там уже пусть connect await делает внутрях
         self.urls_future = asyncio.Future()
@@ -134,8 +140,8 @@ async def main():
     #rapi = ppk.Client()
     # нам коннект даж не нужен..
     #await rapi.connect()
-    ws = WebsocketBridgeSrv()
-    await ws.main(10001)
+    ws = WebsocketReprSrv()
+    await ws.main(10002)
 
 if __name__ == "__main__":    
     asyncio.run(main)
