@@ -99,6 +99,9 @@ async def main():
         block = {"description":{"type":"column","items":[tx1,tx2,fon,bt]},"target_id":"root"}
         gui_ch.put( block )
 
+        m = {"description":{"type":"view","params":{}},"target_id":"root","id":"theview"}
+        gui_ch.put( m )
+
         """
         for i in range(1000):
             x = random.sample(range(1, 100), 3*2*1)

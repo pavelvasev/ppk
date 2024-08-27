@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 
+import * as CL2 from "/jsapi/cl2.js"
+import * as API from "./app.js"
+import * as UTILS from "./utils.js"
+
 // https://codesandbox.io/p/sandbox/basic-threejs-example-with-re-use-dsrvn?file=%2Fsrc%2Findex.js%3A3%2C1-134%2C1
 
 
@@ -17,6 +21,7 @@ class Cube extends THREE.Mesh {
     this.material = new THREE.MeshStandardMaterial({ color: new THREE.Color('orange').convertSRGBToLinear() })
     this.cubeSize = 100
     this.cubeActive = false
+    this.node = this
   }
 
   render() {
@@ -46,6 +51,21 @@ class Cube extends THREE.Mesh {
 
 function cube(descr,rapi) 
 {
+	let c = new Cube()
+}
+
+function create_tjs_obj( tjs_node ) {
+	
+	let obj = {tjs_node}
+	obj.append_to = tgt_id => {	
+		tgt.tjs_node.add( that )
+	}
+	obj.release = CL2.create_channel()
+	obj.remove = () => {
+		obj.release.submit()
+	}
+
+	return obj
 }
 
 function view(descr,rapi) 
@@ -69,12 +89,14 @@ function view(descr,rapi)
 	const mouse = new THREE.Vector2()
 
 	// view
+	/*
 	const cube1 = new Cube()
 	cube1.position.set(-1.5, 0, 0)
 	const cube2 = new Cube()
 	cube2.position.set(1.5, 0, 0)
 	scene.add(cube1)
 	scene.add(cube2)
+	*/
 
 	const ambientLight = new THREE.AmbientLight()
 	const pointLight = new THREE.PointLight()
@@ -100,7 +122,7 @@ function view(descr,rapi)
 	}
 
 	window.addEventListener('resize', resize)
-	resize()
+	//resize()
 
 	// events
 	/*
@@ -156,9 +178,10 @@ function view(descr,rapi)
 	let obj = {scene}
 
 	obj.append_to = tgt_id => {
-		let tgt = document.getElementById( tgt_id )
+		let tgt = tgt_id.dom_node || document.getElementById( tgt_id )
 		tgt.append( renderer.domElement )
 	}
+	obj.release = CL2.create_channel()
 
 	return obj
 
@@ -169,4 +192,4 @@ function somethingToColor( theColorData )
     return theColorData?.length >= 3 ? new THREE.Color( theColorData[0], theColorData[1], theColorData[2] ) : new THREE.Color(theColorData);
 }
 
-export let types = {view,cube} 
+export let types = {view,cube}
