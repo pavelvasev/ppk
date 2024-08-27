@@ -8,42 +8,6 @@ import * as UTILS from "./utils.js"
 // https://codesandbox.io/p/sandbox/basic-threejs-example-with-re-use-dsrvn?file=%2Fsrc%2Findex.js%3A3%2C1-134%2C1
 
 
-class Cube1 extends THREE.Mesh {
-  constructor() {
-    super()
-    this.geometry = new THREE.BoxGeometry()
-    this.material = new THREE.MeshStandardMaterial({ color: new THREE.Color('orange').convertSRGBToLinear() })
-    this.cubeSize = 0
-    this.cubeActive = false
-  }
-
-  render() {
-    this.rotation.x = this.rotation.y += 0.01
-  }
-
-  onResize(width, height, aspect) {
-    this.cubeSize = width / 5 // 1/5 of the full width
-    this.scale.setScalar(this.cubeSize * (this.cubeActive ? 1.5 : 1))
-  }
-
-  onPointerOver(e) {
-    this.material.color.set('hotpink')
-    this.material.color.convertSRGBToLinear()
-  }
-
-  onPointerOut(e) {
-    this.material.color.set('orange')
-    this.material.color.convertSRGBToLinear()
-  }
-
-  onClick(e) {
-    this.cubeActive = !this.cubeActive
-    this.scale.setScalar(this.cubeSize * (this.cubeActive ? 1.5 : 1))
-  }
-}
-
-
-
 ////////////////////////////////
 // плагины-фичи. удобно вызывать из конструкторов объектов
 // todo но вообще это может модификаторы? посмотрим..
@@ -232,7 +196,7 @@ function cube(descr,rapi)
 function lines(descr,rapi)
 {
 	return create_c( rapi, Lines, 
-		 {"scale":"scale","position":"position","rotation":"position","color":"color", "radius":"radius",
+		 {"scale":"scale","position":"position","rotation":"rotation","color":"color", "radius":"radius",
 		"positions":"positions", "colors":"colors","patch":"patch"}, descr)
 }
 
@@ -394,13 +358,6 @@ function view(descr,rapi)
 	UTILS.ch_bind_in_links( rapi, obj, api_to_attr, descr.links_in || {} )
 	UTILS.ch_bind_out_links( rapi, obj,api_to_attr, descr.links_out || {})
 	API.create_children( rapi, obj, descr )
-
-	const cube1 = new Cube1()
-cube1.position.set(-1.5, 0, 0)
-const cube2 = new Cube1()
-cube2.position.set(1.5, 0, 0)
-scene.add(cube1)
-scene.add(cube2)
 
 	return obj
 }

@@ -30,6 +30,36 @@ def on_worker_msg(msg):
     print("msg from worker: ",msg)
 
 
+# вариант 1 что big_grid вот явная функция
+# а вариант 2 что в ответ на то что там нешмогли но это сложнее делать
+def big_grid( rapi,gui_ch,target_id,minmax=[0,0,1000,1000],step=[100,100],id=None,**params):
+    coords = []
+    for x in range(minmax[0],minmax[2]+step[0],step[0]):
+        coords.append( x )
+        coords.append( minmax[1] )
+        coords.append( 0 )
+        coords.append( x )
+        coords.append( minmax[3] )
+        coords.append( 0 )
+
+    for y in range(minmax[1],minmax[3]+step[1],step[1]):
+        coords.append( minmax[0] )
+        coords.append( y )        
+        coords.append( 0 )
+        coords.append( minmax[2] )
+        coords.append( y )        
+        coords.append( 0 )
+    
+    m = {"description":{
+      "type":"lines",
+      "params":{"positions":coords, "radius":1,**params}
+      },
+      "target_id":target_id}
+    #print("bigrid m=",m)
+    gui_ch.put( m )
+    # todo может быть стоит запулить координаты не в разметке а в канал
+
+
 #import lib
 
 import string
@@ -71,12 +101,15 @@ async def main():
         gui_id = msg["id"]
         gui_ch = rapi.channel(gui_id)
         #gui_ch = rapi.channel("gui/create_component")
+
+        """
         m = {"description":{"type":"big_grid","params":{"step":[10,10]},"items":[]},"target_id":"s","id":id_generator()}
         print("putting message to test create",m)
         gui_ch.put( m )
         m = {"description":{"type":"big_grid","params":{"step":[100,100],"color":[0,1,0],"rotation":[90 * math.pi / 180,0,0]},"items":[]},"target_id":"s","id":id_generator()}
         print("putting message to test create2",m)
         gui_ch.put( m )
+        """
 
         text_id = "info_text1"
         #m = {"description":{"type":"text","params":{"value":"hello! -- "}},"target_id":"root","id":text_id}
@@ -109,6 +142,8 @@ async def main():
         print("putting message to test create3",m)
         gui_ch.put( m )
 
+        big_grid( rapi, gui_ch, step=[10,10], target_id="theview",color=[0,1,0])
+        big_grid( rapi, gui_ch, step=[100,100], target_id="theview",color=[0,1,0],rotation=[90 * math.pi / 180,0,0])
 
         """
         for i in range(1000):
