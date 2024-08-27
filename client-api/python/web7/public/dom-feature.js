@@ -54,19 +54,6 @@ function create_dom_c( rapi, tagname, api_to_dom_attr, descr, patch_fn ) {
 	UTILS.ch_bind_out_links( rapi, obj,api_to_dom_attr, descr.links_out || {})
 	API.create_children( rapi, obj, descr )
 
-/*
-	let links_out = descr.links_out || {}
-	for (let local_name in links_out) {
-		let sources = descr.links_out[local_name]
-		for (let ch_name in sources) {
-
-			rapi.query( ch_name ).done( msg => {
-				that[ local_name ] = msg.value;				
-			})
-		}
-	}
-*/
-
 	return obj
 }
 
@@ -116,20 +103,23 @@ function box( descr,rapi ) {
 
 function row( descr,rapi ) {
 	return create_dom_c( rapi,"div",{},descr,(obj) => {
-		obj.dom_node.style = "display: flex; flex-direction: row;"
+		obj.own_style = "display: flex; flex-direction: row;"
+		obj.dom_node.style = obj.own_style
 	})
 }
 
 function column( descr,rapi ) {
 	return create_dom_c( rapi,"div",{},descr,(obj) => {
-		obj.dom_node.style = "display: flex; flex-direction: column;"
+		obj.own_style = "display: flex; flex-direction: column;"
+		obj.dom_node.style = obj.own_style;
 	})
 }
 
 function grid( descr,rapi ) {
 	return create_dom_c( rapi,"div",{},descr,(obj) => {
-		obj.dom_node.style = "display: grid;"
-	})	
+		obj.own_style = "display: grid;"
+		obj.dom_node.style = obj.own_style
+	})
 }
 
 ////////////// модификаторы пробуем
@@ -144,6 +134,7 @@ export function bgcolor( descr,rapi ) {
 	}
 	obj.remove = () => {	
 	}
+	obj.release = CL2.create_channel()
 
 	obj.value = CL2.create_channel()
 	obj.value.subscribe( x => {
@@ -172,8 +163,8 @@ export function textcolor( descr,rapi ) {
 		tgt = tgt_id.dom_node || document.getElementById( tgt_id )
 		UTILS.ch_assign_attrs( obj,api_to_attr, descr.params )
 	}
-	obj.remove = () => {	
-	}
+	obj.remove = () => {		}
+	obj.release = CL2.create_channel()
 
 	obj.value = CL2.create_channel()
 	obj.value.subscribe( x => {
@@ -186,4 +177,35 @@ export function textcolor( descr,rapi ) {
 	return obj
 }
 
-export let types = {textcolor,bgcolor,text,row,column,grid,box,button,slider}
+/* это наивная добавлялка css
+   idea улучшенная добавлялка позволит делать несколько тегов add_css
+   либо сделает для add_css сбор детей сначала
+   но вообще это уже про тему модификаторов
+   и мб классы эффективнее
+   в обжем жизнь покажет
+*/
+export function set_css_style( descr,rapi ) {
+	let api_to_attr = { value:"value" }
+
+	let obj = {}
+	let tgt
+	obj.append_to = tgt_id => {
+		tgt = tgt_id.dom_node || document.getElementById( tgt_id )
+		UTILS.ch_assign_attrs( obj,api_to_attr, descr.params )
+	}
+	obj.remove = () => {}
+	obj.release = CL2.create_channel()
+
+	obj.value = CL2.create_channel()
+	obj.value.subscribe( x => {
+		if (!tgt) return
+		let style_prefix = tgt.own_style || ""	
+		tgt.style = `${style_prefix};${x}`;
+	})	
+
+	UTILS.ch_bind_in_links( obj, api_to_attr, descr.links_in || {} )
+
+	return obj
+}
+
+export let types = {textcolor,bgcolor,text,row,column,grid,box,button,slider,set_css_style}

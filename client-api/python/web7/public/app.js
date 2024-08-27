@@ -27,12 +27,19 @@ PPK_REPR.connect( "bro", url ).then( rapi => {
 
 let mia_types = { ...DOM_FEATURE.types,...THREEJS_FEATURE.types };
 
+let created_objects_ids = {}
 export function create_object( rapi, description, target_id )
 {
   	let fn = mia_types[ description.type ]
   	if (fn) {
   		let obj = fn( description, rapi )
-  		obj.append_to( target_id )
+  		
+      if (description.id) {
+        created_objects_ids[ description.id ] = obj
+      }
+
+      obj.append_to( created_objects_ids[target_id] || target_id )
+
   	} else {
   		console.error("cannot find fn for type",description.type)
   	}

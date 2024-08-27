@@ -142,7 +142,7 @@ process "lines" {
     let p = positions.get();
     let c = colors.get();
     colors.submit( c.concat( col ));
-    positions.submit( p.concat( pos ));    
+    positions.submit( p.concat( pos ));
     // todo мб там у буфера есть методы аппенда?
  :}
 

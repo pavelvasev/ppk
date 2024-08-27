@@ -61,8 +61,9 @@ async def main():
     gui_attached_ch = rapi.channel("gui_attached")
     lines_id = "main_lines"
     lines_id2 = lines_id +"/append_data"
-    print("lines_id2=",lines_id2)
-    lines_channel = rapi.channel(lines_id2)    
+    #print("lines_id2=",)
+    PATCH_LINES_CH_ID = "patch_lines"
+    lines_channel = rapi.channel(PATCH_LINES_CH_ID)
 
     async def on_gui_attached(msg):
         #global lines_id
@@ -75,13 +76,6 @@ async def main():
         gui_ch.put( m )
         m = {"description":{"type":"big_grid","params":{"step":[100,100],"color":[0,1,0],"rotation":[90 * math.pi / 180,0,0]},"items":[]},"target_id":"s","id":id_generator()}
         print("putting message to test create2",m)
-        gui_ch.put( m )
-
-        x = random.sample(range(1, 100), 3*2*10)
-        y = (np.random.randint(255, size=3*2*10) / 255.0).tolist()
-        #lines_id = id_generator()
-        m = {"description":{"type":"lines","params":{"color":[1,1,1],"positions":x, "colors":y,"radius":5}},"target_id":"s","id":lines_id}
-        print("putting message to test create3",m)
         gui_ch.put( m )
 
         text_id = "info_text1"
@@ -99,8 +93,22 @@ async def main():
         block = {"description":{"type":"column","items":[tx1,tx2,fon,bt]},"target_id":"root"}
         gui_ch.put( block )
 
-        m = {"description":{"type":"view","params":{}},"target_id":"root","id":"theview"}
+        m = {"description":{"type":"view","params":{"bgcolor":[0,0,0.01]},"id":"theview","items":[{"type":"cube"}]},"target_id":"root"}
+        print("putting message to create view ",m)
         gui_ch.put( m )
+
+        x = random.sample(range(1, 100), 3*2*10)
+        y = (np.random.randint(255, size=3*2*10) / 255.0).tolist()
+        #lines_id = id_generator()
+        m = {"description":{
+              "type":"lines",
+              "params":{"color":[1,1,1],"positions":x, "colors":y,"radius":5},
+              "links_in": {"positions":["linecoords"],"patch":[PATCH_LINES_CH_ID]}
+              },
+              "target_id":"theview"}
+        print("putting message to test create3",m)
+        gui_ch.put( m )
+
 
         """
         for i in range(1000):
@@ -139,7 +147,7 @@ async def main():
       x = random.sample(range(1, 100), 3*2*1)
       y = (np.random.randint(255, size=3*2*1) / 255.0).tolist()        
       m = {"p":x,"c":y}
-      print("sending to lines2:",m)
+      print("sending to lines:",m)
       lines_channel.put( m )
       
     print("range finished, exiting")
