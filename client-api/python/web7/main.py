@@ -39,6 +39,7 @@ def id_generator(size=10, chars=string.ascii_uppercase + string.digits):
 
 import webbrowser
 
+i=0
 async def main():
     print("starting system")
     s1 = await s.start()
@@ -84,12 +85,19 @@ async def main():
         gui_ch.put( m )
 
         text_id = "info_text1"
-        m = {"description":{"type":"text","params":{"value":"hello! -- "}},"target_id":"root","id":text_id}
-        gui_ch.put( m )
+        #m = {"description":{"type":"text","params":{"value":"hello! -- "}},"target_id":"root","id":text_id}
+        #gui_ch.put( m )
 
         text_id = "info_text"
-        m = {"description":{"type":"text","params":{"value":"starting..."},"links_in": {"value":["test"]}},"target_id":"root","id":text_id}
-        gui_ch.put( m )
+        #m = {"description":{"type":"text","params":{"value":"starting..."},"links_in": {"value":["test"]}},"target_id":"root","id":text_id}
+        #gui_ch.put( m )
+
+        tx1 = {"type":"text","params":{"value":"hello! -- "}}
+        tx2 = {"type":"text","params":{"value":"starting..."},"links_in": {"value":["test"]}}
+        bt = {"type":"button","params":{"value":"reset"},"links_out": {"click":["reset_cnt"]}}
+        fon = {"type":"bgcolor","params":{"value":[1,0,0]}}
+        block = {"description":{"type":"column","items":[tx1,tx2,fon,bt]},"target_id":"root"}
+        gui_ch.put( block )
 
         """
         for i in range(1000):
@@ -109,9 +117,19 @@ async def main():
     print("starting bro..")
     #await lib.start_visual( s_urls[0] )
 
+    def reset_cnt(val):
+        print("reset_cnt!")
+        global i
+        i = 0
+
+    rapi.channel("reset_cnt").react(reset_cnt)
+
     test_channel = rapi.channel("test")
-    for i in range(1000):
-      print("python: put to test")
+    global i
+    #for i in range(1000):
+    while True:
+      i = i + 1
+      print("python: put to test",i)
       test_channel.put(i)
       await asyncio.sleep( 1 )
       #print("lines_id=",lines_id)
@@ -121,10 +139,8 @@ async def main():
       print("sending to lines2:",m)
       lines_channel.put( m )
       
-    print("Exiting")
-    await c.exit()
-    await s.exit()
-    await w.exit()
+    print("range finished, exiting")
+    await rapi.exit()
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete( main() )
