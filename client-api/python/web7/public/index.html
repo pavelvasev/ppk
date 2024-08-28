@@ -6,11 +6,21 @@
   {
     "imports": {
       "three": "https://cdn.jsdelivr.net/npm/three@0.167.1/build/three.module.min.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/"
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/",
+      "web7":"./app.js"
     }
   }
 </script>
-<script type="module" src="./app.js"> </script>
+<script type="module" src="./dom-feature.js"> </script>
+<script type="module" src="./threejs-feature.js"> </script>
+<script type="module">
+  import * as API from "./app.js"
+  import * as DOM from "./dom-feature.js"
+  import * as TJS from "./threejs-feature.js"
+  API.register( DOM.types )
+  API.register( TJS.types )
+  API.start()
+</script>
 </head>
 <body>
   <div id="root" style="position:fixed; top:0px; left:0px; bottom:0px; right:0px;"> 

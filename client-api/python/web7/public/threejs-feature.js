@@ -387,3 +387,4 @@ function somethingToColor( theColorData )
 }
 
 export let types = {view,cube,lines}
+

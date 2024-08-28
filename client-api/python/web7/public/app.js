@@ -1,17 +1,18 @@
 //import * as PPK from "/jsapi/client-api.js"
 import * as PPK_REPR from "/jsapi/repr-ws-client-api.js"
-import * as THREEJS_FEATURE from "./threejs-feature.js"
-import * as DOM_FEATURE from "./dom-feature.js"
 
-let params = new URL(document.location.toString()).searchParams;
-let url = params.get("repr_url");
+export function start( repr_url ) {
 
-console.log("connecting to repr, url=",url);
+if (!repr_url) {
+  let params = new URL(document.location.toString()).searchParams;
+  repr_url = params.get("repr_url");
+}
 
+console.log("connecting to repr, url=",repr_url);
 
-PPK_REPR.connect( "bro", url ).then( rapi => {
+PPK_REPR.connect( "bro", repr_url ).then( rapi => {
   console.log("connected to repr");
-  rapi.query("test").done(x => console.log("see in test:",x))
+  //rapi.query("test").done(x => console.log("see in test:",x))
 
   let gui_ch_id = rapi.client_id + "/gui"
   rapi.query(gui_ch_id).done(guicmd => {
@@ -23,9 +24,17 @@ PPK_REPR.connect( "bro", url ).then( rapi => {
   rapi.msg({label:"gui_attached",value:{"id":gui_ch_id}})
 })
 
+}
+
 //console.log(333)
 
-let mia_types = { ...DOM_FEATURE.types,...THREEJS_FEATURE.types };
+export function register( fn_dict )
+{
+  console.log("API: register",fn_dict)
+  mia_types = {...mia_types,...fn_dict }
+}
+
+let mia_types = {};
 
 let created_objects_ids = {}
 export function create_object( rapi, description, target_id )

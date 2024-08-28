@@ -52,7 +52,7 @@ async def main():
     #print("ws bridge started, url=",q.url)
 
     print("starting web server")
-    await w.start(os.path.join( os.path.dirname(__file__), "public" ))
+    await w.start({"/":os.path.join( os.path.dirname(__file__), "public" )})
     print("webserver started, url=",w.url  )
     # https://docs.python.org/3/library/webbrowser.html
     webbrowser.open(w.url + "/index.html?repr_url="+q.url, new = 2)

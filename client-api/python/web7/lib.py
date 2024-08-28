@@ -24,10 +24,10 @@ import webbrowser
 это мб и норм. но мб хотелось бы и доступа к нему..
 те же карты прописать.. кстати да.. мне же не надо например threejs везде
 """
-async def start(rapi,static_routes=dict()):
-    await start_visual(rapi,static_routes)
+async def start(rapi,static_routes=dict(), entry_path=None):
+    await start_visual(rapi,static_routes, entry_path)
 
-async def start_visual(rapi,static_routes=dict()):
+async def start_visual(rapi,static_routes=dict(), entry_path=None):
     q = ppk_ws_repr.Server()
     w = ppk_web.Server()    
 
@@ -37,12 +37,14 @@ async def start_visual(rapi,static_routes=dict()):
 
     print("starting web server")
     r = static_routes.copy()
-    r["/"] = os.path.join( os.path.dirname(__file__), "public" )
+    r["/gui"] = os.path.join( os.path.dirname(__file__), "public" )
     app = await w.start( r )
 
     print("webserver started, url=",w.url  )
     # https://docs.python.org/3/library/webbrowser.html
-    webbrowser.open(w.url + "/index.html?repr_url="+q.url, new = 2)
+    if entry_path is None:
+        entry_path = "/gui/index.html"
+    webbrowser.open(w.url + entry_path + "?repr_url="+q.url, new = 2)
 
 # вариант 1 что big_grid вот явная функция
 # а вариант 2 что в ответ на то что там нешмогли но это сложнее делать
