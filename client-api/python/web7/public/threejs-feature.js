@@ -265,8 +265,8 @@ function view(descr,rapi)
 	scene.add(pointLight)
 	
 		//pointLight.position.set(10, 10, 10)
-	//const ambientLight = new THREE.AmbientLight()
-	//scene.add(ambientLight)
+	const ambientLight = new THREE.AmbientLight()
+	scene.add(ambientLight)
 
 
 	const controls = new OrbitControls( camera, renderer.domElement );

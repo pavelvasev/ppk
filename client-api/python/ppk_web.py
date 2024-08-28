@@ -33,7 +33,7 @@ class Server:
         # пододжать пока отработает
         await asyncio.sleep( 0.1 )
 
-    async def start( self,path_to_static_folder, port=0 ):
+    async def start( self,static_routes, port=0 ):
         app = web.Application()
         # https://docs.aiohttp.org/en/stable/web_reference.html#aiohttp.web.UrlDispatcher.add_static
 
@@ -42,7 +42,8 @@ class Server:
         print("js_api=",js_api)
         app.router.add_static('/jsapi', js_api, append_version=True,show_index=True)
 
-        app.router.add_static('/', path_to_static_folder, append_version=True,show_index=True)
+        for url in static_routes:
+            app.router.add_static(url, static_routes[url], append_version=True,show_index=True)
 
         # https://docs.aiohttp.org/en/stable/web_reference.html#running-applications
         runner = web.AppRunner(app)
@@ -56,7 +57,6 @@ class Server:
         self.url = "http://" + adr[0] + ":" + str(adr[1])
         #self.task = asyncio.create_task( web._run_app(app) )
         
-
         async def do_stop():
             await self.finish_future
             await runner.cleanup()
@@ -66,3 +66,4 @@ class Server:
         # todo убрать это и заменить обратно на url - так удобнее клиентский вид
         # а там уже пусть connect await делает внутрях
         #return self.task
+        return app

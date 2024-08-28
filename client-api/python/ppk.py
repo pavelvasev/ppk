@@ -35,6 +35,7 @@ from ppk_starter import *
 from ppk_cells import *
 
 import web7.lib as grlib
+import web7.lib as gui
 
 ########################################## рабочее
 

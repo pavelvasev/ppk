@@ -19,7 +19,15 @@ import ppk_web
 
 import webbrowser
 
-async def start_visual(rapi):    
+"""
+получается мы делаем как бы закрытый вьювер
+это мб и норм. но мб хотелось бы и доступа к нему..
+те же карты прописать.. кстати да.. мне же не надо например threejs везде
+"""
+async def start(rapi,static_routes=dict()):
+    await start_visual(rapi,static_routes)
+
+async def start_visual(rapi,static_routes=dict()):
     q = ppk_ws_repr.Server()
     w = ppk_web.Server()    
 
@@ -28,7 +36,10 @@ async def start_visual(rapi):
     #print("ws bridge started, url=",q.url)
 
     print("starting web server")
-    await w.start(os.path.join( os.path.dirname(__file__), "public" ))
+    r = static_routes.copy()
+    r["/"] = os.path.join( os.path.dirname(__file__), "public" )
+    app = await w.start( r )
+
     print("webserver started, url=",w.url  )
     # https://docs.python.org/3/library/webbrowser.html
     webbrowser.open(w.url + "/index.html?repr_url="+q.url, new = 2)
