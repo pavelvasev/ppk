@@ -29,38 +29,7 @@ w = ppk_web.Server()
 def on_worker_msg(msg):
     print("msg from worker: ",msg)
 
-
-# вариант 1 что big_grid вот явная функция
-# а вариант 2 что в ответ на то что там нешмогли но это сложнее делать
-def big_grid( rapi,gui_ch,target_id,minmax=[0,0,1000,1000],step=[100,100],id=None,**params):
-    coords = []
-    for x in range(minmax[0],minmax[2]+step[0],step[0]):
-        coords.append( x )
-        coords.append( minmax[1] )
-        coords.append( 0 )
-        coords.append( x )
-        coords.append( minmax[3] )
-        coords.append( 0 )
-
-    for y in range(minmax[1],minmax[3]+step[1],step[1]):
-        coords.append( minmax[0] )
-        coords.append( y )        
-        coords.append( 0 )
-        coords.append( minmax[2] )
-        coords.append( y )        
-        coords.append( 0 )
-    
-    m = {"description":{
-      "type":"lines",
-      "params":{"positions":coords, "radius":1,**params}
-      },
-      "target_id":target_id}
-    #print("bigrid m=",m)
-    gui_ch.put( m )
-    # todo может быть стоит запулить координаты не в разметке а в канал
-
-
-#import lib
+import lib
 
 import string
 import random
@@ -142,8 +111,8 @@ async def main():
         print("putting message to test create3",m)
         gui_ch.put( m )
 
-        big_grid( rapi, gui_ch, step=[10,10], target_id="theview",color=[0,1,0])
-        big_grid( rapi, gui_ch, step=[100,100], target_id="theview",color=[0,1,0],rotation=[90 * math.pi / 180,0,0])
+        lib.big_grid( rapi, gui_ch, step=[10,10], target_id="theview",color=[0,1,0])
+        lib.big_grid( rapi, gui_ch, step=[100,100], target_id="theview",color=[0,1,0],rotation=[90 * math.pi / 180,0,0])
 
         """
         for i in range(1000):
@@ -177,7 +146,7 @@ async def main():
       i = i + 1
       print("python: put to test",i)
       test_channel.put(i)
-      await asyncio.sleep( 1 )
+      await asyncio.sleep( 0.1 )
       #print("lines_id=",lines_id)
       x = random.sample(range(1, 100), 3*2*1)
       y = (np.random.randint(255, size=3*2*1) / 255.0).tolist()        

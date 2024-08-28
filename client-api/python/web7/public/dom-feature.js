@@ -79,7 +79,7 @@ function dom_event_channel( obj, event_name ) {
 // сильно упрощенное, чистый дом
 // похоже достигнут некий предел тут.. и надо делать классы.. ну ок..
 function text( descr,rapi ) {
-	let api_to_dom_attr = { "value" : "innerText"}
+	let api_to_dom_attr = { "value" : "innerHTML"}
 	return create_dom_c( rapi,"span",api_to_dom_attr,descr );	
 }
 
@@ -208,4 +208,4 @@ export function set_css_style( descr,rapi ) {
 	return obj
 }
 
-export let types = {textcolor,bgcolor,text,row,column,grid,box,button,slider,set_css_style}
+export let types = {textcolor,bgcolor,text,row,column,grid,box,button,slider,add_style:set_css_style}

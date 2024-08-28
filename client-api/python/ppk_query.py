@@ -224,7 +224,10 @@ class QueryTcp:
             trid = m["tr_id"]
             #print("ppk: see tr_id mark",trid)
             tlen = time.time() - trid["t"]
-            await self.rapi.msg({"label":"online_logging_msg","value":{"task":"send","actor":trid["actor"],"actor_tgt":self.rapi.sender,"tlen":tlen,"t1":trid["t"],"dy":0}})
+            # todo это тупняк конечно.. надо например указать причину отправки..
+            # или хотябы имена каналов
+            if trid["actor"] != self.rapi.sender:
+                await self.rapi.msg({"label":"online_logging_msg","value":{"task":"send","actor":trid["actor"],"actor_tgt":self.rapi.sender,"tlen":tlen,"t1":trid["t"],"dy":0}})
 
         #print("query got message:",packet,"cb=",cb)    
         res = cb(m)

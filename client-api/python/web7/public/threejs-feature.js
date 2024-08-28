@@ -55,6 +55,7 @@ function add_radius( obj ) {
 function add_positions( obj,records_per_item=3 ) {
   obj.positions = CL2.create_channel()
   obj.positions.subscribe( v => {
+  	  //console.log("new positions",v)
   	  let vv = new THREE.BufferAttribute( new Float32Array(v), records_per_item )
 	  	obj.geometry.setAttribute( 'position', vv );
     	obj.geometry.needsUpdate = true;
@@ -74,8 +75,10 @@ function add_colors( obj,records_per_item=3 ) {
   obj.colors = CL2.create_channel()
   obj.colors.subscribe( v => {	
    if (v) {
+   			//console.log("new colors",v)
    	    // todo проверять может v уже буфер
    	    let vv = new THREE.BufferAttribute( new Float32Array(v), records_per_item )
+   	    //console.log("new colors attr",vv)
 	      obj.geometry.setAttribute( 'color', vv );
 	      obj.material.vertexColors = true;
 	    } else {
@@ -83,6 +86,7 @@ function add_colors( obj,records_per_item=3 ) {
 	      obj.material.vertexColors = false; 
 	    }
 	    obj.geometry.needsUpdate = true;
+	    obj.material.needsUpdate = true
     })
 }
 
@@ -90,6 +94,9 @@ class TjsBase {
 	constructor(tjs_node) {
 		this.tjs_node = tjs_node
 		this.release = CL2.create_channel()		
+
+		// ключевой момент для обычных образов
+		this.tjs_node.frustumCulled = false;
 	}
 	append_to(tgt) {
 		tgt.tjs_node.add( this.tjs_node )
@@ -224,12 +231,19 @@ function view(descr,rapi)
 
 	// setup
 	const scene = new THREE.Scene()
-	const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000)
+	
+	let camin = 0.00001
+	const camera = new THREE.PerspectiveCamera(75, 1, camin, 1000*1000)
 	camera.position.z = 5
-	const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+	const renderer = new THREE.WebGLRenderer({
+          preserveDrawingBuffer : true // надо для скриншотов
+         ,logarithmicDepthBuffer: true  // без этого наши точки глючат.. да и поверхности глючат..	
+       })
+  //{ antialias: true, alpha: true })	
+
 	renderer.setPixelRatio(Math.min(Math.max(1, window.devicePixelRatio), 2))
-	renderer.toneMapping = THREE.ACESFilmicToneMapping
-	renderer.outputEncoding = THREE.sRGBEncoding
+	//renderer.toneMapping = THREE.ACESFilmicToneMapping
+	//renderer.outputEncoding = THREE.sRGBEncoding
 
 	const raycaster = new THREE.Raycaster()
 	const mouse = new THREE.Vector2()
@@ -244,11 +258,16 @@ function view(descr,rapi)
 	scene.add(cube2)
 	*/
 
-	const ambientLight = new THREE.AmbientLight()
-	const pointLight = new THREE.PointLight()
-	pointLight.position.set(10, 10, 10)
-	scene.add(ambientLight)
+	
+	
+	const pointLight = new THREE.PointLight(0xFFFFFF,1.5)
+	pointLight.position.set(0, 0, 0)
 	scene.add(pointLight)
+	
+		//pointLight.position.set(10, 10, 10)
+	//const ambientLight = new THREE.AmbientLight()
+	//scene.add(ambientLight)
+
 
 	const controls = new OrbitControls( camera, renderer.domElement );
 
