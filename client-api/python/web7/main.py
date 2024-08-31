@@ -30,6 +30,8 @@ def on_worker_msg(msg):
     print("msg from worker: ",msg)
 
 import lib
+import dom
+import threejs
 
 import string
 import random
@@ -52,7 +54,10 @@ async def main():
     #print("ws bridge started, url=",q.url)
 
     print("starting web server")
-    await w.start({"/":os.path.join( os.path.dirname(__file__), "public" )})
+    dirs = { "/dom-public":dom.public_dir(), "/threejs-public":threejs.public_dir(),
+            "/":os.path.join( os.path.dirname(__file__),"public") }
+            
+    await w.start(dirs)
     print("webserver started, url=",w.url  )
     # https://docs.python.org/3/library/webbrowser.html
     webbrowser.open(w.url + "/index.html?repr_url="+q.url, new = 2)

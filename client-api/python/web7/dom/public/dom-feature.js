@@ -1,6 +1,6 @@
-import * as CL2 from "/jsapi/cl2.js"
-import * as API from "./app.js"
-import * as UTILS from "./utils.js"
+import * as CL2 from "ppk/cl2.js"
+import * as API from "web7/app.js"
+import * as UTILS from "web7/utils.js"
 
 function create_dom_obj( tag_name ) {
 	let that = document.createElement(tag_name)

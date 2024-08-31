@@ -7,16 +7,16 @@
     "imports": {
       "three": "https://cdn.jsdelivr.net/npm/three@0.167.1/build/three.module.min.js",
       "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/",
-      "web7":"./app.js"
+      "web7/": "/",
+      "ppk/": "/ppk/"
     }
   }
 </script>
-<script type="module" src="./dom-feature.js"> </script>
-<script type="module" src="./threejs-feature.js"> </script>
+
 <script type="module">
   import * as API from "./app.js"
-  import * as DOM from "./dom-feature.js"
-  import * as TJS from "./threejs-feature.js"
+  import * as DOM from "/dom-public/dom-feature.js"
+  import * as TJS from "/threejs-public/threejs-feature.js"
   API.register( DOM.types )
   API.register( TJS.types )
   API.start()

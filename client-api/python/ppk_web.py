@@ -40,7 +40,7 @@ class Server:
         # приоритет
         js_api = os.path.abspath( os.path.join( os.path.dirname(__file__), "../js" ) )
         print("js_api=",js_api)
-        app.router.add_static('/jsapi', js_api, append_version=True,show_index=True)
+        app.router.add_static('/ppk', js_api, append_version=True,show_index=True)
 
         for url in static_routes:
             app.router.add_static(url, static_routes[url], append_version=True,show_index=True)

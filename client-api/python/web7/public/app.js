@@ -1,5 +1,5 @@
 //import * as PPK from "/jsapi/client-api.js"
-import * as PPK_REPR from "/jsapi/repr-ws-client-api.js"
+import * as PPK_REPR from "ppk/repr-ws-client-api.js"
 
 export function start( repr_url ) {
 

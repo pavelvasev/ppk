@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-import * as CL2 from "/jsapi/cl2.js"
-import * as API from "./app.js"
-import * as UTILS from "./utils.js"
+import * as CL2 from "ppk/cl2.js"
+import * as API from "web7/app.js"
+import * as UTILS from "web7/utils.js"
 
 // https://codesandbox.io/p/sandbox/basic-threejs-example-with-re-use-dsrvn?file=%2Fsrc%2Findex.js%3A3%2C1-134%2C1
 
