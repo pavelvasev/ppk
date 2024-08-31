@@ -19,6 +19,12 @@ import ppk_web
 
 import webbrowser
 
+mdir = os.path.dirname(__file__)
+sys.path.insert(0,mdir)
+import dom as dom
+import threejs as threejs
+
+
 """
 получается мы делаем как бы закрытый вьювер
 это мб и норм. но мб хотелось бы и доступа к нему..

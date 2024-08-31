@@ -18,6 +18,9 @@ mdir = os.path.join( os.path.dirname(__file__), ".." )
 sys.path.insert(0,mdir)
 #import lib
 
+#import dom as dom
+#import threejs as threejs
+
 rapi = ppk.Client()
 s = ppk_main.Server()
 #q = ppk_ws_bridge.Server()
