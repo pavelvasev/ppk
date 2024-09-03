@@ -23,7 +23,8 @@ mdir = os.path.dirname(__file__)
 sys.path.insert(0,mdir)
 import dom as dom
 import threejs as threejs
-
+sys.path.remove(mdir)
+#sprint("sss",sys.path)
 
 """
 получается мы делаем как бы закрытый вьювер

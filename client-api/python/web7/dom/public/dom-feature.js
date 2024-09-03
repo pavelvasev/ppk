@@ -2,6 +2,7 @@ import * as CL2 from "ppk/cl2.js"
 import * as API from "web7/app.js"
 import * as UTILS from "web7/utils.js"
 
+
 function create_dom_obj( tag_name ) {
 	let that = document.createElement(tag_name)
 	
@@ -19,11 +20,18 @@ function create_dom_obj( tag_name ) {
 }
 
 function assign_attrs( obj,api_to_dom_attr, params) {
-	for (let name in params) {
+	let has_value_attr = false;
+	for (let name in params) {		
 		let dom_attr = api_to_dom_attr[ name ]
+		if (dom_attr == "value") { has_value_attr = name; continue; }
 		if (dom_attr) {
 			obj.dom_node[dom_attr] = params[ name ]
 		}
+	}
+	// поле типа .value надо присваивать последним, иначе например attr не отрабатывает
+	if (has_value_attr) {
+		let dom_attr = api_to_dom_attr[ has_value_attr ]
+		obj.dom_node[dom_attr] = params[ has_value_attr ]
 	}
 }
 
@@ -57,21 +65,48 @@ function create_dom_c( rapi, tagname, api_to_dom_attr, descr, patch_fn ) {
 	return obj
 }
 
-function dom_event_channel( obj, event_name ) {
+function create_dom_ch( rapi, tagname, api_to_dom_attr, descr, patch_fn ) {
+	
+	let obj = create_dom_obj(tagname)
+	if (patch_fn) patch_fn(obj)
+	UTILS.ch_assign_attrs( obj, api_to_dom_attr, descr.params);
+	UTILS.ch_bind_in_links( rapi, obj, api_to_dom_attr, descr.links_in || {} )
+	UTILS.ch_bind_out_links( rapi, obj,api_to_dom_attr, descr.links_out || {})
+	API.create_children( rapi, obj, descr )
+
+	return obj
+}
+
+function dom_event_channel( obj, dom_node, event_name, convertor_fn ) {
 	let forget = () => {}
 	let tgt_channel = CL2.create_channel()
 
+	if (!convertor_fn) convertor_fn = () => true;
+
     function handler(arg) 
     {
-        tgt_channel.submit( arg )
+    	let val = convertor_fn(arg)    	
+        tgt_channel.submit( val )
     }
 
-    obj.dom_node.addEventListener( event_name, handler )            
+    dom_node.addEventListener( event_name, handler )            
     forget = () => {
-        obj.dom_node.removeEventListener( event_name, handler )
+        dom_node.removeEventListener( event_name, handler )
         forget = () => {}
     }
 
+    obj.release.subscribe( () => forget() )
+    return tgt_channel
+}
+
+function dom_attr_channel( obj, dom_node, attr_name ) {
+	let forget = () => {}
+	let tgt_channel = CL2.create_channel()
+
+	forget = tgt_channel.subscribe( x => {
+		dom_node[attr_name] = x
+	})
+    
     obj.release.subscribe( () => forget() )
     return tgt_channel
 }
@@ -86,14 +121,64 @@ function text( descr,rapi ) {
 function button( descr,rapi ) {
 	let api_to_dom_attr = { "value" : "innerText","click":"click"}
 	return create_dom_c( rapi,"button",api_to_dom_attr,descr,(obj) => {		
-		obj.click = dom_event_channel( obj,"click" )
+		obj.click = dom_event_channel( obj,obj.dom_node,"click" )
+	} );
+}
+
+function combobox( descr,rapi ) {
+	let api_to_dom_attr = { "value" : "value","change":"change","values":"values"}
+	return create_dom_ch( rapi,"select",api_to_dom_attr,descr,(obj) => {		
+		obj.change = dom_event_channel( obj,obj.dom_node,"change",x => parseInt(x.target.value) )
+		obj.value = dom_attr_channel( obj, obj.dom_node,"value")
+		obj.values = CL2.create_channel()
+		obj.values.subscribe( list => {
+			obj.dom_node.options.length = 0;
+			for (let i=0; i<list.length; i++) {			
+				const opt = document.createElement("option");
+				opt.value = i;
+				opt.text = list[i];
+				obj.dom_node.add( opt );
+			}			
+		})
+	} );
+}
+
+function checkbox( descr,rapi ) {
+	let api_to_dom_attr = { "value" : "setval", "text": "settxt"}
+	return create_dom_c( rapi,"label",api_to_dom_attr,descr,(obj) => {
+		let that = document.createElement("input")
+		that.setAttribute("type", "checkbox");
+		obj.dom_node.appendChild( that )
+		obj.changed = dom_event_channel( obj,that,"change",x => x.target.checked )
+		obj.setval = CL2.create_channel();
+		obj.setval.subscribe( v => that.checked = v)
+
+		let txt = document.createElement("span")
+		obj.settxt = CL2.create_channel();
+		obj.settxt.subscribe( t => txt.innerHTML = t )
+		// еще можно obj.node_obj.nodeValue попробовать
 	} );
 }
 
 function slider( descr,rapi ) {
-	let api_to_dom_attr = { "value" : "value","click":"click"}
-	return create_dom_c( rapi,"range",api_to_dom_attr,descr,(obj) => {
+	const stop = function(e) {
+	    e.preventDefault();
+	    e.stopImmediatePropagation();
+	};
+
+	let api_to_dom_attr = { "value" : "value",
+	    "change":"change","interactive_change":"interactive_change",
+	    "min":"min","max":"max","step":"step"}
+	return create_dom_c( rapi,"input",api_to_dom_attr,descr,(obj) => {
+		obj.dom_node.setAttribute("type", "range");
 		//obj.click = dom_event_channel( obj,"click" )
+		// https://stackoverflow.com/questions/69490604/html-input-range-type-becomes-un-usable-by-drag-action-if-highlighted-in-chrome
+		// bugfix
+		obj.dom_node.draggable = true;
+    	obj.dom_node.addEventListener('dragstart', stop);
+
+    	obj.change = dom_event_channel( obj,obj.dom_node,"change",(x)=>x.target.valueAsNumber )
+    	obj.interactive_change = dom_event_channel( obj,obj.dom_node,"input",(x)=>x.target.valueAsNumber )
 	} );
 }
 
@@ -103,22 +188,22 @@ function box( descr,rapi ) {
 
 function row( descr,rapi ) {
 	return create_dom_c( rapi,"div",{},descr,(obj) => {
-		obj.own_style = "display: flex; flex-direction: row;"
-		obj.dom_node.style = obj.own_style
+		obj.dom_node.own_style = "display: flex; flex-direction: row;"
+		obj.dom_node.style = obj.dom_node.own_style
 	})
 }
 
 function column( descr,rapi ) {
 	return create_dom_c( rapi,"div",{},descr,(obj) => {
-		obj.own_style = "display: flex; flex-direction: column;"
-		obj.dom_node.style = obj.own_style;
+		obj.dom_node.own_style = "display: flex; flex-direction: column;"
+		obj.dom_node.style = obj.dom_node.own_style;
 	})
 }
 
 function grid( descr,rapi ) {
 	return create_dom_c( rapi,"div",{},descr,(obj) => {
-		obj.own_style = "display: grid;"
-		obj.dom_node.style = obj.own_style
+		obj.dom_node.own_style = "display: grid;"
+		obj.dom_node.style = obj.dom_node.own_style
 	})
 }
 
@@ -177,6 +262,29 @@ export function textcolor( descr,rapi ) {
 	return obj
 }
 
+export function padding( descr,rapi ) {
+	let api_to_attr = { value:"value" }
+
+	let obj = {}
+	let tgt
+	obj.append_to = tgt_id => {
+		tgt = tgt_id.dom_node || document.getElementById( tgt_id )
+		UTILS.ch_assign_attrs( obj,api_to_attr, descr.params )
+	}
+	obj.remove = () => {		}
+	obj.release = CL2.create_channel()
+
+	obj.value = CL2.create_channel()
+	obj.value.subscribe( x => {
+		if (!tgt) return
+		tgt.style.padding = x + "px"
+	})	
+
+	UTILS.ch_bind_in_links( obj, api_to_attr, descr.links_in || {} )
+
+	return obj
+}
+
 /* это наивная добавлялка css
    idea улучшенная добавлялка позволит делать несколько тегов add_css
    либо сделает для add_css сбор детей сначала
@@ -200,6 +308,7 @@ export function set_css_style( descr,rapi ) {
 	obj.value.subscribe( x => {
 		if (!tgt) return
 		let style_prefix = tgt.own_style || ""	
+		//console.log("")
 		tgt.style = `${style_prefix};${x}`;
 	})	
 
@@ -208,4 +317,5 @@ export function set_css_style( descr,rapi ) {
 	return obj
 }
 
-export let types = {textcolor,bgcolor,text,row,column,grid,box,button,slider,add_style:set_css_style}
+export let types = {textcolor,bgcolor,text,row,column,grid,box,button,
+   slider,add_style:set_css_style,padding,combobox,checkbox}

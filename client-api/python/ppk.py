@@ -37,6 +37,8 @@ from ppk_cells import *
 import web7.lib as grlib
 import web7.lib as gui
 
+import local_channel as local
+
 ########################################## рабочее
 
 # 1 запуск системы или не надо - 2 подключение к системе и переход к функции

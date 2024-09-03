@@ -1,16 +1,16 @@
 
 export function ch_bind_in_links( rapi, obj, api_to_attr, links_in )
 {
+	//console.log("ch_bind_in_links:",links_in)
 	for (let local_name in links_in) {
 		let sources = links_in[local_name]
 		let attr_name = api_to_attr[ local_name ]
 		if (attr_name) {
 			for (let ch_name of sources) {
+				//console.log("ch_bind_in_links: query ",ch_name)
 				let q = rapi.query( ch_name ).done( msg => {
-					
-			
-						obj[ attr_name ].submit( msg.value );
-					
+					//console.log("eeee msg!",msg)
+					obj[ attr_name ].submit( msg.value );				
 				})
 			}
 		}

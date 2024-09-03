@@ -15,6 +15,7 @@ REASON
 а в subscribe словари какие-то приходят
 """
 
+
 class ChannelFeature:
     def __init__(self,rapi):
         self.rapi = rapi
@@ -133,16 +134,16 @@ class WhenAll():
 
         for x in self.channels:
             #print("when all subscribing to ",x.id,"index=",index)
-            await x.subscribe( lambda z,index=index: self.on_val(index,x,z))
+            x.react( lambda z,index=index: self.on_val(index,x,z))
             index = index+1
         return self
 
-    async def on_val(self,index,channel,val):
+    def on_val(self,index,channel,val):
         self.pending_mask = self.pending_mask & (~(2**index))
         #print("when-all index",index,"so pending_mask",self.pending_mask,"index=",index,"pow=",2**index,"channel.id=",channel.id,"val",val)
         if self.pending_mask == 0:
-            await self.do_job()
+            self.do_job()
 
-    async def do_job(self):
+    def do_job(self):
         vals = [x.value for x in self.channels]
-        await self.output.submit( vals )
+        self.output.put( vals )

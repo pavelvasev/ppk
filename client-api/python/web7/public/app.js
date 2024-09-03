@@ -54,6 +54,7 @@ export function create_object( rapi, description, target_id )
   	}
 }
 
+// todo descr заменить на сразу items
 export function create_children( rapi, obj, descr )
 {
 	let items = descr.items || []

@@ -814,7 +814,7 @@ export function schedule( fn, priority_holder_object, force_priority ) {
 
 // https://stackoverflow.com/a/74195771
 var startPerformScheduled = typeof(setImmediate) !== "undefined" ? setImmediate : (fn) => {
-	Promise.resolve.then( fn )
+	Promise.resolve().then( fn )
 }
 	;
 // нам надо уметь эту штуку переопределять
