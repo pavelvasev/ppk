@@ -2,7 +2,7 @@ class Channel:
     def __init__(self):
         self.reactions = {}
         self.rcnt = 0
-        self.is_local_channel = True
+        self.is_channel = True
 
     def put(self,value):
         for fn in self.reactions.values():

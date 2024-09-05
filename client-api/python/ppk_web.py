@@ -33,6 +33,7 @@ class Server:
         # пододжать пока отработает
         await asyncio.sleep( 0.1 )
 
+    # static_routes - словарь вида /url-prefix => fs_dir_path
     async def start( self,static_routes, port=0 ):
         app = web.Application()
         # https://docs.aiohttp.org/en/stable/web_reference.html#aiohttp.web.UrlDispatcher.add_static

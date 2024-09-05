@@ -43,9 +43,12 @@ async def start_visual(rapi,static_routes=dict(), entry_path=None):
     #print("ws bridge started, url=",q.url)
 
     print("starting web server")
-    r = static_routes.copy()
-    r["/gui"] = os.path.join( os.path.dirname(__file__), "public" )
-    app = await w.start( r )
+    #r = static_routes.copy()
+    #r["/gui"] = os.path.join( os.path.dirname(__file__), "public" )
+    dirs = { "/dom-public":dom.public_dir(), 
+             "/threejs-public":threejs.public_dir(),
+             "/gui":os.path.join( os.path.dirname(__file__),"public") }    
+    app = await w.start( dirs )
 
     print("webserver started, url=",w.url  )
     # https://docs.python.org/3/library/webbrowser.html
