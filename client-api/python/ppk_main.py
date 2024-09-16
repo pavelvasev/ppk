@@ -175,7 +175,12 @@ class WebsocketSrv:
         if finish_future is None:
             finish_future = asyncio.Future()
         print("main: server start.., port=",port)
-        async with serve(self.echo, "0.0.0.0", port) as s:
+        # наличие ping_timeout=None убирает отключение клиентов по отсутствию пинга
+        # потому что клиенты могут не отвечать долго, решая задачу
+        # если же они падают, то ожидаем что они отключают соединение
+        # ping_interval
+        # F-PING-TM
+        async with serve(self.echo, "0.0.0.0", port, ping_timeout=None, ping_interval=None) as s:
             if urls_future is not None:
                 urls = []
                 for x in s.sockets:

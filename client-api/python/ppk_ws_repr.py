@@ -88,6 +88,7 @@ class WebsocketReprSrv:
         if finish_future is None:
             finish_future = asyncio.Future()
         print("ws_repr: server start.., port=",port)
+        # todo выяснить max_size
         async with serve(self.echo, "0.0.0.0", port) as s:
             if urls_future is not None:
                 urls = []

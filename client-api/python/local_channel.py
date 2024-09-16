@@ -49,7 +49,7 @@ def as_cell( channel, initial_value=None ):
     channel.value = initial_value
     def set_value(x):
         channel.value = x 
-    channel.react( set_value )    
+    channel.react( set_value )
     return channel
 
 

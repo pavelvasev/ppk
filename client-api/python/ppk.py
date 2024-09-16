@@ -205,7 +205,8 @@ class Client:
         self.ws = None
         while self.ws is None:
             try:
-                self.ws = await websockets.connect( self.main_url )
+                # F-PING-TM
+                self.ws = await websockets.connect( self.main_url, ping_timeout=None )
             except OSError as ex:
                 t = 3
                 print("failed to connect to system url=",self.main_url,str(ex),"restart in ",t,"seconds")
