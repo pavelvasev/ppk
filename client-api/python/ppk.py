@@ -39,8 +39,36 @@ import web7.lib as gui
 
 import local_channel as local
 
-########################################## рабочее
+########################################## помощник запуска системы
+# F-PYTHON-START-HELPER
+import ppk_main
 
+# запускает клиент и при необходимости сервер
+# передает управление в user_fn(rapi)
+def start( user_fn, server_url=None):
+    async def main():
+        nonlocal server_url   
+        if server_url is None:
+            s = ppk_main.Server()
+            print("starting system")
+            s1 = await s.start()
+            print("system started")
+            server_url = s.url
+
+        print("connecting to sytem")
+        rapi = Client()
+        await rapi.connect( url=server_url )
+        print("connected")
+        if asyncio.iscoroutinefunction(user_fn):
+            await user_fn( rapi )
+        else:
+            user_fn( rapi )
+
+    asyncio.run( main() )
+
+########################################## рабочее    
+
+# todo это видимо лишнее
 # 1 запуск системы или не надо - 2 подключение к системе и переход к функции
 # , main_url="ws://127.0.0.1:10000"
 def ppk_run(main_fn, main_url="ws://127.0.0.1:10000"):
