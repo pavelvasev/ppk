@@ -159,8 +159,21 @@ class QueryTcp:
         #print("query called",crit)
         url = await self.get_incoming_endpoint()
         query_id = self.make_query_id()
-        self.query_callbacks[query_id] = callback
-        return await self.rapi.reaction( crit, self.rapi.operation("do_query_send",query_id=query_id,results_url=url) )
+        # логика авто-отписки
+        async def n_callback(msg):
+            res = callback(msg)
+            # хм видимо res это вызывает ожидание
+            if inspect.isawaitable(res):
+                #print("it is awaitable, entering await")
+                await res
+            nonlocal N,rhandle
+            N = N - 1            
+            if N == 0:               
+               await self.rapi.delete( rhandle )
+
+        self.query_callbacks[query_id] = n_callback
+        rhandle = await self.rapi.reaction( crit, self.rapi.operation("do_query_send",query_id=query_id,results_url=url) )
+        return rhandle
 
     # присоединился новый клиент
     async def on_connected(self,reader, writer):
@@ -228,11 +241,8 @@ class QueryTcp:
             # или хотябы имена каналов
             if trid["actor"] != self.rapi.sender:
                 await self.rapi.msg({"label":"online_logging_msg","value":{"task":"send","actor":trid["actor"],"actor_tgt":self.rapi.sender,"tlen":tlen,"t1":trid["t"],"dy":0}})
-
-        #print("query got message:",packet,"cb=",cb)    
+        
         res = cb(m)
-        #print("cb called, res=",res)
-        # а нам ето надо?
         # хм видимо res это вызывает ожидание
         if inspect.isawaitable(res):
             #print("it is awaitable, entering await")

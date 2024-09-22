@@ -350,7 +350,8 @@ class Client:
 
         await asyncio.gather( *res_arr )
 
-    # todo обратная операция по удалению реакции?
+    # idea разместить счетчик N прямо в реакции?
+    # action - это словарь с описанием действия
     async def reaction( self, crit, action ):
         name = self.mkguid()
         #print("name=",name)
@@ -361,6 +362,7 @@ class Client:
         rhandle = { "cmd": "delete_item", "name": name, "crit":crit }
         return rhandle
 
+    # удаление реакции
     async def delete( self, handle ):
         await self.send( handle )
 

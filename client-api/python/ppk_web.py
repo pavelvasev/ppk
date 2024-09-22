@@ -1,3 +1,5 @@
+# веб-сервер. но зачем он в ппк теперь неясно.
+
 import asyncio
 import ppk
 import json
@@ -19,6 +21,9 @@ class Server:
     def __init__(self):
         self.finish_future = asyncio.Future()
         atexit.register(self.cleanup) # это системное..
+        # создание app вынесено отдельно, чтобы можно было добавлять routes
+        # т.к. после запуска app в методе start() их уже не добавить (frozen)
+        self.app = web.Application()
 
     def cleanup(self):
         if not self.finish_future.done():
@@ -33,14 +38,14 @@ class Server:
         # пододжать пока отработает
         await asyncio.sleep( 0.1 )
 
-    # static_routes - словарь вида /url-prefix => fs_dir_path
+    # static_routes - словарь вида /url-prefix => fs_dir_pa`th
     async def start( self,static_routes, port=0 ):
-        app = web.Application()
+        app = self.app
         # https://docs.aiohttp.org/en/stable/web_reference.html#aiohttp.web.UrlDispatcher.add_static
 
         # приоритет
         js_api = os.path.abspath( os.path.join( os.path.dirname(__file__), "../js" ) )
-        print("js_api=",js_api)
+        #print("js_api=",js_api)
         app.router.add_static('/ppk', js_api, append_version=True,show_index=True)
 
         for url in static_routes:
