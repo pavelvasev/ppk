@@ -45,13 +45,15 @@ import ppk_main
 
 # запускает клиент и при необходимости сервер
 # передает управление в user_fn(rapi)
-def start( user_fn, server_url=None):
+# server_url - к какому серверу подключаться. если не указать сервер будет запущен.
+# port - порт для запуска сервера, 0 для выбора свободного
+def start( user_fn, server_url=None, port=0):
     async def main():
         nonlocal server_url   
         if server_url is None:
             s = ppk_main.Server()
             print("starting system")
-            s1 = await s.start()
+            s1 = await s.start(port)
             print("system started")
             server_url = s.url
 
@@ -66,7 +68,7 @@ def start( user_fn, server_url=None):
 
     asyncio.run( main() )
 
-########################################## рабочее    
+########################################## рабочее, todo удалить
 
 # todo это видимо лишнее
 # 1 запуск системы или не надо - 2 подключение к системе и переход к функции

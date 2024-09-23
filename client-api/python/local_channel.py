@@ -24,14 +24,14 @@ class Channel:
 
 class Link:
     def __init__(self,src,tgt):
-        self.unsub = src.react( lambda x: tgt.put(x) )        
+        self.unsub = src.react( lambda x: tgt.put(x) )
 
     def stop(self):
         self.unsub()
         self.unsub = None
 
 def create_link( src,tgt ):
-    return LocalLink( src,tgt )
+    return Link( src,tgt )
 
 
 # это пока простая ячейка которая хранит входящее значение
