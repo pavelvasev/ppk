@@ -6,6 +6,8 @@ import asyncio
 import websockets
 from websockets.server import serve
 import ppk
+#import socket
+import ppk_utils
 
 ####################### вебсокеты + main
 import json
@@ -94,11 +96,10 @@ class WebsocketReprSrv:
                 urls = []
                 for x in s.sockets:
                     name = x.getsockname()
-                    #print("see sock name",name)
-                    if name[0] == '0.0.0.0':
-                        urls.append( f"ws://127.0.0.1:{name[1]}")
-                    else:
-                        urls.append( f"ws://{name[0]}:{name[1]}")
+                    host = name[0]
+                    if host == "0.0.0.0":
+                        host = ppk_utils.get_ip_addresses()[0]                        
+                    urls.append( f"ws://{host}:{name[1]}")
                 print("ws_repr: server started",urls)
                 urls_future.set_result( urls )
 
