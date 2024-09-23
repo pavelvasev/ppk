@@ -132,7 +132,7 @@ class StartProcessCh():
             await proc.wait()
             await asyncio.sleep(0.002) 
             # надо ждать ибо изза слипа _handle_stdout получается что после нашего сигнала завершения приходят еще сообщения
-            await self.finish.put( proc.returncode )
+            self.finish.put( proc.returncode )
 
         async def _handle_stdout(stdout: asyncio.streams.StreamReader,channel):
             #global bufsize

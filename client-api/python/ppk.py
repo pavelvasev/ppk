@@ -65,8 +65,19 @@ def start( user_fn, server_url=None, port=0):
             await user_fn( rapi )
         else:
             user_fn( rapi )
+            
+    # asyncio печать исключений https://superfastpython.com/asyncio-log-all-exceptions/
+    #def exception_handler(loop, context):
+    #  # log exception
+    #  print(context['exception'])
+    # get the event loop
+    #loop = asyncio.get_running_loop()
+    # set the exception handler
+    #loop.set_exception_handler(exception_handler)
+    
+    # см debug=True далее
 
-    asyncio.run( main() )
+    asyncio.run( main(), debug=True )
 
 ########################################## рабочее, todo удалить
 
