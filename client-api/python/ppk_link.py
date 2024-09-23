@@ -31,7 +31,8 @@ class LinkFeature:
         if hasattr( src_crit, "id"):
             src_crit = src_crit.id
         if hasattr( tgt_crit, "id"):
-            tgt_crit = tgt_crit.id            
+            tgt_crit = tgt_crit.id
+        # todo работа с локальными каналами
         return await self.rapi.reaction( src_crit, self.rapi.operation("do_forward",target_label=tgt_crit) )
 
     async def do_forward( self,msg, arg):        
