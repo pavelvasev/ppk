@@ -25,6 +25,9 @@ class Channel:
 class Link:
     def __init__(self,src,tgt):
         self.unsub = src.react( lambda x: tgt.put(x) )
+        # логика подключения к ячейкам - передача установленных значений...
+        if hasattr(src,"value") and src.value is not None:
+            tgt.put( src.value)
 
     def stop(self):
         self.unsub()
