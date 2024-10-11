@@ -42,9 +42,9 @@ def create_link( src,tgt ):
 class Cell(Channel):
     def __init__(self, initial_value):
         super(self)
-        self.value = None
+        self.value = initial_value
         def set_value(x):
-            self.value = x 
+            self.value = x
         self.react( set_value )
 
 # эксперимент
