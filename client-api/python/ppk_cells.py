@@ -1,5 +1,7 @@
 import asyncio
 
+# Концепция "Каналов"
+
 """
 todo
 - попробвоать with selected.react as msg: ....

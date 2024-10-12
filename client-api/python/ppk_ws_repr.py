@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 # упрощенная версия моста
+# todo https://websockets.readthedocs.io/en/stable/reference/asyncio/server.html#websockets.asyncio.server.basic_auth
+
 
 import asyncio
 import websockets
@@ -8,6 +10,7 @@ from websockets.server import serve
 import ppk
 #import socket
 import ppk_utils
+import traceback
 
 ####################### вебсокеты + main
 import json
@@ -20,6 +23,7 @@ class WebsocketReprSrv:
         self.ws_cnt = 0
 
     async def echo(self,websocket):
+        print("ws_repr: client connected:",websocket.remote_address,flush=True)
         # список функций, которые надо вызвать при отключении клиента
         #client_finish_funcs = dict()
         # список идентификаторов процессов отслеживания
@@ -58,26 +62,35 @@ class WebsocketReprSrv:
                 #elif cmd == "put":
                     #msg_to_send = msg["msg"]
                     #await self.rapi.msg( msg_to_send )
-                else:                    
+                else:
+                    #msg["client_ip"] = websocket.remote_address[0]
+                    #print("REPR MSG=",msg)
                     await self.rapi.msg( msg )
                     #print("ws_repr: invalid cmd:",cmd)
 
+            print("ws_repr: iterator finished normally")
                 #resp_txt = json.dumps( resp )
                 #await websocket.send(resp_txt)
         except websockets.exceptions.ConnectionClosedOK as e:
-            print(f'ws_repr: client closed ok: {e}')
+             print(f'ws_repr: client closed ok: {e}')
 
         except websockets.exceptions.ConnectionClosedError as e:
-            print(f'ws_repr: client closed error: {e}')            
+             print(f'ws_repr: client closed error: {e}')             
 
-        #except Exception as e:
-        #    print(f'main: unexpected exception: {e}')
+        #except websockets.exceptions.WebSocketException as e:
+        #     print(f'ws_repr: other client error: {e}')
+        except Exception as e:
+             print(f'ws_repr: unexpected exception:',e)
+             traceback.print_exc()
+             # BasicException
 
         finally:
-            print("ws_repr: client finished")
+            print("ws_repr: finishing client. removing it's queries. this_ws_id=",this_ws_id)
+            # то что ЭТОТ клиент запрашивал - мы убираем
             for q in active_queries.values():
                 await self.rapi.delete(q)
             del self.ws_clients[ this_ws_id ]
+            print("ws_repr: finishing client. queries removed.")
             #self.rl.print()
 
 
@@ -86,10 +99,9 @@ class WebsocketReprSrv:
     async def main(self,port,finish_future=None,urls_future=None):
 
         # запустим операцию приема сообщений
-
         if finish_future is None:
             finish_future = asyncio.Future()
-        print("ws_repr: server start.., port=",port)
+        print("ws_repr: server start.., port=",port)        
         # todo выяснить max_size
         async with serve(self.echo, "0.0.0.0", port) as s:
             if urls_future is not None:
@@ -104,10 +116,11 @@ class WebsocketReprSrv:
                 urls_future.set_result( urls )
 
             await finish_future # ждем окончания вечности
+            print("~~~~~~~~~~~~~~~~~ ws-repr see finish_future")
             
 
 ############### api в духе ppk_starter
-# специальный класс, для удобства запуска WebsocketBridgeSrv изнутри процессов программ
+# специальный класс, для удобства запуска WebsocketReprSrv изнутри процессов программ
 # в принципе, можно обоходиться и без этого класса
 import atexit
 class Server:
@@ -134,7 +147,7 @@ class Server:
         # а там уже пусть connect await делает внутрях
         self.urls_future = asyncio.Future()
         # urls_future это возможность получить порт
-        self.task = asyncio.create_task(ws.main(port,self.finish_future, self.urls_future))
+        self.task = asyncio.create_task(ws.main(port,self.finish_future, self.urls_future),name="repr_ws")
         # пододжать пока отработает
         #await asyncio.sleep( 0.1 )
         await self.urls_future

@@ -2,9 +2,12 @@
 
 # перенесен в client-api т.к. тогда удобно импортировать embeddedserver
 
+# todo https://websockets.readthedocs.io/en/stable/reference/asyncio/server.html#websockets.asyncio.server.basic_auth
+
 import asyncio
 import websockets
 from websockets.server import serve
+import traceback
 
 class ReactionsList:
     def __init__(self):
@@ -79,7 +82,6 @@ class WebsocketSrv:
         listening_processes = dict()
 
         try:
-
             async for message in websocket:
                 msg = json.loads(message)
                 cmd = msg["cmd"]
@@ -149,23 +151,35 @@ class WebsocketSrv:
                     if name in client_finish_funcs:
                         del client_finish_funcs[ name ]
                 else:
-                    print("main: invalid cmd:",cmd)
+                    print("ppk_main(srv): invalid cmd:",cmd)
 
                 resp_txt = json.dumps( resp )
                 await websocket.send(resp_txt)
+
+            print("ppk_main(srv): client finished gracefully")
         except websockets.exceptions.ConnectionClosedOK as e:
-            print(f'main: client closed ok: {e}')
+            print(f'ppk_main(srv): client closed ok: {e}')
 
         except websockets.exceptions.ConnectionClosedError as e:
-            print(f'main: client closed error: {e}')            
+            print(f'ppk_main(srv): client closed error: {e}')            
 
-        #except Exception as e:
-        #    print(f'main: unexpected exception: {e}')
-
-        finally:
-            print("main: client finished")
+        except Exception as e:
+            print(f'ppk_main(srv): unexpected exception: {e}')
+            traceback.print_exc()
+        finally:            
+            #await asyncio.sleep(4)            
+            print("ppk_main(srv): finishing client: start it's client_finish_funcs")
+            #traceback.print_stack()
+            #print("client websocket=",websocket.remote_address)
+            #print("calling close")
+            await websocket.close()
+            #print("calling close done")
             for fn in client_finish_funcs.values():
+                #print("ppk_main(srv): sleep")
+                #await asyncio.sleep(1)
+                #print("ppk_main(srv): calling func ",fn)
                 await fn()
+            print("ppk_main(srv): finishing client done")
             #self.rl.print()
 
 
@@ -190,9 +204,10 @@ class WebsocketSrv:
                         urls.append( f"ws://127.0.0.1:{name[1]}")
                     else:
                         urls.append( f"ws://{name[0]}:{name[1]}")
-                print("main: server started",urls)
+                print("ppk_main(srv): server started",urls)
                 urls_future.set_result( urls )
-                await finish_future # ждем окончания вечности
+                await finish_future # ждем окончания вечности (пока ее извне не закончат)
+                print("ppk_main(srv): server stopping (got finish_future)")
             pass
 
 ############### api в духе ppk_starter
@@ -227,7 +242,7 @@ class Server:
         # а там уже пусть connect await делает внутрях
         self.urls_future = asyncio.Future()
         # urls_future это возможность получить порт
-        self.task = asyncio.create_task(ws.main(port,self.finish_future, self.urls_future))
+        self.task = asyncio.create_task(ws.main(port,self.finish_future, self.urls_future), name="ppk_main(srv)")
         # пододжать пока отработает
         #await asyncio.sleep( 0.1 )
         await self.urls_future

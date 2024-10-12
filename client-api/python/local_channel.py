@@ -1,3 +1,5 @@
+# Локальные каналы (т.е. для процесса, и вне сетевой среды)
+
 class Channel:
     def __init__(self):
         self.reactions = {}
@@ -36,6 +38,8 @@ class Link:
 def create_link( src,tgt ):
     return Link( src,tgt )
 
+def bind( src,tgt ):
+    return Link( src,tgt )
 
 # это пока простая ячейка которая хранит входящее значение
 # без ресабмита при подключении других, без входящего сабмита, и без проверки изменений

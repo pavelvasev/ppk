@@ -114,6 +114,32 @@ class StartProcess():
         return self
 
 
+class PrefixCh():
+    def __init__( self, prefix):        
+        self.input = ppk.local.Channel()
+        self.output = ppk.local.Channel()
+        def onmsg(msg):
+            self.output.put( prefix + msg )
+        self.input.react(onmsg)
+
+class FileWriterCh():
+    def __init__( self, filename):
+        self.f = open(filename, "w")
+        self.input = ppk.local.Channel()
+        # канал для вызова close
+        # но формально это второй интерфейс. эксперимент что удобнее
+        self.stop = ppk.local.Channel()
+
+        def write(msg):
+            if not self.f.closed:
+                self.f.write(msg)
+
+        self.input.react( write )
+        self.stop.react( self.close )
+
+    def close(self):
+        self.f.close()
+
 ### локальная версия
 class StartProcessCh():
     # idea: prefix
@@ -183,7 +209,7 @@ class StartProcessCh():
             # эти задачи сами завершатся когда процесс завершится.. хм.    
             #print("start_process: proc started. cmd=",cmd,args,other_opts,"proc=",proc)
         except Exception as ex:
-            print("start_process: error",cmd,str(ex))
+            print("start_process: error! cmd=",cmd,"error=",str(ex))
             print(traceback.format_exc())
             #await self.set_status("Aborted", 0, str(exc))
 

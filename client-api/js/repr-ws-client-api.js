@@ -45,11 +45,25 @@ export function connect( sender, url = "ws://127.0.0.1:12000", verbose, submit_p
   })
 }
 
+// https://stackoverflow.com/a/7616484
+// https://gist.github.com/hyamamoto/fd435505d29ebfa3d9716fd2be8d42f0
+function hashCode(s) {
+  var hash = 0,
+    i, chr;
+  if (s.length === 0) return hash;
+  for (i = 0; i < s.length; i++) {
+    chr = s.charCodeAt(i);
+    hash = ((hash << 5) - hash) + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
+}
+
 class ReprWsClientApi {
   constructor( endpoint_url ) {
     console.log("ReprWsClientApi started:",endpoint_url)
 
-    this.client_id = "webclient_"+Math.random()
+    this.client_id = "webclient_"+hashCode(window.navigator.userAgent)+"_"+Math.ceil( Math.random() * 10000000 )
 
     let ppr
     this.closed = new Promise( (resolve) => {      

@@ -18,6 +18,7 @@ from typing import Callable
 
 import marshal
 import inspect
+import traceback
 
 # вообще спорно. ну ладно. для get_payload надо
 import numpy as np
@@ -30,6 +31,7 @@ import ppk_link
 import ppk_task
 import ppk_request
 import sync_async_queue
+
 
 from ppk_starter import *
 from ppk_cells import *
@@ -49,22 +51,28 @@ import ppk_main
 # port - порт для запуска сервера, 0 для выбора свободного
 def start( user_fn, server_url=None, port=0):
     async def main():
-        nonlocal server_url   
-        if server_url is None:
+        rapi = Client()
+        nonlocal server_url        
+        if server_url is None:            
             s = ppk_main.Server()
             print("starting system")
             s1 = await s.start(port)
             print("system started")
             server_url = s.url
+            # необходимо остановить сервер когда запросят остановку rapi
+            rapi.atexit(s.exit)
 
-        print("connecting to sytem")
-        rapi = Client()
+        print("connecting to system")
+        
         await rapi.connect( url=server_url )
         print("connected")
-        if asyncio.iscoroutinefunction(user_fn):
-            await user_fn( rapi )
-        else:
-            user_fn( rapi )
+        try:
+            if asyncio.iscoroutinefunction(user_fn):
+                await user_fn( rapi )
+            else:
+                user_fn( rapi )
+        finally:
+            await rapi.exit()
             
     # asyncio печать исключений https://superfastpython.com/asyncio-log-all-exceptions/
     #def exception_handler(loop, context):
@@ -202,6 +210,7 @@ class Client:
 
         self.function_counter = 0
         self.exit_callbacks = []        
+        self.exited = False
         
         # а вообще странно. мы идем всегда локально. так может таки пусть пуша нам говорит свой урль?
         # а не мы за нее решаем
@@ -298,12 +307,22 @@ class Client:
             print("run: exited loop")
 
     async def exit(self):
+        # idea если будут глюки то подождать с закрытием ws.close (см ниже)?        
+        print("rapi: exit. I am", self.ws.local_address)
+        #traceback.print_stack()
         #self.t1.cancel()
-        await self.ws.close()
+        if self.exited:
+            return
+        self.exited = True        
 
+        print("rapi: exit: calling exit_callbacks")
         for x in self.exit_callbacks:
+            #print("...")
             await x()
         self.exit_callbacks = []
+        print("rapi: exit: callbacks finished. closing ws connection")
+        await self.ws.close()
+        print("rapi: exit: ws connection closed")
 
         # await asyncio.sleep( 0.5 ) # ждем завершения процессов и записи их потоков..
 
@@ -324,6 +343,8 @@ class Client:
         #self.ws.run_forever(skip_utf8_validation=True) 
 
     async def send(self,data):
+        if self.exited:
+            return
         j = json.dumps(data)
         return await self.ws.send( j ) #www
 
