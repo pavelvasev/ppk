@@ -21,17 +21,18 @@ class Feature:
         self.task.cancel()
 
     def add_async_item(self,item):
-        #print("sync_async_queue: add item")
+        print("sync_async_queue: add item",item)
         self.rapi.sync_async_queue.put_nowait( item )
 
     async def process(self):
         #print("sync_async_queue: process start")
         while True:
-            #print("sync_async_queue: getting item")
+            print("sync_async_queue: getting item")
             item = await self.rapi.sync_async_queue.get()
-            #print("sync_async_queue: got item, awaiting")
+            print("sync_async_queue: got item, awaiting",item)
             try:
                 await item
+                print("sync_async_queue: item awaited OK",item)
             except Exception as error:
                 # handle the exception
                 print("ppk: exception occurred:", error) # An exception occurred: division by zero

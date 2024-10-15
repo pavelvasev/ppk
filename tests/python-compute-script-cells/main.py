@@ -59,15 +59,16 @@ async def main():
     if not os.path.exists("log"):
        os.mkdir("log",0o755)
     for x in range(0,4):
-        ch = rapi.channel( f"wrk_{x}" )
+        ch = rapi.channel( f"wrk_{x}" ).writing_cell()
+        ch.put( [11,12,13,14,15] )
         worker_channels.append(ch)
         await start_worker_process( s_urls[0], f"wrk_{x}", ch.id, workers_output_channel.id,"log" )
 
     await asyncio.sleep( 1 )
     print("workers: started..")
 
-    for w in worker_channels:
-        w.put( [10,20,42] )
+#    for w in worker_channels:
+#        w.put( [10,20,42] )
 
     await asyncio.sleep( 1*100000 )
  

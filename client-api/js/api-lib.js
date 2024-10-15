@@ -19,6 +19,7 @@ export class ClientList {
   set(name,value) {
     let value_existed = this.records.has( name )
     this.records.set( name,value ) //this.process_value(value) )
+    // микрособытия
     this.changed.submit( this.get_values() )    
     this.setted.submit( {name,value} )
 

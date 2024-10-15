@@ -52,7 +52,7 @@ class ReactionsList:
     def get_listeners_list( self, crit ):
         if not crit in self.listeners:
             self.listeners[crit] = dict()
-        return self.listeners[crit]            
+        return self.listeners[crit]
 
     def begin_listen_list( self, crit, fn ):
         k = self.get_listeners_list( crit )

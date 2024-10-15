@@ -30,7 +30,7 @@ import ppk_payloads_shmem2 as ppk_payloads
 import ppk_link
 import ppk_task
 import ppk_request
-import sync_async_queue
+import sync_async_queue_v2
 
 
 from ppk_starter import *
@@ -85,7 +85,7 @@ def start( user_fn, server_url=None, port=0):
     
     # см debug=True далее
 
-    asyncio.run( main(), debug=True )
+    asyncio.run( main() )#, debug=True )
 
 ########################################## рабочее, todo удалить
 
@@ -184,7 +184,7 @@ class Operations:
 
 # идея https://github.com/dask/distributed/blob/main/distributed/scheduler.py#L161
 DEFAULT_EXTENSIONS = {
-    "sync_async_queue": sync_async_queue.Feature,
+    "sync_async_queue": sync_async_queue_v2.Feature,
     "channels": ChannelFeature,
     "link": ppk_link.LinkFeature,
 
@@ -197,6 +197,62 @@ DEFAULT_EXTENSIONS = {
     "request" : ppk_request.RequestReplyFeature,    
     "query_for": ppk_query_for.QueryFor,    
 }
+
+# список реакций на исходящие сообщения для заданной темы 
+class ReactionsList:
+
+    def __init__(self):
+        #self.topic = topic
+        #self.list = initial_list # почему-то это у нас (ключ -> реакция)
+        # пока так. там еще бы changed надо мб
+        self.list = {}
+        self.is_inited = asyncio.Future()
+        self.added   = local.Channel()
+        self.removed = local.Channel()
+        self.inited  = local.Channel()
+
+    def init(self,initial_list):
+        self.list = initial_list
+        self.is_inited.set_result(True)        
+        self.inited.put(1)
+        # нам надо послать сообщения
+        #for id in self.list.keys():
+        #    self.added(id)
+        # это дорого. лучше inited 1 раз
+
+    # здесь reaction есть результат entry_to_reaction
+    def add(self,id,reaction):
+        self.list[id] = reaction
+        self.added.put(id)
+
+    def remove(self,id):
+        del self.list[id]
+        self.removed.put(id)
+
+    # посылка для одной реакции
+    # вообще выгоднее сразу всем послать и потом всех ждать
+    async def list_msg_to_one(self,recipient_reaction_id,value):
+        r = self.list[ recipient_reaction_id ]
+        f = r["action"]["fn"]
+        #f = recipient_reaction["action"]["fn"]
+        res = f(value)
+        if inspect.isawaitable( res ):
+            await res # запуск отправки
+
+    # посылка сообщения в список
+    # ну может не list_msg а что-то другое. но пока так
+    async def list_msg(self,value):
+        reactions = self.list.values()
+        await self.is_inited
+        res_arr = []
+        for r in reactions:
+            f = r["action"]["fn"]
+            res = f( value )
+            if inspect.isawaitable( res ):
+                res_arr.append( res )
+
+        # ждем асинхронные операции
+        await asyncio.gather( *res_arr )
 
 class Client:
 
@@ -238,14 +294,20 @@ class Client:
         if self.verbose:
             print("incoming message",obj)
         if "cmd_reply" in obj and obj["cmd_reply"] == "begin_listen_list":
-            list = { rec[0] : self.entry_to_reaction(rec[1]) for rec in obj["entries"] }
-            self.lists[ obj["crit"] ].set_result( list )
+            mlist = { rec[0] : self.entry_to_reaction(rec[1]) for rec in obj["entries"] }
+            #rlist = ReactionsList( list )
+            rlist = self.get_list_now( obj["crit"] )
+            rlist.init( mlist )
+            #self.lists[ obj["crit"] ].set_result( rlist )
         if "opcode" in obj and obj["opcode"] == "set":
-            q = self.lists[ obj["crit"] ].result()
-            q[ obj["arg"]["name"] ] = self.entry_to_reaction( obj["arg"]["value"] )
+            #q = self.lists[ obj["crit"] ].result()
+            q = self.get_list_now( obj["crit"] )
+            q.add( obj["arg"]["name"], self.entry_to_reaction( obj["arg"]["value"] ) )
+            # надо послать микрособытие о подключении
         if "opcode" in obj and obj["opcode"] == "delete":
-            q = self.lists[ obj["crit"] ].result()
-            del q[ obj["arg"]["name"] ]
+            #q = self.lists[ obj["crit"] ].result()
+            q = self.get_list_now( obj["crit"] )
+            q.remove( obj["arg"]["name"] )            
 
     def on_error(self, wsapp, err):
         print("Websocket error encountered: ", err)    
@@ -290,7 +352,7 @@ class Client:
                 e.run()
 
         if self.verbose:
-            print("run: entering loop")        
+            print("run: entering loop")
         #while True:
         #    message = await self.ws.recv()            
         #    self.on_message(message)
@@ -302,6 +364,9 @@ class Client:
             #if self.verbose:
             print("websockets.ConnectionClosed, exiting run loop")
             await self.exit() # вызовем каллбеки разные
+        except Exception as e:
+            print("PPK: exception on message",e)
+            print(traceback.format_exc())
 
         if self.verbose:
             print("run: exited loop")
@@ -349,17 +414,31 @@ class Client:
         return await self.ws.send( j ) #www
 
     #   начать слушать список name
-    async def begin_listen_list( self, crit ):
-        self.lists[ crit ] = asyncio.Future()
-        k = { "cmd":"begin_listen_list", "crit":crit}
-        await self.send(k)
-        return self.lists[ crit ]
+    def begin_listen_list( self, crit ):
+        #self.lists[ crit ] = asyncio.Future()
+        k = { "cmd":"begin_listen_list", "crit":crit}        
+        t = self.send(k)
+        self.sa_queue2.add_async_item( t )
+        #return self.lists[ crit ]
 
+    """
     async def get_list( self, crit ):
         if crit not in self.lists:
           #print("self.lists[crit] is empty, going to begin_listen_list")
           await self.begin_listen_list( crit )
         return await self.lists[ crit ]
+    """
+
+    # F-GET-LIST-SYNC
+    def get_list_now( self, crit):
+        if not crit in self.lists:
+            rlist = ReactionsList()
+            self.lists[crit] = rlist
+            # но надо еще послать запрос
+            self.begin_listen_list( crit )
+            return rlist
+        return self.lists[crit]
+
 
     def mkguid(self):
         return str(uuid.uuid4()) + "[" + self.sender + "]"
@@ -371,10 +450,12 @@ class Client:
         if self.verbose:
             print("msg operation. msg=",msg)
         crit = msg["label"]
-        reactions = await self.get_list( crit )
+        rlist = self.get_list_now( crit )
+        await rlist.is_inited #self.get_list( crit )
+        reactions = rlist.list.values()
         #print("running reactions",reactions)
         res_arr = []
-        for r in reactions.values():
+        for r in reactions:
             #print("running reaction",r)
             f = r["action"]["fn"]
             res = f( msg )
@@ -382,6 +463,8 @@ class Client:
                 res_arr.append( res )
             # todo отмена обработки
 
+        # это что за красота интересно и зачем
+        # но кстати это может быть затем, что там асинхронные операции отправки
         await asyncio.gather( *res_arr )
 
     # idea разместить счетчик N прямо в реакции?
@@ -403,6 +486,9 @@ class Client:
     def entry_to_reaction( self,e ):
         action = e["action"]
         if "python_hex" in action:
+            # это смело. и избыточно вроде как. 
+            # и пока отменяется. типа делайте ссылки на себя.
+            # и локально размещайте себя у нас...
             b= bytearray.fromhex( action["python_hex"])
             g=lambda x: -1
             g.__code__ = marshal.loads( b )
@@ -411,6 +497,7 @@ class Client:
             code = action["code"]
             arg = action["arg"]
             #if code in dir(self.operations):
+            # вот основное. тут пересылка и передача по ссылке! должны быть
             if hasattr( self.operations, code ):
                 operation_fn = getattr( self.operations, code )
             else:
