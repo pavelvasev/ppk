@@ -79,7 +79,7 @@ class WhenAll():
 
     def on_val(self,index,channel,val):
         self.pending_mask = self.pending_mask & (~(2**index))
-        #print("when-all index",index,"so pending_mask",self.pending_mask,"index=",index,"pow=",2**index,"channel.id=",channel.id,"val",val)
+        #print("~~~~~~~ when-all index",index,"so pending_mask",self.pending_mask,"index=",index,"pow=",2**index,"channel.id=",channel.id,"val",val)
         if self.pending_mask == 0:
             self.do_job()
 
