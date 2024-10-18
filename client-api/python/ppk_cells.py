@@ -205,6 +205,7 @@ class ReadingCell:
     def put(self,value):
         self.channel.put(value)
         # это вызовет реакцию и changed, см выше
+        return self
 
     def react(self,fn):
         return self.channel.react(fn)          
