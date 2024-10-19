@@ -23,27 +23,30 @@ import traceback
 # вообще спорно. ну ладно. для get_payload надо
 import numpy as np
 
-import ppk_query
-import ppk_query_for
+import ppk.ppk_query as ppk_query
+import ppk.ppk_query_for as ppk_query_for
 #import ppk_payloads
-import ppk_payloads_shmem2 as ppk_payloads
-import ppk_link
-import ppk_task
-import ppk_request
-import sync_async_queue_v2
+import ppk.ppk_payloads_shmem2 as ppk_payloads
+import ppk.ppk_link as ppk_link
+import ppk.ppk_task as ppk_task
+import ppk.ppk_request as ppk_request
+import ppk.sync_async_queue_v2 as sync_async_queue_v2
 
 
-from ppk_starter import *
-from ppk_cells import *
+from ppk.ppk_starter import *
+from ppk.ppk_cells import *
 
-import web7.lib as grlib
-import web7.lib as gui
+#import web7.lib as grlib
+#import web7.lib as gui
 
-import local_channel as local
+import ppk.local_channel as local
 
 ########################################## помощник запуска системы
 # F-PYTHON-START-HELPER
-import ppk_main
+import ppk.main as ppk_main
+
+# походу пьесы пока что проще все импортировать?
+# import ppk.main as ppk_main
 
 # запускает клиент и при необходимости сервер
 # передает управление в user_fn(rapi)
@@ -53,7 +56,7 @@ def start( user_fn, server_url=None, port=0):
     async def main():
         rapi = Client()
         nonlocal server_url        
-        if server_url is None:            
+        if server_url is None:
             s = ppk_main.Server()
             print("starting system")
             s1 = await s.start(port)

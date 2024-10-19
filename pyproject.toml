@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name="ppk"
+version = "2024.10.a"
+
+[todo]
+dependencies = [
+'websockets',
+'numpy',
+'aiofiles',
+'cloudpickle',
+'aiohttp',
+'aiohttp_socks',
+'psutil'
+]
+
+[tool.setuptools]
+packages = ["ppk", "ppk.js"]
+
+[tool.setuptools.package-dir]
+"ppk"="client-api/python"
+"ppk.js"="client-api/js"

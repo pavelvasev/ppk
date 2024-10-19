@@ -2,7 +2,6 @@
 
 import asyncio
 import ppk
-import ppk_main
 import os
 import time
 import sys
@@ -30,7 +29,7 @@ async def start_worker_process(url, worker_id, input_channel_id, output_channel_
 
 async def main():
     rapi = ppk.Client()
-    s = ppk_main.EmbeddedServer()
+    s = ppk.main.EmbeddedServer()
     print("starting system")
     s1 = await s.start()
     print("system started, connecting")

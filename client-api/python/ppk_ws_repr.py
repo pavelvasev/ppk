@@ -9,7 +9,7 @@ import websockets
 from websockets.server import serve
 import ppk
 #import socket
-import ppk_utils
+#import ppk_utils
 import traceback
 
 ####################### вебсокеты + main
@@ -110,7 +110,7 @@ class WebsocketReprSrv:
                     name = x.getsockname()
                     host = name[0]
                     if host == "0.0.0.0":
-                        host = ppk_utils.get_ip_addresses()[0]                        
+                        host = ppk.utils.get_ip_addresses()[0]                        
                     urls.append( f"ws://{host}:{name[1]}")
                 print("ws_repr: server started",urls)
                 urls_future.set_result( urls )
