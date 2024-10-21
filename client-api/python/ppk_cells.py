@@ -239,7 +239,8 @@ class WritingCell:
         self.has_value = True
         if self.list_waiting_value:
             self.list_waiting_value = False
-            self.list.list_msg( self.value )
+            t = self.list.list_msg( self.value )
+            self.channel.rapi.add_async_item( t )
 
     def put(self,value):
         self.update_value( value )
@@ -253,6 +254,8 @@ class WritingCell:
 
     def on_added(self,r_id):
         #print(self.id,"WritingCell: new listener added, r_id=",r_id,"self.has_value=",self.has_value)
+        # необходимости отдельно рассылать если у ячейки нет значения нет, 
+        # т.к. это будет сделано по признаку list_waiting_value
         if self.has_value: # todo optimize            
             #print(self.id,"WritingCell: sending value to newcomer",self.value)
             msg = { "label": self.channel.id, "value": self.value}

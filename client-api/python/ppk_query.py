@@ -161,11 +161,18 @@ class QueryTcp:
         query_id = self.make_query_id()
         # логика авто-отписки
         async def n_callback(msg):
-            res = callback(msg)
-            # хм видимо res это вызывает ожидание
-            if inspect.isawaitable(res):
-                #print("it is awaitable, entering await")
-                await res
+            try:
+                res = callback(msg)
+                # хм видимо res это вызывает ожидание
+                if inspect.isawaitable(res):
+                    #print("it is awaitable, entering await")
+                    await res
+            except:
+                print("-----------------------------")
+                print("query: exception in callback!")
+                traceback.print_exc()    
+                print("-----------------------------")
+
             nonlocal N,rhandle
             N = N - 1            
             if N == 0:               
