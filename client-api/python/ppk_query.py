@@ -62,11 +62,11 @@ class QueryTcp:
         # print("do_query_send called",msg,arg)
         
         attach = None
-        if "attach" in msg:
-            attach = msg["attach"]
+        if "payload" in msg:
+            attach = msg["payload"]
             #if "tobytes" in attach:
                 #attach = attach.tobytes()
-            del msg["attach"]
+            del msg["payload"]
         query_id_bytes = arg["query_id"].to_bytes(4,"big")
         #packet = {"query_id": arg["query_id"],  "m": msg } ыыы
         s = json.dumps( msg )
@@ -84,11 +84,16 @@ class QueryTcp:
         
         client.write( query_id_bytes )
         client.write( len_bytes )
-        #client.write( attach_len_bytes )
+        client.write( attach_len_bytes ) # #F-MSGFORMAT-V2
         client.write( bytes )
         if attach is not None:
-            print("FAIL! attaches not supported")
+            #print("FAIL! attaches not supported")
+            # #F-MSGFORMAT-V2
             client.write( attach )
+            # получается attach это должно быть что-то что можно писать в tcp
+            # типа bytes или bytesarray
+            # https://docs.python.org/3/library/stdtypes.html#bytes
+            
         #client.write( b''.join([len_bytes,bytes]) )
         # было, убрали
         #await client.drain()
@@ -188,8 +193,10 @@ class QueryTcp:
 
         while True:
             try:
+                # #F-MSGFORMAT-V2
                 data = await reader.readexactly(4)
                 data2 = await reader.readexactly(4)
+                data3 = await reader.readexactly(4)
             except Exception as ex:
                 if not reader.at_eof():
                     print("error reading reader. at eof=",reader.at_eof(),"err=",ex)
@@ -207,8 +214,8 @@ class QueryTcp:
 
             query_id = int.from_bytes(data,"big")
             len = int.from_bytes(data2,"big")
-            #len_att = int.from_bytes(data2,"big")
-            len_att = 0
+            len_att = int.from_bytes(data3,"big")
+            #len_att = 0
             #print("query_id=",query_id,"len=",len,hex(len),"len_att=",len_att)
                         
             if len == 0:
