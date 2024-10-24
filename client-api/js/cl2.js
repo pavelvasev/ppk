@@ -147,8 +147,36 @@ export class Channel extends Comm {
 	
 }
 
-export function create_channel() {
-	let channel = new Channel()
+// #F-TRANSCODE-MSG преобразуем сообщения в наборы байт и обратно
+export class DecodingChannel extends Channel {
+	constructor(decoder_fn) {
+		super()
+		this.decoder_fn = decoder_fn
+	}
+
+	submit( value ) {
+		let result = this.decoder_fn( value )
+		if (result && result.then) {
+			result.then( (decoded_val) => this.emit(decoded_val) )
+		} else 
+			this.emit( result )
+	}
+}
+
+export class TranscodeFloat32Array {
+	decode_fn( value ) {
+		if (value && value.payload)
+			return value.payload.arrayBuffer().then( arg => new Float32Array(arg))
+		return value;
+	}
+}
+
+export function create_channel( transcoder ) {
+	let channel
+	if (transcoder)	
+		channel = new DecodingChannel( transcoder.decode_fn )	
+	else
+	  channel = new Channel()
 	return channel
 }
 

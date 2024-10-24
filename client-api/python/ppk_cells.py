@@ -84,7 +84,16 @@ class Channel:
         # можно было бы просто и спец-функцию сделать
 
     async def submit( self, value ):
-        await self.rapi.msg( { "label": self.id, "value": value} )
+        if isinstance(value,dict) and "payload" in value:
+            # #F-PAYLOAD-PASS 
+            payload = value["payload"]
+            del value["payload"]
+            await self.rapi.msg( { "label": self.id, "value": value, "payload": payload } )
+        else:
+            await self.rapi.msg( { "label": self.id, "value": value} )
+        #if isinstance(value, (bytes, bytearray)):
+        #    await self.rapi.msg( { "label": self.id, "value": None, "payload": value } )
+        
 
     # todo это видимо не надо уже
     async def read(self):
@@ -96,6 +105,14 @@ class Channel:
         # todo от этого надо уходить
         def cba(msg):
           v = msg["value"] if "value" in msg else None
+          
+          # #F-PAYLOAD-PASS галиматья на тему пейлоадов и каналов
+          # кстати также см grafix utils.js
+          if "payload" in msg:
+            if v is None:
+                v = {}
+            v["payload"] = msg["payload"]
+
           self.value = v
           return cb(v)
           
@@ -222,6 +239,9 @@ class WritingCell:
         self.list = channel.rapi.get_list_now( self.channel.id )
         self.list.added.react( self.on_added )
         self.list.inited.react( self.on_inited )
+
+        self.encoder_fn = None
+        self.decoder_fn = None
         # а кстати вопрос. от пусть у нас в клиенте уже есть этот список
         # получается мы ни разу не получим inited/added. и не пошлем. хм.
         # но как бы ну и что. мы при нашем put вызовем получается 
@@ -274,6 +294,15 @@ class WritingCell:
             self.channel.rapi.add_async_item( t )
         else:
             self.list_waiting_value = True
+
+    # todo в дектораторы это
+    # #F-ENCODING
+    def set_encoder(self,encoder_fn):
+        self.encoder_fn = encoder_fn
+        return self
+    def set_encoder(self,decoder_fn):
+        self.decoder_fn = decoder_fn
+        return self
 
 
 ################################################
