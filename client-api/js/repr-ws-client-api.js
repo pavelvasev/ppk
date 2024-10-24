@@ -72,18 +72,32 @@ class ReprWsClientApi {
     this.closed.resolve = ppr
 
     this.ws = new WebSocket( endpoint_url )
+
+    let have_payload = null;
     
     this.ws.addEventListener('message', (event) => {
-       //console.log("client got message",event)
+       //console.log("client got message",event)       
 
        let data = event.data
+
+       if (data instanceof Blob) {
+         have_payload = data;
+         return;
+       }
+
        let json = JSON.parse(data)
        if (json.query_reply) {
          json.m.timestamp ||= this.server_t0 + performance.now() // но может это и не здесь надо..
-         let cb=  this.query_dic[json.query_reply]
-         if (cb) 
-            cb( json.m ) 
-          else console.error('no query with id ',json.query_reply)
+
+         if (have_payload) {
+           json.m.payload = have_payload;
+           have_payload = null;           
+         }
+
+         let cb =  this.query_dic[json.query_reply]
+            if (cb) 
+              cb( json.m ) 
+            else console.error('no query with id ',json.query_reply)   
        } else
        if (json.shared_reply) {
          // это обновление значений списков

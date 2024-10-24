@@ -46,9 +46,19 @@ class WebsocketReprSrv:
                     crit = msg["crit"]
                     def mk_reply(outer_query_id):
                         async def on_query_reply(inmsg):
+                            payload = None
+                            if 'payload' in inmsg:
+                                payload = inmsg['payload']
+                                del inmsg['payload']
+                                #inmsg["has_payload"] = True
+                                await websocket.send(payload)
+                                
                             resp= {"query_reply": outer_query_id, "m": inmsg}
                             resp_txt = json.dumps( resp )
                             await websocket.send(resp_txt)
+                            #if payload is not None:
+                            #    await websocket.send(payload)
+
                         return on_query_reply
 
                     q = await self.rapi.query( crit,mk_reply(msg["query"]), N)

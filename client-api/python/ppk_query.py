@@ -93,7 +93,7 @@ class QueryTcp:
             # получается attach это должно быть что-то что можно писать в tcp
             # типа bytes или bytesarray
             # https://docs.python.org/3/library/stdtypes.html#bytes
-            
+
         #client.write( b''.join([len_bytes,bytes]) )
         # было, убрали
         #await client.drain()
@@ -242,7 +242,7 @@ class QueryTcp:
         cb = self.query_callbacks[ query_id ]
         m = packet
         if attach is not None:
-            m["attach"] = attach
+            m["payload"] = attach
         
         if self.rapi.verbose:
             print("query got message:",packet,"cb=",cb)
