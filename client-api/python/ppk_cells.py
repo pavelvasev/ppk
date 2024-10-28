@@ -83,17 +83,17 @@ class Channel:
         # с удобным аксессором на чтение
         # можно было бы просто и спец-функцию сделать
 
-    async def submit( self, value ):
+    def value_to_message( self,value):
         if isinstance(value,dict) and "payload" in value:
             # #F-PAYLOAD-PASS 
             payload = value["payload"]
             del value["payload"]
-            await self.rapi.msg( { "label": self.id, "value": value, "payload": payload } )
+            return { "label": self.id, "value": value, "payload": payload }
         else:
-            await self.rapi.msg( { "label": self.id, "value": value} )
-        #if isinstance(value, (bytes, bytearray)):
-        #    await self.rapi.msg( { "label": self.id, "value": None, "payload": value } )
-        
+            return { "label": self.id, "value": value}
+
+    async def submit( self, value ):
+        await self.rapi.msg( self.value_to_message(value) )
 
     # todo это видимо не надо уже
     async def read(self):
@@ -259,7 +259,7 @@ class WritingCell:
         self.has_value = True
         if self.list_waiting_value:
             self.list_waiting_value = False
-            t = self.list.list_msg( self.value )
+            t = self.list.list_msg( self.channel.value_to_message(self.value) )
             self.channel.rapi.add_async_item( t )
 
     def put(self,value):
@@ -277,8 +277,8 @@ class WritingCell:
         # необходимости отдельно рассылать если у ячейки нет значения нет, 
         # т.к. это будет сделано по признаку list_waiting_value
         if self.has_value: # todo optimize            
-            #print(self.id,"WritingCell: sending value to newcomer",self.value)
-            msg = { "label": self.channel.id, "value": self.value}
+            #print(self.id,"WritingCell: sending value to newcomer",self.value)            
+            msg = self.channel.value_to_message(self.value)
             t = self.list.list_msg_to_one( r_id, msg )
             self.channel.rapi.add_async_item( t )
 
@@ -287,13 +287,16 @@ class WritingCell:
         if self.has_value:
             #self.list_waiting_value = False
             #print(self.id,"WritingCell: sending value to list")
-            msg = { "label": self.channel.id, "value": self.value}
+            #msg = { "label": self.channel.id, "value": self.value}
             # todo вообще это уже странно такое отправлять. надо просто value
             #ну это следующий этап
+            msg = self.channel.value_to_message(self.value)
             t = self.list.list_msg( msg )
             self.channel.rapi.add_async_item( t )
         else:
-            self.list_waiting_value = True
+            #self.list_waiting_value = True
+            # вроде как это не надо.. когда придет значение список уже будет
+            pass
 
     # todo в дектораторы это
     # #F-ENCODING

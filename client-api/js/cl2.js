@@ -108,6 +108,10 @@ export class Channel extends Comm {
 	submit( value ) {
 		this.emit( value )
 	}
+	// специальный мост для темы #F-TRANSCODE-MSG
+	set( value ) {
+		this.emit( value )
+	}
 	// провести сигнал
 	emit( value ) {
 		//console.channel_verbose( "Port submit:",this+"","value=",value instanceof Comm ? value + "" : value,typeof(value) )
@@ -148,6 +152,8 @@ export class Channel extends Comm {
 }
 
 // #F-TRANSCODE-MSG преобразуем сообщения в наборы байт и обратно
+// но вообще это выглядит как ну вот оптимизация стиля языка 
+// - вставка функции преобразования. так-то это промежуточный формально робот..
 export class DecodingChannel extends Channel {
 	constructor(decoder_fn) {
 		super()
@@ -173,7 +179,7 @@ export class TranscodeFloat32Array {
 
 export function create_channel( transcoder ) {
 	let channel
-	if (transcoder)	
+	if (transcoder)
 		channel = new DecodingChannel( transcoder.decode_fn )	
 	else
 	  channel = new Channel()
@@ -322,12 +328,25 @@ export class Cell extends Comm {
 		if (this.is_set) return this.value
 		return default_value;
 	}
+
+}
+
+export function transcoding( comm, transcoder ) {
+	comm.submit = value => {
+		let result = transcoder.decode_fn( value )
+		if (result && result.then) {
+			result.then( (decoded_val) => comm.set(decoded_val) )
+		} else 
+			comm.set( result )
+	}
+	return comm
 }
 
 export function create_cell(value,fast=false) {
-	let k = new Cell(value,fast)
-	return k
+	let cell = new Cell( value,fast)
+	return cell
 }
+
 
 // ClObject сделано не comm, потому что иначе на него начинают 
 // пытаться подписываться там где не надо (при передаче его по ссылкам...)
