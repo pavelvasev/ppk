@@ -35,6 +35,8 @@ class WebsocketReprSrv:
 
         active_queries = dict()
 
+        sending_lock = asyncio.Lock()
+
         try:
             async for message in websocket:
                 msg = json.loads(message)
@@ -47,17 +49,20 @@ class WebsocketReprSrv:
                     def mk_reply(outer_query_id):
                         async def on_query_reply(inmsg):
                             payload = None
-                            if 'payload' in inmsg:
-                                payload = inmsg['payload']
-                                del inmsg['payload']
-                                #inmsg["has_payload"] = True
-                                await websocket.send(payload)
-                                
-                            resp= {"query_reply": outer_query_id, "m": inmsg}
-                            resp_txt = json.dumps( resp )
-                            await websocket.send(resp_txt)
-                            #if payload is not None:
-                            #    await websocket.send(payload)
+                            # необходим лок тк. возможны 2 посылки
+                            # и были случаи что посередине вмешивалась третья
+                            async with sending_lock:
+                                if 'payload' in inmsg:
+                                    payload = inmsg['payload']
+                                    del inmsg['payload']
+                                    #inmsg["has_payload"] = True
+                                    await websocket.send(payload)
+                                    
+                                resp= {"query_reply": outer_query_id, "m": inmsg}
+                                resp_txt = json.dumps( resp )
+                                await websocket.send(resp_txt)
+                                #if payload is not None:
+                                #    await websocket.send(payload)
 
                         return on_query_reply
 
