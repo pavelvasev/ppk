@@ -45,7 +45,7 @@ def bind( src,tgt ):
 # без ресабмита при подключении других, без входящего сабмита, и без проверки изменений
 class Cell(Channel):
     def __init__(self, initial_value):
-        super(self)
+        super().__init__()
         self.value = initial_value
         def set_value(x):
             self.value = x

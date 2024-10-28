@@ -228,6 +228,11 @@ class ReadingCell:
         return self.channel.react(fn)          
 
 # ячейка для записи
+"""
+если в ячейке размещено значение, 
+а затем происходит подключение слушателя(слушателей)
+то им посылается это значение
+"""
 class WritingCell:
     def __init__(self,channel):        
         self.channel = channel
