@@ -115,7 +115,15 @@ async def main(rapi):
 ppk_run( main )
 """
 
-
+#F-WITH
+""" не работает а жаль
+import contextlib
+@contextlib.contextmanager
+def react( channel ):
+    def react_fn(msg):
+        yield msg
+    return channel.react( react_fn )
+"""    
 
 ###########################################
 

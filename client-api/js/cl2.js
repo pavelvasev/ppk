@@ -500,18 +500,15 @@ export function attach( target_object, name, embedded_object )
 }
 
 export function get_title( obj ) {
-	if (!obj.$title) {
-		//console.error("get_title: title is not assigned to obj",obj)
-		//console.trace()
-	}
+	if (obj.$cached_title) 
+		return obj.$cached_title		
 
-	//let own_title = `${obj.$title || "unknown"}[id:${obj.$cl_id},pr:${obj.get_m_priority()}]`
 	let own_title = `${obj.$title || "unknown"}[#${obj.$cl_id}]`
 
 	if (obj.attached_to)
-		return get_title( obj.attached_to ) + "." + own_title
-	//if (obj.parent && obj.parent.is_set && obj.parent.get())
-	//	return get_title( obj.parent.get() ) + "." + (obj.$title || "unknown")	
+		own_title = get_title( obj.attached_to ) + "." + own_title
+	
+	obj.$cached_title = own_title
 	return own_title
 }
 

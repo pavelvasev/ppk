@@ -167,6 +167,9 @@ class Channel:
     def writing_cell(self):
         return WritingCell( self )
 
+    def cell(self):
+        return ReadingWritingCell( self )        
+
     """
     def put_save( self, value ):
         self.value = value
@@ -204,6 +207,7 @@ class Channel:
 """
 
 # ячейка для чтения
+# отличается от канала тем что запоминает еще значение которое в нее писали
 class ReadingCell:
     def __init__(self,channel):
         self.channel = channel
@@ -302,6 +306,88 @@ class WritingCell:
             #self.list_waiting_value = True
             # вроде как это не надо.. когда придет значение список уже будет
             pass
+
+    # todo в дектораторы это
+    # #F-ENCODING
+    def set_encoder(self,encoder_fn):
+        self.encoder_fn = encoder_fn
+        return self
+    def set_encoder(self,decoder_fn):
+        self.decoder_fn = decoder_fn
+        return self
+
+# ячейка для записи и для чтения тоже
+"""
+если в ячейке размещено значение, 
+а затем происходит подключение слушателя(слушателей)
+то им посылается это значение
+
+ячейка запоминает .value - последнее полученнное значение, для локального чтения.
+
+если значение установили извне - она тоже запоминает.
+
+todo оптимизировать как-то. react например на листе делать
+"""
+class ReadingWritingCell:
+    def __init__(self,channel):        
+        self.channel = channel
+        self.id = self.channel.id
+        self.is_channel = True
+        self.has_value = False
+        self.value = None
+        
+        self.list = channel.rapi.get_list_now( self.channel.id )
+        self.list.added.react( self.on_added )
+        self.list.inited.react( self.on_inited )
+
+        self.encoder_fn = None
+        self.decoder_fn = None
+        # а кстати вопрос. от пусть у нас в клиенте уже есть этот список
+        # получается мы ни разу не получим inited/added. и не пошлем. хм.
+        # но как бы ну и что. мы при нашем put вызовем получается 
+        # реакции этого уже существующего списка
+
+        # новинка. эта ячейка должна явно вычитывать что в нее пишут..
+        # точнее ну как в нее. в ее процесс передачи информации
+        # чтобы обновлять значение, которое она собралась отсылать
+        # новичкам. все это странно становится
+        # self.channel.react( self.update_value )
+
+        self.channel.react(self.changed)
+        self.is_channel = True
+
+    def changed(self,value):
+        self.value = value
+        self.has_value = True
+    
+    def put(self,value):
+        self.channel.put(value)
+        # это вызовет реакцию и changed, см выше
+        # но вызовет как-то асинхронно чем перезатрет нам мб значения..
+        self.changed(value) # посему ускорим процессы...
+        # но вообще это странно и todo с этим надо разобраться
+        return self        
+
+    def react(self,fn):
+        return self.channel.react(fn)
+
+    # подключился новый слушатель
+    def on_added(self,r_id):
+        #print(self.id,"WritingCell: new listener added, r_id=",r_id,"self.has_value=",self.has_value)
+        # необходимости отдельно рассылать если у ячейки нет значения нет, 
+        # т.к. это будет сделано по признаку list_waiting_value
+        if self.has_value: # todo optimize            
+            #print(self.id,"WritingCell: sending value to newcomer",self.value)            
+            msg = self.channel.value_to_message(self.value)
+            t = self.list.list_msg_to_one( r_id, msg )
+            self.channel.rapi.add_async_item( t )
+
+    # подключился список слушателей к нашей ячейке
+    def on_inited(self,arg):
+        if self.has_value:
+            msg = self.channel.value_to_message(self.value)
+            t = self.list.list_msg( msg )
+            self.channel.rapi.add_async_item( t )
 
     # todo в дектораторы это
     # #F-ENCODING
