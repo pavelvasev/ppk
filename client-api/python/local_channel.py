@@ -4,11 +4,12 @@ class Channel:
     def __init__(self):
         self.reactions = {}
         self.rcnt = 0
-        self.is_channel = True
+        self.is_channel = True        
 
     def put(self,value):
         for fn in self.reactions.values():
             fn(value)
+        return self
 
     def react(self, fn ):
         myid = self.rcnt
@@ -47,16 +48,36 @@ class Cell(Channel):
     def __init__(self, initial_value):
         super().__init__()
         self.value = initial_value
+        #self.is_cell = True
         def set_value(x):
             self.value = x
         self.react( set_value )
+
+class Cell2():
+    def __init__(self):
+        self.channel = Channel()
+        self.is_channel = True
+        self.is_cell = True
+        self.is_set = False
+
+    def put(self,value):
+        self.value = value
+        self.is_set = True
+        self.channel.put( value )        
+        return self
+
+    def react(self, fn ):
+        if self.is_set:
+            fn( self.value )
+        return self.channel.react( fn )
 
 # эксперимент
 def as_cell( channel, initial_value=None ):
     channel.value = initial_value
     def set_value(x):
-        channel.value = x 
+        channel.value = x
     channel.react( set_value )
+    # todo маловато будет.. надо еще при новых react рассылать значения..
     return channel
 
 

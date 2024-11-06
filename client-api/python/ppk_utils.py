@@ -137,7 +137,7 @@ class FileWriterCh():
         self.input.react( write )
         self.stop.react( self.close )
 
-    def close(self):
+    def close(self,msg=None):
         self.f.close()
 
 ### локальная версия

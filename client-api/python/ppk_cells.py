@@ -286,7 +286,7 @@ class WritingCell:
         # необходимости отдельно рассылать если у ячейки нет значения нет, 
         # т.к. это будет сделано по признаку list_waiting_value
         if self.has_value: # todo optimize            
-            #print(self.id,"WritingCell: sending value to newcomer",self.value)            
+            print(self.id,"WritingCell: sending value to newcomer",r_id)
             msg = self.channel.value_to_message(self.value)
             t = self.list.list_msg_to_one( r_id, msg )
             self.channel.rapi.add_async_item( t )
@@ -338,6 +338,7 @@ class ReadingWritingCell:
         
         self.list = channel.rapi.get_list_now( self.channel.id )
         self.list.added.react( self.on_added )
+        self.list.removed.react( self.on_removed )
         self.list.inited.react( self.on_inited )
 
         self.encoder_fn = None
@@ -371,13 +372,17 @@ class ReadingWritingCell:
     def react(self,fn):
         return self.channel.react(fn)
 
+    def on_removed(self,r_id):    
+        print("RWCEll on_removed:",r_id)
+
     # подключился новый слушатель
     def on_added(self,r_id):
+        print("RWCEll on_added:",r_id,self.id)
         #print(self.id,"WritingCell: new listener added, r_id=",r_id,"self.has_value=",self.has_value)
         # необходимости отдельно рассылать если у ячейки нет значения нет, 
         # т.к. это будет сделано по признаку list_waiting_value
         if self.has_value: # todo optimize            
-            #print(self.id,"WritingCell: sending value to newcomer",self.value)            
+            print(self.id,"ReadingWritingCell: sending value to newcomer",r_id)
             msg = self.channel.value_to_message(self.value)
             t = self.list.list_msg_to_one( r_id, msg )
             self.channel.rapi.add_async_item( t )
@@ -385,6 +390,7 @@ class ReadingWritingCell:
     # подключился список слушателей к нашей ячейке
     def on_inited(self,arg):
         if self.has_value:
+            print("RWCELL: on_inited, sending value to all list",self.id)
             msg = self.channel.value_to_message(self.value)
             t = self.list.list_msg( msg )
             self.channel.rapi.add_async_item( t )

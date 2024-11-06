@@ -243,6 +243,9 @@ class ReactionsList:
     # посылка для одной реакции
     # вообще выгоднее сразу всем послать и потом всех ждать
     async def list_msg_to_one(self,recipient_reaction_id,value):
+        #print("list_msg_to_one: ",recipient_reaction_id)
+        if not recipient_reaction_id in self.list:
+            return
         r = self.list[ recipient_reaction_id ]
         f = r["action"]["fn"]
         #f = recipient_reaction["action"]["fn"]
@@ -253,6 +256,7 @@ class ReactionsList:
     # посылка сообщения в список
     # ну может не list_msg а что-то другое. но пока так
     async def list_msg(self,value):
+        #print("list_msg: keys=",self.list.keys())        
         reactions = self.list.values()
         await self.is_inited
         res_arr = []
@@ -461,8 +465,13 @@ class Client:
         if self.verbose:
             print("msg operation. msg=",msg)
         crit = msg["label"]
-        rlist = self.get_list_now( crit )
+        rlist = self.get_list_now( crit )                
         await rlist.is_inited #self.get_list( crit )
+        #print("rapi msg crit=",crit)
+        #traceback.print_stack()
+
+        await rlist.list_msg( msg )
+        """
         reactions = rlist.list.values()
         #print("running reactions",reactions)
         res_arr = []
@@ -474,9 +483,11 @@ class Client:
                 res_arr.append( res )
             # todo отмена обработки
 
+
         # это что за красота интересно и зачем
         # но кстати это может быть затем, что там асинхронные операции отправки
         await asyncio.gather( *res_arr )
+        """
 
     # idea разместить счетчик N прямо в реакции?
     # action - это словарь с описанием действия
