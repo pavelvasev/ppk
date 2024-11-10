@@ -44,6 +44,7 @@ class SyncAsyncQueue:
     def add_async_item(self,item):
         #print(self.title,": add item",item)
         self.sync_async_queue.put_nowait( item )
+        #asyncio.create_task( item )
 
     async def process(self):
         #print("sync_async_queue: process start")
@@ -52,7 +53,9 @@ class SyncAsyncQueue:
             item = await self.sync_async_queue.get()
             #print(self.title,": got item, awaiting",item)
             try:
+                #print("-----> await begin")
                 await item
+                #print("-----> await end")
                 #print(self.title,": item awaited OK",item)
             except Exception as error:
                 # handle the exception

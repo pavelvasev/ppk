@@ -30,7 +30,8 @@ import ppk.ppk_payloads_shmem2 as ppk_payloads
 import ppk.ppk_link as ppk_link
 import ppk.ppk_task as ppk_task
 import ppk.ppk_request as ppk_request
-import ppk.sync_async_queue_v2 as sync_async_queue_v2
+import ppk.sync_async_queue_v2 as sync_async_queue
+#import ppk.sync_async_queue_v3 as sync_async_queue
 
 
 from ppk.ppk_starter import *
@@ -195,7 +196,7 @@ class Operations:
 
 # идея https://github.com/dask/distributed/blob/main/distributed/scheduler.py#L161
 DEFAULT_EXTENSIONS = {
-    "sync_async_queue": sync_async_queue_v2.Feature,
+    "sync_async_queue": sync_async_queue.Feature,
     "channels": ChannelFeature,
     "link": ppk_link.LinkFeature,
 

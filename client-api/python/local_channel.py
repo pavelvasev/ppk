@@ -53,7 +53,8 @@ class Cell(Channel):
             self.value = x
         self.react( set_value )
 
-class Cell2():
+# ячейка с ресабмитом для вновь-подключащихся, и value помнит
+class Cell1():
     def __init__(self):
         self.channel = Channel()
         self.is_channel = True
