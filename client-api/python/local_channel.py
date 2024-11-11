@@ -29,11 +29,14 @@ class Link:
     def __init__(self,src,tgt):
         self.unsub = src.react( lambda x: tgt.put(x) )
         # логика подключения к ячейкам - передача установленных значений...
-        if hasattr(src,"value") and src.value is not None:
-            tgt.put( src.value)
+        # но с другой стороны это уже не надо - ячейки сами вызовут react-функцию
+
+        #if hasattr(src,"value") and src.value is not None:
+        #    tgt.put( src.value)
 
     def stop(self):
-        self.unsub()
+        if self.unsub is not None:
+            self.unsub()
         self.unsub = None
 
 def create_link( src,tgt ):
@@ -44,7 +47,7 @@ def bind( src,tgt ):
 
 # это пока простая ячейка которая хранит входящее значение
 # без ресабмита при подключении других, без входящего сабмита, и без проверки изменений
-class Cell(Channel):
+class Cell0(Channel):
     def __init__(self, initial_value):
         super().__init__()
         self.value = initial_value
@@ -54,12 +57,16 @@ class Cell(Channel):
         self.react( set_value )
 
 # ячейка с ресабмитом для вновь-подключащихся, и value помнит
-class Cell1():
-    def __init__(self):
+class Cell():
+    def __init__(self,maybe_initial_value=None):
         self.channel = Channel()
         self.is_channel = True
         self.is_cell = True
         self.is_set = False
+        self.value = None
+        if maybe_initial_value is not None:
+            self.is_set = True
+            self.value = maybe_initial_value
 
     def put(self,value):
         self.value = value
