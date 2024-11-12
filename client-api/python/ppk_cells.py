@@ -15,6 +15,10 @@ todo
 - ppk.channel, ppk.when_all .... ? такое было конечно уже с промисами
   но тут другое..
 
+IDEA
+добавить проверку записываемых значений. можно кстати на любом уровне,
+хоть канала хоть ячейки хоть вообще внешний проверяльщик. Типы, диапазоны, и пр.  
+
 REASON
 пишем и читаем с ключем value
 читаем тоже с ним иначе глупость получается - записали объект (через submit)
@@ -286,7 +290,7 @@ class WritingCell:
         # необходимости отдельно рассылать если у ячейки нет значения нет, 
         # т.к. это будет сделано по признаку list_waiting_value
         if self.has_value: # todo optimize            
-            print(self.id,"WritingCell: sending value to newcomer",r_id)
+            #print(self.id,"WritingCell: sending value to newcomer",r_id)
             msg = self.channel.value_to_message(self.value)
             t = self.list.list_msg_to_one( r_id, msg )
             self.channel.rapi.add_async_item( t )
@@ -373,16 +377,17 @@ class ReadingWritingCell:
         return self.channel.react(fn)
 
     def on_removed(self,r_id):    
-        print("RWCEll on_removed:",r_id)
+        #print("RWCEll on_removed:",r_id)
+        pass
 
     # подключился новый слушатель
     def on_added(self,r_id):
-        print("RWCEll on_added:",r_id,self.id)
+        #print("RWCEll on_added:",r_id,self.id)
         #print(self.id,"WritingCell: new listener added, r_id=",r_id,"self.has_value=",self.has_value)
         # необходимости отдельно рассылать если у ячейки нет значения нет, 
         # т.к. это будет сделано по признаку list_waiting_value
         if self.has_value: # todo optimize            
-            print(self.id,"ReadingWritingCell: sending value to newcomer",r_id)
+            #print(self.id,"ReadingWritingCell: sending value to newcomer",r_id)
             msg = self.channel.value_to_message(self.value)
             t = self.list.list_msg_to_one( r_id, msg )
             self.channel.rapi.add_async_item( t )
@@ -390,7 +395,7 @@ class ReadingWritingCell:
     # подключился список слушателей к нашей ячейке
     def on_inited(self,arg):
         if self.has_value:
-            print("RWCELL: on_inited, sending value to all list",self.id)
+            #print("RWCELL: on_inited, sending value to all list",self.id)
             msg = self.channel.value_to_message(self.value)
             t = self.list.list_msg( msg )
             self.channel.rapi.add_async_item( t )
