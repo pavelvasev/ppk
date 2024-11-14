@@ -127,7 +127,8 @@ class FileWriterCh():
         self.f = open(filename, "w")
         self.input = ppk.local.Channel()
         # канал для вызова close
-        # но формально это второй интерфейс. эксперимент что удобнее
+        # но формально это второй интерфейс (первый это метод close). 
+        # эксперимент что удобнее
         self.stop = ppk.local.Channel()
 
         def write(msg):
@@ -143,11 +144,11 @@ class FileWriterCh():
 ### локальная версия
 class StartProcessCh():
     # idea: prefix
-    def __init__( self):
+    def __init__( self ):
         #self.input = self.open_channel("input")
         self.stdout = ppk.local.Channel()
         self.stderr = ppk.local.Channel()
-        self.finish = ppk.local.as_cell( ppk.local.Channel() )
+        self.finish = ppk.local.Cell()
         # todo stdin, terminate / kill 
 
     async def init(self, cmd, args=[], env_vars={}, opts={}):

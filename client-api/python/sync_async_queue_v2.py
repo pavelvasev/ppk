@@ -48,9 +48,10 @@ class SyncAsyncQueue:
 
     async def process(self):
         #print("sync_async_queue: process start")
-        while True:
+        while True:            
             #print(self.title,": waiting new item")
             item = await self.sync_async_queue.get()
+            #print("####QSIZE=",self.sync_async_queue.qsize())
             #print(self.title,": got item, awaiting",item)
             try:
                 #print("-----> await begin")
