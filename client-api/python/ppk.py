@@ -316,6 +316,7 @@ class Client:
         if "opcode" in obj and obj["opcode"] == "set":
             #q = self.lists[ obj["crit"] ].result()
             q = self.get_list_now( obj["crit"] )
+            #print("ppk client: new listener arrived",obj["crit"],obj["arg"]["name"],"---> messages will be sent")
             q.add( obj["arg"]["name"], self.entry_to_reaction( obj["arg"]["value"] ) )
             # надо послать микрособытие о подключении
         if "opcode" in obj and obj["opcode"] == "delete":

@@ -39,6 +39,7 @@ class StartProcess():
         #self.input = self.open_channel("input")
         self.stdout = rapi.channel(f"proc_{process_id_counter}_stdout")
         self.stderr = rapi.channel(f"proc_{process_id_counter}_stderr")
+        #self.finish = ppk.local.as_cell( rapi.channel(f"proc_{process_id_counter}_finish") )
         self.finish = ppk.local.as_cell( rapi.channel(f"proc_{process_id_counter}_finish") )
         # todo stdin, terminate / kill 
 

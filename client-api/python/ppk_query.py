@@ -55,7 +55,7 @@ class QueryTcp:
         #print("recepient_client_id=",recepient_client_id,"self.rapi.client_id=",self.rapi.client_id)
         if recepient_client_id == self.rapi.client_id:
             #cb = self.query_callbacks[ arg["query_id"] ]
-            #print("TARGET IS SAME!")
+            #print("TARGET IS SAME! query_id=",arg["query_id"],"label=",msg["label"])
             await self.on_packet( arg["query_id"], msg )
             return
 

@@ -3,6 +3,9 @@ import asyncio
 # Концепция "Каналов"
 
 """
+update текущая реализация ячеек плохая. надо явно обращаться с запросом
+на текущие данные. а не химичить. где-то это я уже недавно делал.
+
 todo
 - попробвоать with selected.react as msg: ....
         # почему-то не сделано до сих пор, а удобное будет
@@ -83,6 +86,7 @@ class Channel:
         self.id = id
         self.value = None # эксмперимент.. переход к ячейкам
         self.is_channel = True
+        self.debug=False
         # update но это не ячейковость а просто кеш прочитанного значения
         # с удобным аксессором на чтение
         # можно было бы просто и спец-функцию сделать
@@ -97,6 +101,8 @@ class Channel:
             return { "label": self.id, "value": value}
 
     async def submit( self, value ):
+        if self.debug:
+            print("channel: submitting value to rapi",self.id)
         await self.rapi.msg( self.value_to_message(value) )
 
     # todo это видимо не надо уже
@@ -270,15 +276,17 @@ class WritingCell:
         #print(self.id,"Writing cell update_value")
         self.value = value
         self.has_value = True
+        """
         if self.list_waiting_value:
             self.list_waiting_value = False
             t = self.list.list_msg( self.channel.value_to_message(self.value) )
             self.channel.rapi.add_async_item( t )
+        """    
 
     def put(self,value):
         self.update_value( value )
         #self.value = value
-        #self.has_value = True
+        #self.has_value = True        
         self.channel.put(value)
         return self
 
@@ -361,19 +369,41 @@ class ReadingWritingCell:
         self.channel.react(self.changed)
         self.is_channel = True
 
+        self.debug=False
+
+    def setdebug(self,v):
+        self.debug=v
+        self.channel.debug=v
+
     def changed(self,value):
         self.value = value
         self.has_value = True
+        if self.debug:
+            print('cell changed',self.id)
     
     def put(self,value):
+        if self.debug:
+            print("cell put",self.id)
         self.channel.put(value)
         # это вызовет реакцию и changed, см выше
         # но вызовет как-то асинхронно чем перезатрет нам мб значения..
+
         self.changed(value) # посему ускорим процессы...
         # но вообще это странно и todo с этим надо разобраться
-        return self        
+
+        # тестово отключил. ибо получалось двоение при отправке ньюкамерам
+        # ибо если почти сразу put, newcomer, ... rapi.msg то дважды
+
+        # self.value = value # но вот это надо сразу..
+        # ну вот потому что семантика такая.. считается если put то уж локально
+        # типа мол оно уж точно есть в доступе на чтение
+        # короче тут у нас жесточайший todo и косяк.
+        # надо еще раз и окончательно разобраться с этими якобы ячейками.
+        return self
 
     def react(self,fn):
+        if self.debug:
+            print("cell new react attached",self.id,fn)
         return self.channel.react(fn)
 
     def on_removed(self,r_id):    
@@ -387,7 +417,8 @@ class ReadingWritingCell:
         # необходимости отдельно рассылать если у ячейки нет значения нет, 
         # т.к. это будет сделано по признаку list_waiting_value
         if self.has_value: # todo optimize            
-            #print(self.id,"ReadingWritingCell: sending value to newcomer",r_id)
+            if self.debug:
+                print(self.id,"cell: have newcomer, sending value",self.id,"newcomerid=",r_id)
             msg = self.channel.value_to_message(self.value)
             t = self.list.list_msg_to_one( r_id, msg )
             self.channel.rapi.add_async_item( t )
