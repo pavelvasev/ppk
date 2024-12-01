@@ -32,7 +32,7 @@ class ChannelFeature:
         rapi.channel = self.channel
 
     def channel( self, id ):
-        print("ppk: open channel ",id)
+        #print("ppk: open channel ",id)
         c = Channel( self.rapi, id )
         return c
 

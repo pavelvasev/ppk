@@ -141,6 +141,26 @@ class FileWriterCh():
     def close(self,msg=None):
         self.f.close()
 
+# параметр - файл (а не имя)
+class FileWriterCh2():
+    def __init__( self, f):
+        self.f = f
+        self.input = ppk.local.Channel()
+        # канал для вызова close
+        # но формально это второй интерфейс (первый это метод close). 
+        # эксперимент что удобнее
+        #self.stop = ppk.local.Channel()
+
+        def write(msg):
+            if not self.f.closed:
+                self.f.write(msg)
+
+        self.input.react( write )
+        #self.stop.react( self.close )
+
+    #def close(self,msg=None):
+    #    self.f.close()
+
 ### локальная версия
 class StartProcessCh():
     # idea: prefix
@@ -197,6 +217,7 @@ class StartProcessCh():
             #print("spawning: cmd=",cmd,"args=",args,"other_opts=",other_opts)
             # https://docs.python.org/3/library/subprocess.html#subprocess.Popen
             opts["env"] = os.environ.copy() | env_vars
+            #print("PPK,opts=",opts)
             proc = await asyncio.create_subprocess_exec(cmd,*args,**opts,
                       stdin=asyncio.subprocess.DEVNULL,
                       stderr=asyncio.subprocess.PIPE,
@@ -213,6 +234,7 @@ class StartProcessCh():
             print("start_process: error! cmd=",cmd,"error=",str(ex))
             print(traceback.format_exc())
             #await self.set_status("Aborted", 0, str(exc))
+            return None
 
         async def wait_io():
             for t in tasks:
@@ -221,4 +243,4 @@ class StartProcessCh():
         proc.wait_io = wait_io
         self.proc = proc
 
-        return self        
+        return self

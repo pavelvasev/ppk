@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+# Сервер коммутации каналов
+
 # перенесен в client-api т.к. тогда удобно импортировать embeddedserver
 
 # todo https://websockets.readthedocs.io/en/stable/reference/asyncio/server.html#websockets.asyncio.server.basic_auth

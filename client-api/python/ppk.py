@@ -1,7 +1,5 @@
 #!/bin/env python3.9
 
-# todo: 1 несколько жобов (чето тупит) 2 слурм
-
 # Клиентское апи PPK на питоне
 
 import cloudpickle
