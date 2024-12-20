@@ -175,7 +175,10 @@ class QueryTcp:
             except:
                 print("-----------------------------")
                 print("query: exception in callback!")
-                traceback.print_exc()    
+                # stderr
+                traceback.print_exc() 
+                # stdout
+                print(traceback.format_exc())   
                 print("-----------------------------")
 
             nonlocal N,rhandle

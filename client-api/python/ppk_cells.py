@@ -114,7 +114,12 @@ class Channel:
         # todo мб таки 2 функции
         # todo от этого надо уходить
         def cba(msg):
-          v = msg["value"] if "value" in msg else None
+          #v = msg["value"] if "value" in msg else None
+          # хак!
+          #F-CHANNEL-REQUEST-HACK возможность в каналы передавать запросы (request)
+          # т.е. если послали не value а скажем arg то сообщение проползает целиком
+          # и там есть reply_id
+          v = msg["value"] if "value" in msg else msg
           
           # #F-PAYLOAD-PASS галиматья на тему пейлоадов и каналов
           # кстати также см grafix utils.js

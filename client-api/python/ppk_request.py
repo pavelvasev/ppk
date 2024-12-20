@@ -78,13 +78,13 @@ class RequestReplyFeature:
 
         if cb is None:
             print("warning: reply_callback not found for reply msg",reply_msg)
-        if "attach" in reply_msg:
-            reply_msg["result"]["attach"] = reply_msg["attach"]
+        if "payload" in reply_msg:
+            reply_msg["result"]["payload"] = reply_msg["payload"]
         res = cb( reply_msg["result"] )
         if inspect.isawaitable(res): 
             await res
         #
-        lambda msg: callback( msg["result"] )
+        #lambda msg: callback( msg["result"] )
            
 
     async def reply( self, input_msg, data ):
@@ -96,13 +96,13 @@ class RequestReplyFeature:
         output_msg = dict(input_msg["reply_msg"])
         
         output_msg["result"] = data
-        if isinstance( data,dict ) and "attach" in data:
-            output_msg["attach"] = data["attach"]
-            del data["attach"]
+        if isinstance( data,dict ) and "payload" in data:
+            output_msg["payload"] = data["payload"]
+            del data["payload"]
         """    
         if "tobytes" in data:
             output_msg["attach"] = data
-        else:    
+        else:
             
         """    
         return await self.rapi.msg( output_msg )

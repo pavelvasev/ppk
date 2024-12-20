@@ -7,13 +7,16 @@ import os
 import sys
 
 from aiohttp import web
+import aiohttp
 
 # https://docs.python.org/3/library/webbrowser.html
 """
 import webbrowser
 async def start_browser( url ):
     webbrowser.open(url, new = 2)
-""" 
+"""
+
+
 
 import atexit
 class Server:
@@ -39,9 +42,12 @@ class Server:
         await asyncio.sleep( 0.1 )
 
     # static_routes - словарь вида /url-prefix => fs_dir_pa`th
-    async def start( self,static_routes, port=0 ):
+    async def start( self,static_routes=None, port=0 ):
         app = self.app
         # https://docs.aiohttp.org/en/stable/web_reference.html#aiohttp.web.UrlDispatcher.add_static
+
+        if static_routes is None:
+            static_routes = dict()
 
         # приоритет
         js_api = os.path.abspath( os.path.join( os.path.dirname(__file__), "../js" ) )
@@ -54,7 +60,7 @@ class Server:
         # https://docs.aiohttp.org/en/stable/web_reference.html#running-applications
         runner = web.AppRunner(app)
         await runner.setup()
-        site = web.TCPSite(runner, '127.0.0.1', 0)
+        site = web.TCPSite(runner, '127.0.0.1', port)
         await site.start()
         self.runner = runner
         #print(runner.server.__dict__)
