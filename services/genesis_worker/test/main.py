@@ -4,9 +4,10 @@ import asyncio
 import ppk
 import os
 import time
-import sys
+import sys  
 import atexit
 import subprocess
+import ppk.genesis as gen
 
 # s = ppk.RemoteSlurm()
 # sw = ppk.LocalServer()
@@ -15,13 +16,13 @@ def on_worker_msg(msg):
     print("msg from worker: ",msg)
 
 async def start_worker_process(url, worker_id, input_channel_id, output_channel_id,logdir):
-    env = os.environ.copy() | {"PPK_INPUT_CHANNEL":input_channel_id,"PPK_OUTPUT_CHANNEL":output_channel_id,"PPK_URL":url}
+    env = os.environ.copy() | {"PPK_INPUT_CHANNEL":input_channel_id,"PPK_REPORT_CHANNEL":output_channel_id,"PPK_URL":url}
     log = os.open(f"{logdir}/{worker_id}.log",os.O_WRONLY | os.O_CREAT,0o644)
     logerr = os.open(f"{logdir}/{worker_id}.err.log",os.O_WRONLY | os.O_CREAT,0o644)
 
     # subprocess.popen уместнее было бы
-    p = await asyncio.create_subprocess_exec(sys.executable,"worker.py",env=env,stdin=subprocess.DEVNULL,stderr=logerr,stdout=log)
-    def cleanup():
+    p = await asyncio.create_subprocess_exec(sys.executable,"../ppk_genesis_worker.py",env=env,stdin=subprocess.DEVNULL,stderr=logerr,stdout=log)
+    def cleanup():        
         if p.returncode is None:
             p.terminate()
     atexit.register(cleanup)
@@ -54,22 +55,49 @@ async def main():
     workers_output_channel = rapi.channel("worker_outputs")
     workers_output_channel.react( on_worker_msg )
 
+    worker_cnt = 0
+    worker_wait = asyncio.Future()
+    def worker_attached( msg ):
+        nonlocal worker_cnt, worker_wait
+        worker_cnt = worker_cnt + 1
+        if worker_cnt == 4:
+            worker_wait.set_result(1)
+    workers_output_channel.react( worker_attached )    
+
     worker_channels = []
     if not os.path.exists("log"):
        os.mkdir("log",0o755)
     for x in range(0,4):
         ch = rapi.channel( f"wrk_{x}" ).cell()
-        ch.put( [11,12,13,14,15] )
+        #ch.put( [11,12,13,14,15] )
         worker_channels.append(ch)
         await start_worker_process( s_urls[0], f"wrk_{x}", ch.id, workers_output_channel.id,"log" )
 
-    await asyncio.sleep( 1 )
+    
+    
+    await worker_wait
     print("workers: started..")
 
-    # посылать не надо ибо ячейки
-    #for w in worker_channels:
-    #   w.put( [10,20,42] )
+    print("action")
 
+    #for w in worker_channels:
+    #    w.put( [10,20,42] )
+
+    #####
+    #nodes = gen.node( "print", text="privet",links_in={"input":["a1"]} )
+    #worker_channels[0].put( {"description":nodes})
+    nodes = gen.node( "print", text="privet",links_in={"input":["a1"]} )
+    worker_channels[0].put( {"description":nodes})
+    nodes = gen.node( "timer", links_out={"output":["a1"]} )
+    worker_channels[1].put( {"description":nodes})
+
+    # todo надо бы получить ответ (request)
+    await asyncio.sleep( 1 )
+
+    #a1 = rapi.channel("a1")
+    #a1.put(333)
+
+    print("done, waiting forever")
     await asyncio.sleep( 1*100000 )
  
     print("Exiting")
