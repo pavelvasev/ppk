@@ -50,7 +50,7 @@ def setup_http_ppk_bridge( rapi, app ):
         # можно бы и json если что читать
         #data = await request.read()
         params = request.rel_url.query
-        print("ppk put, params=",params)
+        print("ppk request, params=",params)
         label = params["label"]
         value = params["value"]
         ch_value = json.loads(value)
