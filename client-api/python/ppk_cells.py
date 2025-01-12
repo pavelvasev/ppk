@@ -94,9 +94,12 @@ class Channel:
     def value_to_message( self,value):
         if isinstance(value,dict) and "payload" in value:
             # #F-PAYLOAD-PASS 
+            # #F-SENDING-KEEP-PAYLOAD надо сохранять payload в оригинальном сообщении т.к. его еще будут посылать может быть
+            # поэтому мы делаем копию сообщения
             payload = value["payload"]
-            del value["payload"]
-            return { "label": self.id, "value": value, "payload": payload }
+            value_to_send = value.copy()
+            del value_to_send["payload"]
+            return { "label": self.id, "value": value_to_send, "payload": payload }
         else:
             return { "label": self.id, "value": value}
 

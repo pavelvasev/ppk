@@ -62,14 +62,21 @@ class QueryTcp:
         # print("do_query_send called",msg,arg)
         
         attach = None
+        sending_msg = msg
         if "payload" in msg:
             attach = msg["payload"]
             #if "tobytes" in attach:
                 #attach = attach.tobytes()
-            del msg["payload"]
+            # #F-SENDING-KEEP-PAYLOAD надо сохранять payload в оригинальном сообщении т.к. его еще будут посылать может быть
+            # поэтому мы делаем копию сообщения
+            # todo возможно тут это излишне - копию уже сделали в канале        
+            orig_msg = msg
+            sending_msg = msg.copy()
+            del sending_msg["payload"]
+
         query_id_bytes = arg["query_id"].to_bytes(4,"big")
         #packet = {"query_id": arg["query_id"],  "m": msg } ыыы
-        s = json.dumps( msg )
+        s = json.dumps( sending_msg )
         # print("do_query_send: encoded packet is len:",len(s))
         bytes = s.encode()
         #print("bytes="=)
@@ -84,6 +91,7 @@ class QueryTcp:
         
         client.write( query_id_bytes )
         client.write( len_bytes )
+        #print("ppk_query: sent message with attach of len",attach_len)
         client.write( attach_len_bytes ) # #F-MSGFORMAT-V2
         client.write( bytes )
         if attach is not None:
@@ -132,25 +140,31 @@ class QueryTcp:
             #print("query: msg server started:",adr,flush=True)
             self.results_url_promise.set_result( {"url":sadr,"host":adr[0],"port":adr[1],"client_id":self.rapi.client_id} )
             
+            # https://github.com/python/cpython/blob/main/Lib/asyncio/base_events.py#L380
             task = asyncio.create_task( self.server.serve_forever() )
             #print("created task ttt",task)
             async def close_site():
+                
+                #print("ppk_query: close_site - stopping q", task)
                 """
-                print("stopping q", task)
                 print("stopping server",dir(self.server), self.server.sockets )
+
                 for s in self.server.sockets:
                     print("s=",dir(s))
                     s.shutdown()
-                """    
+                """
                 task.cancel()
                 try:
-                    #print("enter task await")                    
+                    #print("enter task await, server =",self.server)
+                    #print("methods=",dir(self.server))
+                    # короче это ток в питоне 3.13 #todo
+                    #self.server.close_clients() # hack см https://github.com/python/cpython/issues/123720
                     await task
                     self.server.close()
                     await self.server.wait_closed()
                     #print("task await done is_serving()=",self.server.is_serving())
                 except asyncio.CancelledError:                    
-                    #print("stopping q done")
+                    #print("stopping q done - CancelledError")
                     return
 
             self.rapi.atexit( close_site )
@@ -230,8 +244,9 @@ class QueryTcp:
             if not s:
                 print("strange decoded str len=0, btw data=",data)
 
-            attach = None    
-            if len_att > 0:
+            attach = None
+            #print("ppk_query: incoming message attach len=",len_att)
+            if len_att > 0:                
                 attach = await reader.readexactly(len_att)
 
             await self.on_message( query_id, s,attach )

@@ -395,10 +395,11 @@ class Client:
             return
         self.exited = True        
 
-        print("rapi: exit: calling exit_callbacks")
+        print("rapi: exit: calling exit_callbacks, total",len(self.exit_callbacks))
         for x in self.exit_callbacks:
-            #print("...")
+            print("... waiting exit callback",x)
             await x()
+            print("... done waiting",x)
         self.exit_callbacks = []
         print("rapi: exit: callbacks finished. closing ws connection")
         await self.ws.close()
