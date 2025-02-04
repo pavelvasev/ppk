@@ -33,6 +33,7 @@ class ChannelFeature:
     def __init__(self,rapi):
         self.rapi = rapi
         rapi.channel = self.channel
+        rapi.cell = self.cell
 
     def channel( self, id ):
         #print("ppk: open channel ",id)
@@ -47,8 +48,8 @@ class ChannelFeature:
             - не сабмит если значение не поменялось..
             - хранит ли она очередь сообщений? в js хранит..
         """
-        c = Cell( self.rapi, id )
-        return c
+        #c = Cell( self.rapi, id )
+        return self.channel(id).cell()
 
 # по мотивам WritingCell
 class WritingChannel:
@@ -264,6 +265,9 @@ class WritingCell:
         self.value = None
         self.list_waiting_value = False
         self.list = channel.rapi.get_list_now( self.channel.id )
+        # 2025-01 так может зря я на списки в этом деле опираюсь? пусть они сами себе запрашивают
+        # если им надо - этож вопрос контекста (где размещать ответственность)
+
         self.list.added.react( self.on_added )
         self.list.inited.react( self.on_inited )
 
@@ -447,6 +451,10 @@ class ReadingWritingCell:
     def set_encoder(self,decoder_fn):
         self.decoder_fn = decoder_fn
         return self
+
+    # почему-то показалось логично
+    def get(self):
+        return self.value
 
 
 ################################################
