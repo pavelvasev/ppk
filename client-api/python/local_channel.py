@@ -87,6 +87,14 @@ def as_cell( channel, initial_value=None ):
     channel.react( set_value )
     # todo маловато будет.. надо еще при новых react рассылать значения..
     return channel
+    
+def reader( channel, initial_value=None ):
+    channel.value = initial_value
+    def set_value(x):
+        channel.value = x
+    channel.react( set_value )
+    # todo маловато будет.. надо еще при новых react рассылать значения..
+    return channel    
 
 
 class WhenAll():

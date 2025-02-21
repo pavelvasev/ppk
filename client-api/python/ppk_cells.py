@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 # Концепция "Каналов"
 
@@ -109,6 +110,14 @@ class Channel:
             print("channel: submitting value to rapi",self.id)
         await self.rapi.msg( self.value_to_message(value) )
 
+    # вариант когда уже вызвано value_as_message = self.value_to_message(value) 
+    # он необходим чтобы проверять что значения сериализуемы, 
+    # иначе потом по стеку не видно в режиме с очередями
+    async def submit_prepared( self, value_as_message ):
+        if self.debug:
+            print("channel: submitting value to rapi",self.id)
+        await self.rapi.msg( value_as_message )
+
     # todo это видимо не надо уже
     async def read(self):
         async for msg in self.rapi.query_for( self.id ):
@@ -147,7 +156,8 @@ class Channel:
     # хотя на первое время достаточно будет просто submit-ов
     # F-PYTHON-SYNC
     def put( self, value ):
-        t = self.submit( value )
+        value_as_message = self.value_to_message(value)         
+        t = self.submit_prepared( value_as_message )
         self.rapi.add_async_item( t )
         return self
 
