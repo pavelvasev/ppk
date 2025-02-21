@@ -4,7 +4,8 @@ class Channel:
     def __init__(self):
         self.reactions = {}
         self.rcnt = 0
-        self.is_channel = True        
+        self.is_channel = True
+        self.is_local_channel = True
 
     def put(self,value):
         for fn in self.reactions.values():
@@ -87,6 +88,15 @@ def as_cell( channel, initial_value=None ):
     channel.react( set_value )
     # todo маловато будет.. надо еще при новых react рассылать значения..
     return channel
+
+# эксперимент в поисках нужных абстракций. as_cell выше по смыслу это ну процесс чтения
+def reader( channel, initial_value=None ):
+    channel.value = initial_value
+    def set_value(x):
+        channel.value = x
+    channel.react( set_value )
+    # todo маловато будет.. надо еще при новых react рассылать значения..
+    return channel    
 
 
 class WhenAll():

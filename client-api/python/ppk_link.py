@@ -10,13 +10,16 @@ crit заменить на возможность указать объекты.
 import asyncio
 import json
 import os
+import ppk
 
+# глобальная связь
+# todo создать уже универсальный метод создания ссылок между локальными, между глобальными, вперемешку
 class LinkFeature:
 
     def __init__(self,rapi):
         self.rapi = rapi
         rapi.link = self.link
-        rapi.bind = self.link_sync
+        rapi.bind = self.universal_link
         # create_link ? в js так
         rapi.operations.do_forward = self.do_forward
 
@@ -41,6 +44,22 @@ class LinkFeature:
         await self.rapi.msg( msg )
 
     # F-PYTHON-SYNC
+    """
     def link_sync( self, src_crit, tgt_crit):
         t = self.link( src_crit, tgt_crit )
-        self.rapi.add_async_item( t )
+        unsub_fn = self.rapi.add_async_item( t )
+        return unsub_fn
+    """
+
+    # развитие - смешанный универсальный создаватель связей
+    # возвращает функцию удаления связи
+    # итого: rapi.bind( .... )
+    def universal_link( self, src_crit, tgt_crit):
+        if hasattr( src_crit, "is_local_channel" ):
+            # todo проверить что tgt_crit это скажем не строка
+            l = ppk.local.Link( src_crit, tgt_crit )
+            return l.stop
+        else:
+            t = self.link( src_crit, tgt_crit )
+            unsub_fn = self.rapi.add_async_item( t )
+            return unsub_fn
