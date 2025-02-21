@@ -188,7 +188,7 @@ class QueryTcp:
                     await res
             except:
                 print("-----------------------------")
-                print("query: exception in callback!")
+                print("query: exception in callback! crit=",crit,"callback=",callback)
                 # stderr
                 traceback.print_exc() 
                 # stdout

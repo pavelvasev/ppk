@@ -149,7 +149,12 @@ class Channel:
             await cb(msg)
           else:
             cb(msg)
-        await self.rapi.query( self.id,cba,N )
+        rhandle = await self.rapi.query( self.id,cba,N )
+
+        async def unsubscribe():
+            await self.rapi.delete( rhandle )
+
+        return unsubscribe
 
     # синхронные версии submit, subscribe
     # idea - мб возвращать промису по которой можно узнать что дело сделано
@@ -165,8 +170,16 @@ class Channel:
     def react( self, cb, N=-1 ):
         t = self.subscribe( cb,N )
         self.rapi.add_async_item( t )
+
+        async def unsubscribe():
+            # todo тут ошибки могут быть, но по идее не должно т.к. все через очередь проходит
+            # и сначал абудет сабскрайб а потом этот unsubscribe
+            unsub_fn = t.result()
+            await unsub_fn()
+
         def stop():
-            pass
+            self.rapi.add_async_item( unsubscribe() )
+
         return stop
 
     # удобная вещь вроде.. прочитать следующее значение..
