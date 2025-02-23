@@ -2,6 +2,10 @@
 
 # Клиентское апи PPK на питоне
 
+"""
+ideas: ppk.react( c1, c2, ..., fn ) по аналогии с ppk.bind
+"""
+
 import cloudpickle
 
 import asyncio

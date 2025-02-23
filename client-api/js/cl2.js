@@ -690,10 +690,11 @@ export function when_all( list ) {
 			let unsub
 			let need_unsub
 			if (!k.subscribe) {
-				console.error("when-all: list element have no subscribe method. index=",index,"k=", k+"","list=",list,"q2=",q2+'')
+				//console.error("when-all: list element have no subscribe method. index=",index,"k=", k+"","list=",list,"q2=",q2+'')
 			}
 			k.once( (v) => {
 				counter--
+				//console.log("when-all arrived index ",my_index,"with value",v)
 				values[ my_index ] = v
 			    if (counter == 0)
 			    	enter_mode_2()		    	
@@ -706,13 +707,13 @@ export function when_all( list ) {
 
     // mode 2 - теперь реагируем на любого
 	function enter_mode_2() {
-		//console.log("mode 2 emit to q",values)
+		//console.log("when-all mode 2 emit to q",values)
 		q.emit( values )
 
 		unsubs = list.map( (s,index) => s.subscribe( (val) => ff(val,index)))
 
 		function ff( value, index) {
-			//console.log("mode 2 emit to q index=",index,value)
+			//console.log("when-all mode 2 got value for emit to q, index=",index,"value=",value)
 			values[index] = value
 			q.emit( values )
 		}

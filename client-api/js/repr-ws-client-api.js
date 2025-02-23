@@ -95,6 +95,7 @@ class ReprWsClientApi {
          }
 
          let cb =  this.query_dic[json.query_reply]
+         //console.log("REPR-WS: got message",json.m,"passing to cb",cb)
             if (cb) 
               cb( json.m ) 
             else console.error('no query with id ',json.query_reply)   

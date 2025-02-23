@@ -84,7 +84,9 @@ def create_children( rapi, obj, items ):
 
 def ch_assign_attrs( obj, params):
     #print("params=",params)
-    for name in params:
+    for name in params:        
+        #path = name.split(".")        
+        #attr = path[-1]
         attr = name
         if hasattr( obj, attr ):
             val = getattr(obj,attr)
