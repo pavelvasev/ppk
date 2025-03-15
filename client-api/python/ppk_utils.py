@@ -219,10 +219,12 @@ class StartProcessCh():
             # https://docs.python.org/3/library/subprocess.html#subprocess.Popen
             opts["env"] = os.environ.copy() | env_vars
             #print("PPK,opts=",opts)
+            io_buf_size = 1024*1024*4 #F-FIX-JSON-LINE = нужны длинные строки, иначе обрыв json происходит.. PUT: jsonstr случай
             proc = await asyncio.create_subprocess_exec(cmd,*args,**opts,
                       stdin=asyncio.subprocess.DEVNULL,
                       stderr=asyncio.subprocess.PIPE,
                       stdout=asyncio.subprocess.PIPE,
+                      limit=io_buf_size,
                       #bufsize=bufsize,
                       start_new_session=True)
             tasks = []

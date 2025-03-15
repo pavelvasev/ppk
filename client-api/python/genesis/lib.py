@@ -51,11 +51,13 @@ def create_objects(rapi, description, parent_id):
         create_object( rapi, description, parent_id )
 
 def create_object(rapi, description, parent_id):
-    print("genesys: create_object type=",description["type"])
+    print("genesis: create_object type=",description["type"])
     if not description["type"] in types:
         print("========================= error")
         print("create_object: cannot find fn for type",description["type"],"description=",description)
         print("=========================")
+        # надо все-таки ошибку, а то оно молча продолжает работать
+        raise Exception('genesis', 'type not found',description["type"])
         return False
 
     fn = types[description["type"]]
