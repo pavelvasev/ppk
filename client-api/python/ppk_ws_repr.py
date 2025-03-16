@@ -77,7 +77,7 @@ class WebsocketReprSrv:
                 #elif cmd == "put":
                     #msg_to_send = msg["msg"]
                     #await self.rapi.msg( msg_to_send )
-                else:
+                else:                    
                     #msg["client_ip"] = websocket.remote_address[0]
                     #print("REPR MSG=",msg)
                     await self.rapi.msg( msg )
