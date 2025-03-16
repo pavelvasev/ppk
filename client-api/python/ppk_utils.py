@@ -43,6 +43,8 @@ class StartProcess():
         self.finish = ppk.local.as_cell( rapi.channel(f"proc_{process_id_counter}_finish") )
         # todo stdin, terminate / kill 
 
+    # это кстати глупость, что cmd отдельно аргументы отдельно..
+    # так то они все едино - кортеж
     async def init(self, cmd, args=[], env_vars={}, opts={}):
 
         #bufsize = io.DEFAULT_BUFFER_SIZE # почему то не зашло : 64*1024
