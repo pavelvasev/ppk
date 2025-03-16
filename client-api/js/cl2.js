@@ -677,47 +677,34 @@ export function when_all( list ) {
 	let b = create_binding_delayed( q, q2 )
 	//SSconsole.log("create_binding_when_any, list=",list)
 	let values = new Array( list )
+	let masks = new Array( list )
 	let unsubs = []
 
-	enter_mode_1()
+	let mode_gathered = false;
 
-	// mode 1 - набираем чтобы сработали все
-	function enter_mode_1() {
-		let counter = list.length
-		let index = 0
-		for (let k of list) {
-			let my_index = index
-			let unsub
-			let need_unsub
-			if (!k.subscribe) {
-				//console.error("when-all: list element have no subscribe method. index=",index,"k=", k+"","list=",list,"q2=",q2+'')
-			}
-			k.once( (v) => {
-				counter--
-				//console.log("when-all arrived index ",my_index,"with value",v)
-				values[ my_index ] = v
-			    if (counter == 0)
-			    	enter_mode_2()		    	
-			    // надо делать через шедуле.. а то там соединиться не успевают.. create_binding( when-all, ... )
-			})
-
-			index++
-		}
-	}
-
-    // mode 2 - теперь реагируем на любого
-	function enter_mode_2() {
-		//console.log("when-all mode 2 emit to q",values)
-		q.emit( values )
-
-		unsubs = list.map( (s,index) => s.subscribe( (val) => ff(val,index)))
-
-		function ff( value, index) {
+  function ff( value, index) {
 			//console.log("when-all mode 2 got value for emit to q, index=",index,"value=",value)
 			values[index] = value
-			q.emit( values )
-		}
+
+			if (mode_gathered) {
+				q.emit( values )
+				return 
+			}
+
+			masks[index] = 1
+			let counter = list.length
+			for (let i in list)
+				if (list[i]) counter --;
+
+			if (counter == 0) {
+				mode_gathered = true;
+				q.emit( values )
+			}
 	}
+
+
+	unsubs = list.map( (s,index) => s.subscribe( (val) => ff(val,index)))
+
 	let orig = q2.destroy.bind(q2)
 
 	q2.destroy = () => {

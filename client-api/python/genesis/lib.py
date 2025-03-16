@@ -51,11 +51,13 @@ def create_objects(rapi, description, parent_id):
         create_object( rapi, description, parent_id )
 
 def create_object(rapi, description, parent_id):
-    print("genesys: create_object type=",description["type"])
+    print("genesis: create_object type=",description["type"])
     if not description["type"] in types:
         print("========================= error")
         print("create_object: cannot find fn for type",description["type"],"description=",description)
         print("=========================")
+        # надо все-таки ошибку, а то оно молча продолжает работать
+        raise Exception('genesis', 'type not found',description["type"])
         return False
 
     fn = types[description["type"]]
@@ -73,7 +75,8 @@ def create_object(rapi, description, parent_id):
     if "tags" in description:
         register_object_tags( description["tags"], obj )
         # вот так объект мог бы узнать о тегах. да и об id тоже. но пока не надо
-        #obj.tags = description["tags"]
+        # да вроде уже надо
+        obj.tags = description["tags"]
 
     return obj
 
@@ -93,11 +96,13 @@ def ch_assign_attrs( obj, params):
             if hasattr( val, "is_channel" ):
                 # канал
                 val.put( params[name] )
+                print("genesis: ch_assign_attrs: setting channel name =",name)
             else:
                 # константа
                 setattr(obj,attr,params[name])
+                print("genesis: ch_assign_attrs: setting const param name =",name)
         else:
-            print("ch_assign_attrs: cannot find attr for param=",name,"of object",obj)
+            print("genesis: ch_assign_attrs: cannot find attr for param=",name,"of object",obj)
 
 
 def ch_bind_in_links(rapi, obj, links_in):
@@ -107,15 +112,22 @@ def ch_bind_in_links(rapi, obj, links_in):
         if local_channel:  # todo проверить что это канал
             for ch_name in sources:
                 #print("ch_bind_in_links: query ", ch_name, "to local_name=", local_name)
-                def callback(value):
-                    #print("IN_LINK: local channel CB",local_name,"<--",ch_name)
-                    """ todo
-                    if hasattr(msg, 'payload'):
-                        if hasattr(msg, 'value'):
-                            msg.value.payload = msg.payload
-                    """        
-                    #print("in-links eeee msg!", local_name, msg)
-                    local_channel.put(value)
+
+                def mk_cb( local_channel, local_name ):
+                    # todo 1 а почему тут не bind вообще?
+                    # 2 и также бы сделать через bind :initial_value. надо подумать.
+                    def callback(value):
+                        #print("IN_LINK: local channel CB",local_name,"<--",ch_name)
+                        """ todo
+                        if hasattr(msg, 'payload'):
+                            if hasattr(msg, 'value'):
+                                msg.value.payload = msg.payload
+                        """        
+                        #print("in-links eeee msg!", local_name, value)
+                        local_channel.put(value)
+                    return callback
+
+                callback = mk_cb( local_channel, local_name )
                 rapi.channel(ch_name).react( callback )
 
                 rapi.channel(ch_name+":initial_value").react( callback, 1 )
@@ -131,15 +143,19 @@ def ch_bind_out_links(rapi, obj, links):
         local_channel = getattr(obj,local_name)
         if local_channel:
 
-            global_channels = []
-            for ch_name in globals:
-                global_channels.append( rapi.channel(ch_name) )
+            def mk_cb( globals ):
+                global_channels = []
+                for ch_name in globals:
+                    global_channels.append( rapi.channel(ch_name) )
 
-            def callback(value):              
-                for ch in global_channels:
-                    print("ch_bind_out_links: sending local channel ",local_name,"value to global",ch_name)
-                    #rapi.msg({"label": ch_name, "value": value})
-                    ch.put( value )
+                def callback(value):              
+                    for ch in global_channels:
+                        print("ch_bind_out_links: sending local channel ",local_name,"value to global",ch_name)
+                        #rapi.msg({"label": ch_name, "value": value})
+                        ch.put( value )
+                return callback
+
+            callback = mk_cb( globals )
             
             unsub = local_channel.react(callback)
 
