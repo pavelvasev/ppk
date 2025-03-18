@@ -73,6 +73,10 @@ class ReprWsClientApi {
 
     this.ws = new WebSocket( endpoint_url )
 
+    // необходимо чтобы payload входящие были не блобами а array-buffer-ами
+    // this.ws.binaryType = "arraybuffer"; // #F-PACK-SEND 
+    // оказалось не катит, нам для картинок надо blob
+
     let have_payload = null;
     
     this.ws.addEventListener('message', (event) => {
@@ -85,20 +89,33 @@ class ReprWsClientApi {
          return;
        }
 
+       /*
+       if (data instanceof ArrayBuffer) {
+         have_payload = data;
+         return;
+       }*/
+
        let json = JSON.parse(data)
        if (json.query_reply) {
+         let cb =  this.query_dic[json.query_reply]
+         //console.log("REPR-WS: got message",json.m,"passing to cb",cb)
+         if (!cb) {
+          console.error('no query with id ',json.query_reply)    
+          return
+         }
+
          json.m.timestamp ||= this.server_t0 + performance.now() // но может это и не здесь надо..
 
          if (have_payload) {
-           json.m.payload = have_payload;
-           have_payload = null;           
+           let payload = have_payload;
+           have_payload = null;
+           deserialize_from_network( json.m, payload ).then( m => {
+               cb( m )
+           })
          }
+         else
+         cb( json.m )
 
-         let cb =  this.query_dic[json.query_reply]
-         //console.log("REPR-WS: got message",json.m,"passing to cb",cb)
-            if (cb) 
-              cb( json.m ) 
-            else console.error('no query with id ',json.query_reply)   
        } else
        if (json.shared_reply) {
          // это обновление значений списков
@@ -170,3 +187,70 @@ class ReprWsClientApi {
     return res
   }
 }
+
+
+/// #F-PACK-SEND
+function deserialize_from_network(msg,payload) {
+
+    if (!msg.decoder) {
+      msg.payload = payload;
+      return Promise.resolve( msg )
+    }
+
+    if (msg.decoder.type == "array") {
+      return payload.arrayBuffer().then( arrayBuffer => {
+         let arr = parseNumpyArray( arrayBuffer, msg.decoder.etype )  
+         msg.value = arr  
+         return msg
+      })      
+    } 
+    else {      
+      console.error("ppk: deserialize_from_network: unknown decoder type. msg=",msg)
+      msg.payload = payload;
+      return Promise.resolve( msg )
+    }    
+}
+
+// Функция для преобразования ArrayBuffer в соответствующий тип массива
+function parseNumpyArray(buffer, etype) {
+  const dtype = etype;
+  
+  // Определяем тип данных и создаем соответствующий TypedArray
+  if (dtype == 'float32') {
+    return new Float32Array(buffer);
+  } 
+  else if (dtype == 'float64') {
+    return new Float64Array(buffer);
+  } 
+  else if (dtype == 'int8') {
+    return new Int8Array(buffer);
+  } 
+  else if (dtype == 'uint8') {
+    return new Uint8Array(buffer);
+  } 
+  else if (dtype == 'int16') {
+    return new Int16Array(buffer);
+  } 
+  else if (dtype == 'uint16') {
+    return new Uint16Array(buffer);
+  } 
+  else if (dtype == 'int32') {
+    return new Int32Array(buffer);
+  } 
+  else if (dtype == 'uint32') {
+    return new Uint32Array(buffer);
+  } 
+  else if (dtype == 'bool') {
+    return Array.from(new Uint8Array(buffer)).map(Boolean);
+  } 
+  else if (dtype == 'U') {
+    // Для Unicode строк (предполагаем UTF-16)
+    return Array.from(new Uint16Array(buffer))
+      .map(code => String.fromCharCode(code));
+  } 
+  else {
+    console.warn("ppk: parseNumpyArray: Неизвестный тип данных: ${dtype}");
+    return new Uint8Array(buffer);
+  }
+}
+             

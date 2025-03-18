@@ -52,6 +52,9 @@ class WebsocketReprSrv:
                             # необходим лок тк. возможны 2 посылки
                             # и были случаи что посередине вмешивалась третья
                             async with sending_lock:
+                                inmsg = ppk.ppk_query.serialize_for_network( inmsg ) #F-PACK-SEND
+
+                                # отправим пейлоад и там будут знать, что следом придет json к нему
                                 if 'payload' in inmsg:
                                     payload = inmsg['payload']
                                     del inmsg['payload']
@@ -59,6 +62,7 @@ class WebsocketReprSrv:
                                     await websocket.send(payload)
                                     
                                 resp= {"query_reply": outer_query_id, "m": inmsg}
+                                print("ws repr resp=",resp)
                                 resp_txt = json.dumps( resp )
                                 await websocket.send(resp_txt)
                                 #if payload is not None:

@@ -14,6 +14,23 @@ import numpy as np
 import sys
 import time
 
+#F-PACK-SEND = эксперимент с серизализацией значений
+# здесь мы сериализатор выясняем на основе типа объекта
+# и упаковываем значения перед передачей в сеть, и при приёме из нее
+
+# вообще тут может быть на будущее сокет имеет смысл передать
+def serialize_for_network(msg):
+    if "value" in msg:
+        v = msg["value"]
+        if isinstance(v, np.ndarray):
+            msg = msg.copy()
+            del msg["value"]
+            msg["payload"] = v.tobytes()
+            msg["decoder"] = dict(type="array",etype=str(v.dtype),len=len(v),shape=v.shape)
+            #todo optimize - совместить с payload чтобы 2 раза сообщение не копировать
+    return msg
+
+
 # old: s--- 4 байта длина строки, 4 байта длина attach, и далее строка с json и массив байт attach
 # 4 байта query_id, 4 байта длина строки, и далее строка с json 
 class QueryTcp:
@@ -55,9 +72,12 @@ class QueryTcp:
         #print("recepient_client_id=",recepient_client_id,"self.rapi.client_id=",self.rapi.client_id)
         if recepient_client_id == self.rapi.client_id:
             #cb = self.query_callbacks[ arg["query_id"] ]
-            #print("TARGET IS SAME! query_id=",arg["query_id"],"label=",msg["label"])
+            # print("TARGET IS SAME! query_id=",arg["query_id"],"label=",msg["label"])
             await self.on_packet( arg["query_id"], msg )
             return
+
+        #F-PACK-SEND эксперимент с серизализацией значений
+        msg = serialize_for_network(msg)
 
         # print("do_query_send called",msg,arg)
         

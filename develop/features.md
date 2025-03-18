@@ -146,3 +146,9 @@ F-REACTION-ON-DELETE
 F-PYTHON-START-HELPER
 метод ppk.start для запуска ppk-подсистемы.
 вместо всяких loop, ручного создания серверов, клиентов и т.п.
+
+======
+#TCP-TUNING
+#TCP-NODELAY
+https://habr.com/ru/companies/ruvds/articles/890874/
+https://bugs.python.org/issue28089
