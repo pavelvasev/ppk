@@ -159,7 +159,7 @@ def ch_bind_out_links(rapi, obj, links):
             
             unsub = local_channel.react(callback)
 
-            if getattr(local_channel,"is_cell"):
+            if hasattr(local_channel,"is_cell"):
                 print("ch_bind_out_links: see local cell, adding subscribers listen")
                 #def s_callback(new_subscriber):
                 #    print("ch_bind_out_links: see new subscriber",new_subscriber)

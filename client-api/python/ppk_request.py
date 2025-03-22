@@ -40,7 +40,7 @@ class RequestReplyFeature:
             await self.reply_query_promise
 
         msg["reply_msg"] = {"label": self.reply_label, "request_id": request_id }
-        #print("debug meth",msg)
+        #print("request: debug meth",msg)
         return await self.rapi.msg( msg ) # а нужен ли тут await?
 
     # версия с обещаниями        
