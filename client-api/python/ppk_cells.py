@@ -271,7 +271,7 @@ class ReadingCell:
         return self
 
     def react(self,fn):
-        return self.channel.react(fn)          
+        return self.channel.react(fn)
 
 # ячейка для записи
 """
