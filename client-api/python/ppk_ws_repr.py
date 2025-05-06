@@ -46,6 +46,7 @@ class WebsocketReprSrv:
                     N = msg["opts"]["N"]
                     #outer_query_id = msg["query"]
                     crit = msg["crit"]
+                    #print("REPR_WS: query install, crit=",crit,flush=True)
                     def mk_reply(outer_query_id):
                         async def on_query_reply(inmsg):
                             payload = None
@@ -59,6 +60,7 @@ class WebsocketReprSrv:
                                     payload = inmsg['payload']
                                     del inmsg['payload']
                                     #inmsg["has_payload"] = True
+                                    #print("REPR_WS: sending payload of size",len(payload),flush=True)
                                     await websocket.send(payload)
                                     
                                 resp= {"query_reply": outer_query_id, "m": inmsg}

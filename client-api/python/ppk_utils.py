@@ -116,7 +116,7 @@ class StartProcess():
 
         return self
 
-
+# добавляет префикс к строковым сообщениям
 class PrefixCh():
     def __init__( self, prefix):        
         self.input = ppk.local.Channel()
@@ -125,6 +125,39 @@ class PrefixCh():
             self.output.put( prefix + msg )
         self.input.react(onmsg)
 
+# пропускает сигнал с задержкой
+# если приходит в это время еще один сигнал, то перезапускает ожидание 
+# и пропускает только последний
+class DelayedPass:
+    def __init__(self,delay=2):
+        self.task = None
+        self.delay = delay
+        self.input = ppk.local.Channel()
+        self.output = ppk.local.Channel()
+        self.input.react(self.schedule_call)
+    
+    def schedule_call(self,msg):
+        """Планирует вызов функции через указанное количество секунд"""
+        # Если уже есть запланированная задача, отменяем её
+        if self.task and not self.task.done():
+            self.task.cancel()
+            #print("Предыдущий таймер остановлен")
+        
+        # Создаем новую задачу
+        self.task = asyncio.create_task(self._wait_and_call(msg))
+        #print(f"Функция запланирована через {delay} секунд")
+    
+    async def _wait_and_call(self, msg):
+        """Внутренний метод для ожидания и вызова функции"""
+        try:
+            await asyncio.sleep(self.delay)            
+            self.output.put( msg )
+        except asyncio.CancelledError:
+            # Обработка отмены задачи
+            #print("Задача была отменена")
+            pass
+
+# пишет в файл
 class FileWriterCh():
     def __init__( self, filename):
         self.f = open(filename, "w")
@@ -164,7 +197,8 @@ class FileWriterCh2():
     #def close(self,msg=None):
     #    self.f.close()
 
-### локальная версия
+### запуск процесса
+### версия на локальных каналах
 class StartProcessCh():
     # idea: prefix
     def __init__( self ):
