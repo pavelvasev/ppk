@@ -285,6 +285,9 @@ class Client:
         self.function_counter = 0
         self.exit_callbacks = []        
         self.exited = False
+
+        # todo перетащить это в фичу local_channel
+        self.local_channel = local.Channel
         
         # а вообще странно. мы идем всегда локально. так может таки пусть пуша нам говорит свой урль?
         # а не мы за нее решаем
