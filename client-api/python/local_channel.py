@@ -25,6 +25,9 @@ class Channel:
 
         return mkremover( myid )
 
+    def cell(self):
+        return Cell(self)
+
 
 class Link:
     def __init__(self,src,tgt):
@@ -58,10 +61,11 @@ class Cell0(Channel):
         self.react( set_value )
 
 # ячейка с ресабмитом для вновь-подключащихся, и value помнит
-class Cell():
+class Cell1():
     def __init__(self,maybe_initial_value=None):
         self.channel = Channel()
         self.is_channel = True
+        self.is_local_channel = True
         self.is_cell = True
         self.is_set = False
         self.value = None
@@ -79,6 +83,31 @@ class Cell():
         if self.is_set:
             fn( self.value )
         return self.channel.react( fn )
+
+# ячейка с ресабмитом для вновь-подключащихся, и value помнит
+class Cell():
+    def __init__(self,channel=None):
+        if channel == None:
+            channel = Channel()
+        if not isinstance(channel,Channel):
+            raise "PPK local Cell argument should be channel"
+        self.channel = channel
+        self.is_channel = True
+        self.is_local_channel = True
+        self.is_cell = True
+        self.is_set = False
+        self.value = None
+
+    def put(self,value):
+        self.value = value
+        self.is_set = True
+        self.channel.put( value )        
+        return self
+
+    def react(self, fn ):
+        if self.is_set:
+            fn( self.value )
+        return self.channel.react( fn )        
 
 # эксперимент
 def as_cell( channel, initial_value=None ):
