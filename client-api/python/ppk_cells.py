@@ -169,12 +169,13 @@ class Channel:
     # idea если N закончилось - отдельное сообщение в некий канал..
     def react( self, cb, N=-1 ):
         t = self.subscribe( cb,N )
-        self.rapi.add_async_item( t )
+        t_result_future = self.rapi.add_async_item( t, True )
 
         async def unsubscribe():
             # todo тут ошибки могут быть, но по идее не должно т.к. все через очередь проходит
-            # и сначал абудет сабскрайб а потом этот unsubscribe
-            unsub_fn = t.result()
+            # и сначала будет сабскрайб а потом этот unsubscribe            
+            #unsub_fn = t.result()
+            unsub_fn = t_result_future.result()            
             await unsub_fn()
 
         def stop():

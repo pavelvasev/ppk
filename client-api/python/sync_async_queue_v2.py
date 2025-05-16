@@ -41,23 +41,31 @@ class SyncAsyncQueue:
     async def stop(self):
         self.task.cancel()
 
-    def add_async_item(self,item):
-        #print(self.title,": add item",item)
-        self.sync_async_queue.put_nowait( item )
+    def add_async_item(self,item, need_result=False):
+        #print(self.title,": add item",item)        
+        if need_result: # оптимизация
+            result_f = asyncio.Future()
+        else:
+            result_f = None
+        self.sync_async_queue.put_nowait( [item,result_f] )
         #asyncio.create_task( item )
+        return result_f
 
     async def process(self):
         #print("sync_async_queue: process start")
         while True:            
             #print(self.title,": waiting new item")
-            item = await self.sync_async_queue.get()
+            item, result_f = await self.sync_async_queue.get()
             #print("####QSIZE=",self.sync_async_queue.qsize())
             #print(self.title,": got item, awaiting",item)
             try:
                 #print("-----> await begin")
-                await item
+                res = await item
                 #print("-----> await end")
                 #print(self.title,": item awaited OK",item)
+                #item.ppk_queue_result = res
+                if result_f is not None:
+                    result_f.set_result( res )
             except Exception as error:
                 # handle the exception
                 print(self.title,"ppk: exception occurred:", error) # An exception occurred: division by zero
