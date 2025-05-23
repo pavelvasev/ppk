@@ -21,6 +21,11 @@ def get_objects_by_tag( tag ):
         return created_objects_tags[tag]
     return []
 
+def get_object_by_id( id ):
+    if id in created_objects_ids:
+        return created_objects_ids[id]
+    return None
+
 def apply_description( rapi, obj, description ):
     if "params" in description:
         ch_assign_attrs( obj, description["params"] )
