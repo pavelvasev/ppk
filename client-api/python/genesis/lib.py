@@ -56,9 +56,9 @@ def create_objects(rapi, description, parent_id):
         create_object( rapi, description, parent_id )
 
 def create_object(rapi, description, parent_id):
-    print("genesis: create_object type=",description["type"])
+    #print("genesis: create_object type=",description["type"])
     if not description["type"] in types:
-        print("========================= error")
+        print("========================= genesis error")
         print("create_object: cannot find fn for type",description["type"],"description=",description)
         print("=========================")
         # надо все-таки ошибку, а то оно молча продолжает работать
@@ -101,11 +101,11 @@ def ch_assign_attrs( obj, params):
             if hasattr( val, "is_channel" ):
                 # канал
                 val.put( params[name] )
-                print("genesis: ch_assign_attrs: setting channel name =",name)
+                #print("genesis: ch_assign_attrs: setting channel name =",name)
             else:
                 # константа
                 setattr(obj,attr,params[name])
-                print("genesis: ch_assign_attrs: setting const param name =",name)
+                #print("genesis: ch_assign_attrs: setting const param name =",name)
         else:
             print("genesis: ch_assign_attrs: cannot find attr for param=",name,"of object",obj)
 
@@ -138,7 +138,7 @@ def ch_bind_in_links(rapi, obj, links_in):
                 rapi.channel(ch_name+":initial_value").react( callback, 1 )
                 #rapi.channel(ch_name+":subscribed").put("new_subscriber_id")
 
-                print("ch_bind_in_links: bound channel",ch_name,"to prop",local_name)
+                #print("ch_bind_in_links: bound channel",ch_name,"to prop",local_name)
         else:
             print(f"ch_bind_in_links: cannot find local channel for param={local_name} of object {obj}", 
                   file=sys.stderr)
@@ -155,7 +155,7 @@ def ch_bind_out_links(rapi, obj, links):
 
                 def callback(value):              
                     for ch in global_channels:
-                        print("ch_bind_out_links: sending local channel ",local_name,"value to global",ch_name)
+                        #print("ch_bind_out_links: sending local channel ",local_name,"value to global",ch_name)
                         #rapi.msg({"label": ch_name, "value": value})
                         ch.put( value )
                 return callback
@@ -174,7 +174,7 @@ def ch_bind_out_links(rapi, obj, links):
                     # типа раз он уже и так ячейка. ничего плохого не будет если мы
                     # будем хранить ссылку на значение еще раз
 
-            print("ch_bind_out_links: bound local channel",local_name,"to global channels:",globals)
+            #print("ch_bind_out_links: bound local channel",local_name,"to global channels:",globals)
         else:
             print(f"ch_bind_out_links: cannot find local channel for param={local_name} of object {obj}", 
                   file=sys.stderr)
