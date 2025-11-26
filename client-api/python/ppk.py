@@ -336,6 +336,7 @@ class Client:
 
     async def connect(self,url="ws://127.0.0.1:10000"):
         self.main_url = url
+        self.server_url = url
         self.ws = None
         while self.ws is None:
             try:
