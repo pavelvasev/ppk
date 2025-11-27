@@ -3,3 +3,4 @@ This example shows how to run python script which:
 2. Subscribes to messages using query method
 3. Sends some messages
 
+Run: `python3 app.py`

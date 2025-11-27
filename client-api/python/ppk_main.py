@@ -76,6 +76,7 @@ class WebsocketSrv:
     # rl = объект reactions list
     def __init__(self,rl):
         self.rl = rl
+        self.verbose = False
 
     async def echo(self,websocket):
         # список функций, которые надо вызвать при отключении клиента
@@ -158,9 +159,11 @@ class WebsocketSrv:
                 resp_txt = json.dumps( resp )
                 await websocket.send(resp_txt)
 
-            print("ppk_main(srv): client finished gracefully")
+            if self.verbose:
+                print("ppk_main(srv): client disconnected, finished gracefully")
         except websockets.exceptions.ConnectionClosedOK as e:
-            print(f'ppk_main(srv): client closed ok: {e}')
+            if self.verbose:
+                print(f'ppk_main(srv): client closed ok: {e}')
 
         except websockets.exceptions.ConnectionClosedError as e:
             print(f'ppk_main(srv): client closed error: {e}')            
@@ -169,8 +172,9 @@ class WebsocketSrv:
             print(f'ppk_main(srv): unexpected exception: {e}')
             traceback.print_exc()
         finally:            
-            #await asyncio.sleep(4)            
-            print("ppk_main(srv): finishing client: start it's client_finish_funcs")
+            #await asyncio.sleep(4)
+            if self.verbose:
+                print("ppk_main(srv): finishing client: start it's client_finish_funcs")
             #traceback.print_stack()
             #print("client websocket=",websocket.remote_address)
             #print("calling close")
@@ -181,7 +185,8 @@ class WebsocketSrv:
                 #await asyncio.sleep(1)
                 #print("ppk_main(srv): calling func ",fn)
                 await fn()
-            print("ppk_main(srv): finishing client done")
+            if self.verbose:    
+                print("ppk_main(srv): finishing client done")
             #self.rl.print()
 
 

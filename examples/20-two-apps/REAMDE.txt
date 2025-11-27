@@ -7,3 +7,5 @@ Following processes are started: broker, app1 and app2.
 * app2 sends some messages to topic `test2`
 
 Even sleep for few seconds is installed between app1 and app2 start, sometimes app2 is started before app1. In that case messages are sent before app1 queries for them, and thus sent nowhere.
+
+Run: `./run.sh`
