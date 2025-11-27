@@ -28,7 +28,7 @@ class VoxelVolume:
                     print("deploy vv ",dict(pos=pos,
                                 shape=self.shape,
                                 size=self.size,
-                                id=))
+                                id=object_id))
                     i = i + 1
                     nodes = gen.node( "voxel_volume_item",
                                 pos=pos,
@@ -38,6 +38,7 @@ class VoxelVolume:
                                 )
                     workers[n].put( {"description":nodes,"action":"create"} )
 
+                    # объект канала воркера, id воркера локальный там удаленный
                     d = [ workers[n], object_id ]
                     self.distribution.append( d )
 

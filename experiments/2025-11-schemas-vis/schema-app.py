@@ -31,9 +31,31 @@ async def start_worker_process(url, worker_id, input_channel_id, output_channel_
 
 """
 создает ссылку из объекта A пучка .x в метку B
+update тогда уж в набор B?
+update проще сделать уж тогда сразу набор, { channel_id -> ... }
 """
-def hyper_link_out( object, hyperchannel, target_label ):
-    ppk.bind()
+def hyper_link_out( object, channel_id, target_label ):
+    distr = object.distribution
+    cnt = 0
+    for d in distr:
+        worker_channel = d[0]
+        object_id = d[1]
+        partial_target_label = f"{target_label}_{cnt}"
+        u = { "links_out": {channel_id:partial_target_label}}
+        worker_channel.put( {"description":u,"id":object_id, "action":"update"} )
+        cnt = cnt + 1
+
+def hyper_link_in( object, channel_id, target_labels ):
+    distr = object.distribution
+    cnt = 0
+    for d in distr:
+        worker_channel = d[0]
+        object_id = d[1]        
+        partial_target_label = f"{target_label}_{cnt}"
+        u = { "links_in": {channel_id:partial_target_label}}
+        worker_channel.put( {"description":u,"id":object_id, "action":"update"} )
+        cnt = cnt + 1
+    
 
 # todo
 #class WorkerStater:
@@ -101,7 +123,6 @@ async def main():
         
         shape = [3,3,3]
         vv = plugins.voxel.VoxelVolume( size=10,shape=shape )
-
         init = plugins.life.RandomVoxels( shape=shape )
         gamestep = plugins.life.GameOfLife3D( shape=shape )
 
@@ -110,6 +131,11 @@ async def main():
         init.deploy( worker_channels )
         gamestep.deploy( worker_channels )
         print("deployed")
+
+        hyper_link_out( vv,"output","D0")
+        hyper_link_in( init,"input","D0")
+        hyper_link_out( init,"output","D1")
+        hyper_link_in( gamestep,"input","D1")
 
     except Exception as e:
         print(f"Caught an exception in my_coroutine: {e}")  

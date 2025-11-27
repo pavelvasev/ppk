@@ -42,8 +42,8 @@ async def main():
         arg = msg # пока так
         if msg["action"] == "create":
             objs = gen.create_objects( rapi, arg["description"],arg.get("target_id",None) )
-        elif msg["action"] == "modify":
-            object_id = msg["object_id"]
+        elif msg["action"] == "update":
+            object_id = msg["id"]
             obj = gen.get_object_by_id( object_id )
             gen.apply_description(rapi,obj,arg["description"])
 

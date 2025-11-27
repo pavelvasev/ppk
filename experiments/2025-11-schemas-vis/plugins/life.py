@@ -12,6 +12,7 @@ class RandomVoxels:
     def __init__(self,shape):
         #self.size = size # сторона кубика (кол-во ячеек)
         self.shape = shape # [cx,cy,cz] число кубиков
+        self.distribution = []
 
     def deploy( self,workers ):
         total = self.shape[0] * self.shape[1] * self.shape[2]
@@ -20,17 +21,21 @@ class RandomVoxels:
         for nx in range(self.shape[0]):
             for ny in range(self.shape[1]):
                 for nz in range(self.shape[2]):                    
+                    
+                    object_id = f"random_voxels{i}"
                     n =  i % len(workers)                    
                     pos = [nx,ny,nz]
                     print("deploy random_voxels ",dict(pos=pos,
                                 shape=self.shape,
+                                object_id=object_id
                                 ))
                     i = i + 1
                     nodes = gen.node( "random_voxels",
                                 pos=pos,
-                                shape=self.shape                                
+                                shape=self.shape,
+                                object_id=object_id                                                                
                                 )
-                    workers[n].put( {"description":nodes})
+                    workers[n].put( {"description":nodes,"action":"create"})
 
 
 class random_voxels:
@@ -62,6 +67,7 @@ class GameOfLife3D:
     def __init__(self,shape):
         #self.size = size # сторона кубика (кол-во ячеек)
         self.shape = shape # [cx,cy,cz] число кубиков
+        self.distribution = []
 
     def deploy( self,workers ):
         total = self.shape[0] * self.shape[1] * self.shape[2]
@@ -70,17 +76,20 @@ class GameOfLife3D:
         for nx in range(self.shape[0]):
             for ny in range(self.shape[1]):
                 for nz in range(self.shape[2]):                    
-                    n =  i % len(workers)                    
+                    object_id = f"game_of_life_3d_{i}"
+                    n =  i % len(workers)
                     pos = [nx,ny,nz]
                     print("deploy game_of_life_3d ",dict(pos=pos,
                                 shape=self.shape,
+                                object_id=object_id
                                 ))
                     i = i + 1
                     nodes = gen.node( "game_of_life_3d",
                                 pos=pos,
-                                shape=self.shape                                
+                                shape=self.shape,
+                                object_id=object_id                                
                                 )
-                    workers[n].put( {"description":nodes})
+                    workers[n].put( {"description":nodes,"action":"create"})
 
 
 class game_of_life_3d:
