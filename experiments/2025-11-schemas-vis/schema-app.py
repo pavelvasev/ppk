@@ -10,8 +10,30 @@ import atexit
 import subprocess
 import ppk.genesis as gen
 
-# s = ppk.RemoteSlurm()
-# sw = ppk.LocalServer()
+class VoxelVolume:
+    def __init__(size,side):
+        self.size = size # [cx,cy,cz] число кубиков
+        self.side = side # сторона кубика (кол-во ячеек)
+
+    def deploy( workers ):
+        total = self.size[0] * self.size[1] * self.size[2]
+        #for i in range(total):
+        i = 0
+        for nx in range(self.size[0]):
+            for ny in range(self.size[1]):
+                for nz in range(self.size[2]):                    
+                    n =  i % len(workers)                    
+                    pos = [nx,ny,nz]
+                    print("deploy vv ",dict(pos=pos,
+                                size=self.size,
+                                side=self.side))
+                    i = i + 1
+                    nodes = gen.node( "voxel_volume_item",
+                                pos=pos,
+                                size=self.size,
+                                side=self.side,
+                                links_in={"input":["a1"]} )
+                    workers[n].put( {"description":nodes})
 
 def on_worker_msg(msg):
     print("msg from worker: ",msg)
@@ -79,13 +101,32 @@ async def main():
 
     worker_channels = await start_workers( rapi, "A", 1, 4 )
 
-    #####
-    #nodes = gen.node( "print", text="privet",links_in={"input":["a1"]} )
-    #worker_channels[0].put( {"description":nodes})
+    """ 
+    #test
     nodes = gen.node( "print", text="privet",links_in={"input":["a1"]} )
     worker_channels[0].put( {"description":nodes})
     nodes = gen.node( "timer", links_out={"output":["a1"]} )
     worker_channels[1].put( {"description":nodes})
+    """
+
+    ####################################
+    print("Start main code")
+    #aaa
+    #raise ValueError
+    print("Start main code 2")
+    try:
+        bbbb   
+        vv = VoxelVolume( [3,3,3],10 )
+
+        print("deploy")
+        vv.deploy( worker_channels )
+        print("deployed")
+
+    except ValueError as e:
+        print(f"Caught an exception in my_coroutine: {e}")  
+        traceback.print_exc()        
+
+    ####################################
 
     print("done, waiting forever")
     await asyncio.Future()
@@ -98,7 +139,7 @@ async def main():
 #loop.run_until_complete( main() )
 #loop.close()
 try:
-  asyncio.run( main(),debug=True )
+  asyncio.run( main() )#,debug=True )
 except ValueError as e:
     print(f"Caught an exception in my_coroutine: {e}")  
     traceback.print_exc()
