@@ -171,6 +171,7 @@ class SystemStarter:
         #print("worker: process finished. returncode=",prg.returncode)
 
 
+    # всего будет запущено count тасков и в каждой по workers воркеров
     async def start_workers( self,count, workers, memory, slurm_opts="" ):        
         for i in range(count):
             t = asyncio.create_task( self.start_one_job( workers, memory, slurm_opts, self.jobs_counter ) )
@@ -191,6 +192,7 @@ class RemoteSlurm(SystemStarter):
         return ["ssh",args,{}]
 
     # должна вернуть тройку [prg, args, env]
+    # запускает 1 слурм-таску и в ней workers воркеров
     def job_cmd( self,workers, memory, slurm_opts="",starter_job_id=None ):
         count=1
         per_worker_mem = round(memory / workers)

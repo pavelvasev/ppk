@@ -59,9 +59,11 @@ import ppk.main as ppk_main
 # todo это неправильная структура asyncio.run() не должно быть запрятано в ппк
 # ппк должна быть ортогональна асинхио; по крайней мере пользователь должен сам
 # запускать ее и явно. !!!!!!
-def start( user_fn, server_url=None, port=0):
+# todo idea add extra *args to pass to user_fn
+def start( user_fn, server_url=None, port=0, client_name="python"):
+
     async def main():
-        rapi = Client()
+        rapi = Client(sender=client_name)
         nonlocal server_url        
         if server_url is None:
             s = ppk_main.Server()
@@ -340,6 +342,7 @@ class Client:
 
     async def connect(self,url="ws://127.0.0.1:10000"):
         self.main_url = url
+        self.server_url = url
         self.ws = None
         while self.ws is None:
             try:
@@ -399,22 +402,31 @@ class Client:
 
     async def exit(self):
         # idea если будут глюки то подождать с закрытием ws.close (см ниже)?        
-        print("rapi: exit. I am", self.ws.local_address)
+        if self.verbose:
+            print("rapi: exit. I am", self.ws.local_address)
         #traceback.print_stack()
         #self.t1.cancel()
         if self.exited:
             return
         self.exited = True        
 
-        print("rapi: exit: calling exit_callbacks, total",len(self.exit_callbacks))
+        if self.verbose:
+            print("rapi: exit: calling exit_callbacks, total",len(self.exit_callbacks))
         for x in self.exit_callbacks:
-            print("... waiting exit callback",x)
-            await x()
-            print("... done waiting",x)
+            if self.verbose:
+                print("... waiting exit callback",x)
+            if asyncio.iscoroutinefunction(x):
+                await x()
+            else:
+                x()
+            if self.verbose:
+                print("... done waiting",x)
         self.exit_callbacks = []
-        print("rapi: exit: callbacks finished. closing ws connection")
+        if self.verbose:
+            print("rapi: exit: callbacks finished. closing ws connection")
         await self.ws.close()
-        print("rapi: exit: ws connection closed")
+        if self.verbose:
+            print("rapi: exit: ws connection closed")
 
         # await asyncio.sleep( 0.5 ) # ждем завершения процессов и записи их потоков..
 

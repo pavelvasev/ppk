@@ -1,0 +1,147 @@
+#!/bin/env python3
+
+import asyncio
+import traceback
+import ppk
+import os
+import time
+import sys  
+import atexit
+import subprocess
+import ppk.genesis as gen
+
+class VoxelVolume:
+    def __init__(self,size,side):
+        self.size = size # [cx,cy,cz] число кубиков
+        self.side = side # сторона кубика (кол-во ячеек)
+
+    def deploy( self,workers ):
+        total = self.size[0] * self.size[1] * self.size[2]
+        #for i in range(total):
+        i = 0
+        for nx in range(self.size[0]):
+            for ny in range(self.size[1]):
+                for nz in range(self.size[2]):                    
+                    n =  i % len(workers)                    
+                    pos = [nx,ny,nz]
+                    print("deploy vv ",dict(pos=pos,
+                                size=self.size,
+                                side=self.side))
+                    i = i + 1
+                    nodes = gen.node( "voxel_volume_item",
+                                pos=pos,
+                                size=self.size,
+                                side=self.side,
+                                links_in={"input":["a1"]} )
+                    workers[n].put( {"description":nodes})
+
+def on_worker_msg(msg):
+    print("msg from worker: ",msg)
+
+async def start_worker_process(url, worker_id, input_channel_id, output_channel_id,logdir):
+    env = os.environ.copy() | {"PPK_INPUT_CHANNEL":input_channel_id,"PPK_REPORT_CHANNEL":output_channel_id,"PPK_URL":url}
+    log = os.open(f"{logdir}/{worker_id}.log",os.O_WRONLY | os.O_CREAT,0o644)
+    logerr = os.open(f"{logdir}/{worker_id}.err.log",os.O_WRONLY | os.O_CREAT,0o644)
+
+    # subprocess.popen уместнее было бы
+    p = await asyncio.create_subprocess_exec(sys.executable,"./genesis_worker.py",env=env,stdin=subprocess.DEVNULL,stderr=logerr,stdout=log)
+    def cleanup():        
+        if p.returncode is None:
+            p.terminate()
+    atexit.register(cleanup)
+    return p
+
+
+# todo
+#class WorkerStater:
+#  def __init__(self):
+
+# возвращает пачку объектов каналов для передачи сообщений воркерам
+# todo refactor to run single .sh
+async def start_workers( rapi, request_prefix, task_count, cpu_per_task_count ):
+    workers_output_channel = rapi.channel("worker_outputs")
+    workers_output_channel.react( on_worker_msg )
+
+    worker_cnt = 0
+    total_cnt = task_count * cpu_per_task_count
+    worker_wait = asyncio.Future()
+    def worker_attached( msg ):
+        nonlocal worker_cnt, worker_wait
+        worker_cnt = worker_cnt + 1
+        if worker_cnt == total_cnt:
+            worker_wait.set_result(1)
+    workers_output_channel.react( worker_attached )
+
+    worker_channels = []
+    if not os.path.exists("log"):
+       os.mkdir("log",0o755)
+    for t in range(task_count):
+        for x in range(cpu_per_task_count):
+            worker_id = f"wrk_{request_prefix}_{t}_{x}"
+            ch = rapi.channel( worker_id ) #.cell()
+            #ch.put( [11,12,13,14,15] )
+            worker_channels.append(ch)
+            await start_worker_process( rapi.server_url, worker_id, ch.id, workers_output_channel.id,"log" )
+
+    print("start_workers: waiting workers to start...")
+    await worker_wait 
+    print("start_workers: workers started")
+    return worker_channels
+
+async def main():
+    rapi = ppk.Client()
+    s = ppk.main.EmbeddedServer()
+    print("starting system")
+    s1 = await s.start()
+    print("system started, connecting")
+    s_urls = s.urls_future.result()
+    
+    t1 = await rapi.connect( url=s_urls[0] )
+    print("connected",t1)
+
+    worker_channels = await start_workers( rapi, "A", 1, 4 )
+
+    """ 
+    #test
+    nodes = gen.node( "print", text="privet",links_in={"input":["a1"]} )
+    worker_channels[0].put( {"description":nodes})
+    nodes = gen.node( "timer", links_out={"output":["a1"]} )
+    worker_channels[1].put( {"description":nodes})
+    """
+
+    ####################################
+    print("Start main code")
+    #aaa
+    #raise ValueError
+    print("Start main code 2")
+    try:
+        
+        vv = VoxelVolume( [3,3,3],10 )
+
+        print("deploy")
+        vv.deploy( worker_channels )
+        print("deployed")
+
+    except Exception as e:
+        print(f"Caught an exception in my_coroutine: {e}")  
+        traceback.print_exc()        
+
+    ####################################
+
+    print("done, waiting forever")
+    await asyncio.Future()
+ 
+    print("Exiting")
+    await c.exit()
+    await s.exit()
+
+#loop = asyncio.get_event_loop()
+#loop.run_until_complete( main() )
+#loop.close()
+try:
+  asyncio.run( main() )#,debug=True )
+except Exception as e:
+    print(f"Caught an exception in my_coroutine: {e}")  
+    traceback.print_exc()
+finally:
+  sys.exit()
