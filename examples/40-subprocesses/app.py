@@ -10,16 +10,14 @@ async def start_worker_process( rapi, cmd_and_args, worker_id ):
     env["SERVER_URL"] = rapi.server_url
     proc = await asyncio.create_subprocess_exec(*cmd_and_args,env=env,stdin=asyncio.subprocess.DEVNULL,start_new_session=True)
 
-    def make_cleanup_fn( proc, worker_id):
-        def cleanup():            
-            if proc.returncode is None:
-                print("sending terminate to worker_id=",worker_id)
-                proc.terminate()
-        return cleanup
+    def cleanup():            
+        if proc.returncode is None:
+            print("sending terminate to worker_id=",worker_id)
+            proc.terminate()
 
-    #atexit.register( make_cleanup_fn(proc,worker_id) )
+    #atexit.register( cleanup )
     # this may be better
-    rapi.atexit( make_cleanup_fn(proc,worker_id) )
+    rapi.atexit( cleanup )
 
 
 async def main(rapi):
