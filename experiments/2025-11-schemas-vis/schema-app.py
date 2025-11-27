@@ -11,11 +11,11 @@ import subprocess
 import ppk.genesis as gen
 
 class VoxelVolume:
-    def __init__(size,side):
+    def __init__(self,size,side):
         self.size = size # [cx,cy,cz] число кубиков
         self.side = side # сторона кубика (кол-во ячеек)
 
-    def deploy( workers ):
+    def deploy( self,workers ):
         total = self.size[0] * self.size[1] * self.size[2]
         #for i in range(total):
         i = 0
@@ -115,14 +115,14 @@ async def main():
     #raise ValueError
     print("Start main code 2")
     try:
-        bbbb   
+        
         vv = VoxelVolume( [3,3,3],10 )
 
         print("deploy")
         vv.deploy( worker_channels )
         print("deployed")
 
-    except ValueError as e:
+    except Exception as e:
         print(f"Caught an exception in my_coroutine: {e}")  
         traceback.print_exc()        
 
@@ -140,7 +140,7 @@ async def main():
 #loop.close()
 try:
   asyncio.run( main() )#,debug=True )
-except ValueError as e:
+except Exception as e:
     print(f"Caught an exception in my_coroutine: {e}")  
     traceback.print_exc()
 finally:
