@@ -11,6 +11,7 @@ import subprocess
 import ppk.genesis as gen
 import plugins.voxel
 import plugins.life
+import plugins.common
 
 def on_worker_msg(msg):
     print("msg from worker: ",msg)
@@ -30,7 +31,7 @@ async def start_worker_process(url, worker_id, input_channel_id, output_channel_
 
 
 """
-создает ссылку из объекта A пучка .x в метку B
+создает ссылку из объекта A пучка .x в гиперметку B
 update тогда уж в набор B?
 update проще сделать уж тогда сразу набор, { channel_id -> ... }
 """
@@ -41,21 +42,36 @@ def hyper_link_out( object, channel_id, target_label ):
         worker_channel = d[0]
         object_id = d[1]
         partial_target_label = f"{target_label}_{cnt}"
-        u = { "links_out": {channel_id:partial_target_label}}
+        u = { "links_out": {channel_id:[partial_target_label]}}
         worker_channel.put( {"description":u,"id":object_id, "action":"update"} )
         cnt = cnt + 1
 
-def hyper_link_in( object, channel_id, target_labels ):
+"""
+создает ссылку в объекта A пучка .x из гиперметки B
+"""
+def hyper_link_in( object, channel_id, target_label ):
     distr = object.distribution
     cnt = 0
     for d in distr:
         worker_channel = d[0]
         object_id = d[1]        
         partial_target_label = f"{target_label}_{cnt}"
-        u = { "links_in": {channel_id:partial_target_label}}
+        u = { "links_in": {channel_id:[partial_target_label]}}
         worker_channel.put( {"description":u,"id":object_id, "action":"update"} )
         cnt = cnt + 1
-    
+
+"""
+создает ссылку в объекта A пучка .x из простой метки B
+"""
+def single_hyper_link_in( object, channel_id, target_label ):
+    distr = object.distribution
+    cnt = 0
+    for d in distr:
+        worker_channel = d[0]
+        object_id = d[1]        
+        u = { "links_in": {channel_id:[target_label]}}
+        worker_channel.put( {"description":u,"id":object_id, "action":"update"} )
+        cnt = cnt + 1
 
 # todo
 #class WorkerStater:
@@ -125,17 +141,29 @@ async def main():
         vv = plugins.voxel.VoxelVolume( size=10,shape=shape )
         init = plugins.life.RandomVoxels( shape=shape )
         gamestep = plugins.life.GameOfLife3D( shape=shape )
+        pass_data = plugins.common.Pass3D( shape=shape,n=1000*1000 )
 
         print("deploy")
+        # надо отметить что это всегда забывается
         vv.deploy( worker_channels )
         init.deploy( worker_channels )
         gamestep.deploy( worker_channels )
+        pass_data.deploy( worker_channels )
         print("deployed")
 
         hyper_link_out( vv,"output","D0")
         hyper_link_in( init,"input","D0")
         hyper_link_out( init,"output","D1")
         hyper_link_in( gamestep,"input","D1")
+        single_hyper_link_in( vv, "input","start")
+
+        hyper_link_out( gamestep,"output","D2")
+        hyper_link_in( pass_data,"input","D2")
+        hyper_link_out( pass_data,"output","D1")
+
+        start = rapi.channel("start")
+        print("starting")
+        start.put(1)
 
     except Exception as e:
         print(f"Caught an exception in my_coroutine: {e}")  

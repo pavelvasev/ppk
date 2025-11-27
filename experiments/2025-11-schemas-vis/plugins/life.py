@@ -7,6 +7,8 @@ import ppk.genesis as gen
 import numpy as np
 import asyncio
 
+from scipy.ndimage import convolve
+
 # todo move to voxels?
 class RandomVoxels:
     def __init__(self,shape):
@@ -37,6 +39,10 @@ class RandomVoxels:
                                 )
                     workers[n].put( {"description":nodes,"action":"create"})
 
+                    # объект канала воркера, id воркера локальный там удаленный
+                    d = [ workers[n], object_id ]
+                    self.distribution.append( d )
+
 
 class random_voxels:
     def __init__(self,rapi,description,parent):
@@ -56,12 +62,13 @@ class random_voxels:
         gen.apply_description( rapi, self, description )
 
     def on_input(self,grid):
+        size = grid.shape[0]
         print("random_voxels creates random of size",size)
         # пришел такт данных на grid надо сделать шаг
         density = self.density.value
-        size = grid.shape[0]
+        
         grid = np.random.random((size, size, size)) < density
-        self.output.submit( grid )
+        self.output.put( grid )
 
 class GameOfLife3D:
     def __init__(self,shape):
@@ -90,6 +97,10 @@ class GameOfLife3D:
                                 object_id=object_id                                
                                 )
                     workers[n].put( {"description":nodes,"action":"create"})
+
+                    # объект канала воркера, id воркера локальный там удаленный
+                    d = [ workers[n], object_id ]
+                    self.distribution.append( d )
 
 
 class game_of_life_3d:
@@ -124,7 +135,7 @@ class game_of_life_3d:
         gen.apply_description( rapi, self, description )
 
     def on_input(self,grid):
-        print("game_of_life_3d performs step",size)
+        print("game_of_life_3d performs step")
         # пришел такт данных на grid надо сделать шаг
         # в идеале new_grid_val совпадает с grid
         new_grid_val = self.step( grid )

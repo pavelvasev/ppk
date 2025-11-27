@@ -8,12 +8,11 @@ import numpy as np
 import asyncio
 
 # todo this is binary.. add type?
-class VoxelVolume:
-    def __init__(self,size,shape):
-        self.size = size # сторона кубика (кол-во ячеек)
+class Pass3D:
+    def __init__(self,shape,n):
         self.shape = shape # [cx,cy,cz] число кубиков
         self.distribution = []
-
+        self.n = n
 
     def deploy( self,workers ):
         total = self.shape[0] * self.shape[1] * self.shape[2]
@@ -24,17 +23,17 @@ class VoxelVolume:
                 for nz in range(self.shape[2]):                    
                     n =  i % len(workers)
                     # todo добавить guid
-                    object_id = f"vv_{i}"
+                    object_id = f"pass3d_item_{i}"
                     pos = [nx,ny,nz]
-                    print("deploy vv ",dict(pos=pos,
+                    print("deploy pass3d_item ",dict(pos=pos,
                                 shape=self.shape,
-                                size=self.size,
+                                n=self.n,
                                 id=object_id))
                     i = i + 1
-                    nodes = gen.node( "voxel_volume_item",
+                    nodes = gen.node( "pass3d_item",
                                 pos=pos,
                                 shape=self.shape,
-                                size=self.size,
+                                n=self.n,
                                 object_id=object_id
                                 )
                     workers[n].put( {"description":nodes,"action":"create"} )
@@ -44,36 +43,34 @@ class VoxelVolume:
                     self.distribution.append( d )
 
 
-class voxel_volume_item:
+class pass3d_item:
     def __init__(self,rapi,description,parent):
         #self.id = gen.id_generator()        
         #self.positions = rapi.channel(self.id + 'positions').cell()
 
         self.output = ppk.local.Channel()
-        self.pos = ppk.local.Cell()
-        self.size = ppk.local.Cell()
-        self.shape = ppk.local.Cell()
+        self.result = ppk.local.Channel() # итого
         self.input = ppk.local.Channel()
+        self.n = ppk.local.Cell()
 
-        def on_size(v):
-          size = v
-          print("voxel_volume_item creates volume with side of size",size)
-          self.grid = np.zeros((size, size, size), dtype=bool)
-          self.output.put(self.grid)
-
-        self.size.react( on_size )
+        self.cnt = 0
 
         def on_input(v):
-            print("voxel_volume_item: see input message, sending grid. object_id=",self.external_id) #,self.grid
-            self.output.put(self.grid)
+            print("pass3d_item input changed: cnt=",self.cnt,"n=",self.n.value)
+            if self.cnt < self.n.value:
+                self.cnt = self.cnt +1
+                self.output.put(v)
+            elif self.cnt == self.n.value:
+                self.result.put(v)
+
         self.input.react( on_input )
 
-        print("voxel_volume_item item created")
+        print("pass3d_item item created")
 
         gen.apply_description( rapi, self, description )
 
 
 def init(*args):
-	gen.register({"voxel_volume_item":voxel_volume_item})
+	gen.register({"pass3d_item":pass3d_item})
 
 ################

@@ -26,6 +26,9 @@ def init(*args):
 	import life
 	life.init(*args)
 
+	import common
+	common.init(*args)	
+
 	#import grafix_setup
 	#grafix_setup.init(*args)
 

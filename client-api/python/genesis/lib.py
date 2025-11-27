@@ -39,6 +39,8 @@ def apply_description( rapi, obj, description ):
 def register_object(id,value):
     global created_objects_ids
     created_objects_ids[id] = value
+    # hm
+    value.external_id = id
 
 def register_object_tags(tags,value):
     global created_objects_tags
@@ -117,6 +119,7 @@ def ch_bind_in_links(rapi, obj, links_in):
         if local_channel:  # todo проверить что это канал
             for ch_name in sources:
                 #print("ch_bind_in_links: query ", ch_name, "to local_name=", local_name)
+                print("ch_bind_in_links: see local channel(or cell), adding subscribers listen. local_name=",local_name,"ch_name=",ch_name)
 
                 def mk_cb( local_channel, local_name ):
                     # todo 1 а почему тут не bind вообще?
@@ -144,31 +147,31 @@ def ch_bind_in_links(rapi, obj, links_in):
                   file=sys.stderr)
 
 def ch_bind_out_links(rapi, obj, links):
-    for local_name, globals in links.items():
+    for local_name, global_channel_ids in links.items():
         local_channel = getattr(obj,local_name)
         if local_channel:
+            print("ch_bind_out_links: see local channel(or cell), adding subscribers listen. local_name=",local_name)
 
-            def mk_cb( globals ):
+            def mk_cb( global_channel_ids ):
                 global_channels = []
-                for ch_name in globals:
+                for ch_name in global_channel_ids:
                     global_channels.append( rapi.channel(ch_name) )
 
                 def callback(value):              
                     for ch in global_channels:
-                        #print("ch_bind_out_links: sending local channel ",local_name,"value to global",ch_name)
+                        print("   cb of ch_bind_out_links: sending local channel ",local_name,"value to global",ch_name,"object_id=",obj.external_id)
                         #rapi.msg({"label": ch_name, "value": value})
                         ch.put( value )
                 return callback
 
-            callback = mk_cb( globals )
+            callback = mk_cb( global_channel_ids )
             
             unsub = local_channel.react(callback)
 
-            if hasattr(local_channel,"is_cell"):
-                print("ch_bind_out_links: see local cell, adding subscribers listen")
+            if hasattr(local_channel,"is_cell"):                
                 #def s_callback(new_subscriber):
                 #    print("ch_bind_out_links: see new subscriber",new_subscriber)
-                for ch_name in globals:
+                for ch_name in global_channel_ids:
                     c = rapi.channel(ch_name+":initial_value").cell()
                     ppk.local.bind( local_channel, c )
                     # типа раз он уже и так ячейка. ничего плохого не будет если мы
