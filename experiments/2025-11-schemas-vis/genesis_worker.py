@@ -40,7 +40,13 @@ async def main():
         #output.put( msg * 2 )
         #arg = msg["arg"]
         arg = msg # пока так
-        objs = gen.create_objects( rapi, arg["description"],arg.get("target_id",None) )
+        if msg["action"] == "create":
+            objs = gen.create_objects( rapi, arg["description"],arg.get("target_id",None) )
+        elif msg["action"] == "modify":
+            object_id = msg["object_id"]
+            obj = gen.get_object_by_id( object_id )
+            gen.apply_description(rapi,obj,arg["description"])
+
         #await rapi.reply( msg, {"content_type":"image/png","payload":image} )
         # ну сделаем чтобы можно было посылать запросы.. ну например..
         await rapi.reply( msg, "created" )

@@ -294,6 +294,7 @@ class Client:
 
         # todo перетащить это в фичу local_channel
         self.local_channel = local.Channel
+        #self.local_cell = local.Cell
         
         # а вообще странно. мы идем всегда локально. так может таки пусть пуша нам говорит свой урль?
         # а не мы за нее решаем

@@ -9,31 +9,8 @@ import sys
 import atexit
 import subprocess
 import ppk.genesis as gen
-
-class VoxelVolume:
-    def __init__(self,size,side):
-        self.size = size # [cx,cy,cz] число кубиков
-        self.side = side # сторона кубика (кол-во ячеек)
-
-    def deploy( self,workers ):
-        total = self.size[0] * self.size[1] * self.size[2]
-        #for i in range(total):
-        i = 0
-        for nx in range(self.size[0]):
-            for ny in range(self.size[1]):
-                for nz in range(self.size[2]):                    
-                    n =  i % len(workers)                    
-                    pos = [nx,ny,nz]
-                    print("deploy vv ",dict(pos=pos,
-                                size=self.size,
-                                side=self.side))
-                    i = i + 1
-                    nodes = gen.node( "voxel_volume_item",
-                                pos=pos,
-                                size=self.size,
-                                side=self.side,
-                                links_in={"input":["a1"]} )
-                    workers[n].put( {"description":nodes})
+import plugins.voxel
+import plugins.life
 
 def on_worker_msg(msg):
     print("msg from worker: ",msg)
@@ -51,6 +28,12 @@ async def start_worker_process(url, worker_id, input_channel_id, output_channel_
     atexit.register(cleanup)
     return p
 
+
+"""
+создает ссылку из объекта A пучка .x в метку B
+"""
+def hyper_link_out( object, hyperchannel, target_label ):
+    ppk.bind()
 
 # todo
 #class WorkerStater:
@@ -116,10 +99,16 @@ async def main():
     print("Start main code 2")
     try:
         
-        vv = VoxelVolume( [3,3,3],10 )
+        shape = [3,3,3]
+        vv = plugins.voxel.VoxelVolume( size=10,shape=shape )
+
+        init = plugins.life.RandomVoxels( shape=shape )
+        gamestep = plugins.life.GameOfLife3D( shape=shape )
 
         print("deploy")
         vv.deploy( worker_channels )
+        init.deploy( worker_channels )
+        gamestep.deploy( worker_channels )
         print("deployed")
 
     except Exception as e:

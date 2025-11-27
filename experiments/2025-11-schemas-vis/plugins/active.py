@@ -20,6 +20,12 @@ def init(*args):
 	import interop
 	interop.init(*args)
 
+	import voxel
+	voxel.init(*args)
+
+	import life
+	life.init(*args)
+
 	#import grafix_setup
 	#grafix_setup.init(*args)
 
