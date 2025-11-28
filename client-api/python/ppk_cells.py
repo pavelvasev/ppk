@@ -364,7 +364,7 @@ class WritingCell:
     def set_encoder(self,encoder_fn):
         self.encoder_fn = encoder_fn
         return self
-    def set_encoder(self,decoder_fn):
+    def set_decoder(self,decoder_fn):
         self.decoder_fn = decoder_fn
         return self
 
@@ -476,7 +476,7 @@ class ReadingWritingCell:
     def set_encoder(self,encoder_fn):
         self.encoder_fn = encoder_fn
         return self
-    def set_encoder(self,decoder_fn):
+    def set_decoder(self,decoder_fn):
         self.decoder_fn = decoder_fn
         return self
 

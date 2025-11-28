@@ -18,8 +18,44 @@ import time
 # здесь мы сериализатор выясняем на основе типа объекта
 # и упаковываем значения перед передачей в сеть, и при приёме из нее
 
+def encode_arrays(arrays_dict):
+    """
+    arrays_dict: {'name1': array1, 'name2': array2, ...}
+    """
+    metadata = {}
+    data_bytes = b''
+    offset = 0
+    
+    for name, arr in arrays_dict.items():
+        arr_bytes = arr.tobytes()
+        metadata[name] = {
+            'shape': arr.shape,
+            'dtype': str(arr.dtype),
+            'offset': offset,
+            'size': len(arr_bytes)
+        }
+        data_bytes += arr_bytes
+        offset += len(arr_bytes)
+    
+    return data_bytes, metadata
+
+def decode_arrays(data_bytes, metadata):
+    """Восстановление массивов"""
+    arrays = {}
+    for name, info in metadata.items():
+        start = info['offset']
+        end = start + info['size']
+        arr_bytes = data_bytes[start:end]
+        arr = np.frombuffer(arr_bytes, dtype=info['dtype'])
+        arrays[name] = arr.reshape(info['shape'])
+    
+    return arrays
+
 # вообще тут может быть на будущее сокет имеет смысл передать
 def serialize_for_network(msg):
+    # value у нас используется каналами так-то...
+    # т.е когда в канал говорят put(x) то этот x уходит в value
+    # кроме того см value_to_message
     if "value" in msg:
         v = msg["value"]
         if isinstance(v, np.ndarray):
@@ -28,6 +64,11 @@ def serialize_for_network(msg):
             msg["payload"] = v.tobytes()
             msg["decoder"] = dict(type="array",etype=str(v.dtype),len=len(v),shape=v.shape)
             #todo optimize - совместить с payload чтобы 2 раза сообщение не копировать
+        elif isinstance(v,dict) and isinstance( v.values()[0], np.ndarray):
+            data_bytes, metadata = encode_arrays(v)
+            msg["payload"] = data_bytes
+            msg["decoder"] = dict(type="dict_of_np",metadata=metadata)
+            # todo десериализацию...
     return msg
 
 
@@ -281,6 +322,7 @@ class QueryTcp:
         m = packet
         if attach is not None:
             m["payload"] = attach
+            ### xxx
         
         if self.rapi.verbose:
             print("query got message:",packet,"cb=",cb)

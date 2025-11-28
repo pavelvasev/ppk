@@ -420,9 +420,9 @@ class voxel_volume_paint_sw:
             print(f"voxel_volume_paint_sw frame {frame_id}: color={rgb.shape}, depth={depth.shape}, object_id=",self.external_id)
             frame_id += 1
 
-            #msg = [rgb, depth]
-            #self.output.put(msg)
-            imageio.imwrite(f"voxels_cubes_edges_{self.external_id}.png", rgb)
+            msg = {"payload":[rgb, depth]}
+            self.output.put(msg)
+            #imageio.imwrite(f"voxels_cubes_edges_{self.external_id}.png", rgb)
 
         self.input.react( on_input )
         print("setup_painting 4")
