@@ -29,6 +29,18 @@ def init(*args):
 	import common
 	common.init(*args)	
 
+	import voxel_paint_sw
+	voxel_paint_sw.init(*args)	
+
+	#import voxel_paint_vispy
+	#voxel_paint_vispy.init(*args)	
+
+	#import voxel_paint_open3d
+	#voxel_paint_open3d.init(*args)	
+
+	#import voxel_paint_pyvista
+	#voxel_paint_pyvista.init(*args)	
+
 	#import grafix_setup
 	#grafix_setup.init(*args)
 

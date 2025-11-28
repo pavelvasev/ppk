@@ -10,6 +10,11 @@ import atexit
 import subprocess
 import ppk.genesis as gen
 import plugins.voxel
+#import plugins.voxel_paint_open3d as voxpaint
+#import plugins.voxel_paint_pyvista as voxpaint
+#import plugins.voxel_paint_vispy as voxpaint
+import plugins.voxel_paint_sw as voxpaint
+
 import plugins.life
 import plugins.common
 
@@ -47,7 +52,7 @@ def hyper_link_out( object, channel_id, target_label ):
         cnt = cnt + 1
 
 """
-создает ссылку в объекта A пучка .x из гиперметки B
+создает ссылку в объекта A пучок .x из гиперметки B
 """
 def hyper_link_in( object, channel_id, target_label ):
     distr = object.distribution
@@ -57,6 +62,21 @@ def hyper_link_in( object, channel_id, target_label ):
         object_id = d[1]        
         partial_target_label = f"{target_label}_{cnt}"
         u = { "links_in": {channel_id:[partial_target_label]}}
+        worker_channel.put( {"description":u,"id":object_id, "action":"update"} )
+        cnt = cnt + 1
+
+#создает ссылку в объекта A пучок .x/y из гиперметки B
+def interleave_hyper_link_in( object, channel_id, channel_id_2, target_label):
+    distr = object.distribution
+    cnt = 0
+    for d in distr:
+        worker_channel = d[0]
+        object_id = d[1]        
+        partial_target_label = f"{target_label}_{cnt}"
+        if cnt % 2 == 0:
+            u = { "links_in": {channel_id:[partial_target_label]}}
+        else:
+            u = { "links_in": {channel_id_2:[partial_target_label]}}
         worker_channel.put( {"description":u,"id":object_id, "action":"update"} )
         cnt = cnt + 1
 
@@ -137,11 +157,14 @@ async def main():
     print("Start main code 2")
     try:
         
-        shape = [3,3,3]
+        shape = [4,4,4]
         vv = plugins.voxel.VoxelVolume( size=10,shape=shape )
         init = plugins.life.RandomVoxels( shape=shape )
         gamestep = plugins.life.GameOfLife3D( shape=shape )
         pass_data = plugins.common.Pass3D( shape=shape,n=1000*1000 )
+        paint = voxpaint.VoxelVolumePaint( size=10,shape=shape )
+        #paint = voxpaint.VoxelVolumePaint( size=10,shape=shape )
+        merge = voxpaint.ImageMergeSimple( total=shape[0]*shape[1]*shape[2])
 
         print("deploy")
         # надо отметить что это всегда забывается
@@ -149,7 +172,15 @@ async def main():
         init.deploy( worker_channels )
         gamestep.deploy( worker_channels )
         pass_data.deploy( worker_channels )
+        paint.deploy( worker_channels )
+        merge.deploy( worker_channels )
         print("deployed")
+
+        """
+          start -> ПАМЯТЬ -> D0 -> init -> D1 -> gamestep -> D2
+                       D2 -> paint
+                       D2 -> pass_data -> D1
+        """
 
         hyper_link_out( vv,"output","D0")
         hyper_link_in( init,"input","D0")
@@ -160,6 +191,10 @@ async def main():
         hyper_link_out( gamestep,"output","D2")
         hyper_link_in( pass_data,"input","D2")
         hyper_link_out( pass_data,"output","D1")
+
+        hyper_link_in( paint,"input","D2")
+        hyper_link_out( paint,"output","D3")
+        hyper_link_in( merge,"input","D3")
 
         start = rapi.channel("start")
         print("starting")

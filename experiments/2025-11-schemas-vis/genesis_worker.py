@@ -8,12 +8,23 @@
 выразить логику объектом
 """
 
+# Сначала устанавливаем переменные окружения
+import os
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
+# Затем импортируем библиотеки
+import numpy as np
+############################
+
 import asyncio
 import ppk
 import ppk.genesis as gen
 import time
 import sys
-import os
 import matplotlib.pyplot as plt
 import io
 

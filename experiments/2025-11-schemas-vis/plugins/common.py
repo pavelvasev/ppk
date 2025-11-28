@@ -7,7 +7,7 @@ import ppk.genesis as gen
 import numpy as np
 import asyncio
 
-# todo this is binary.. add type?
+# todo voxel-volume-pass назвать
 class Pass3D:
     def __init__(self,shape,n):
         self.shape = shape # [cx,cy,cz] число кубиков
