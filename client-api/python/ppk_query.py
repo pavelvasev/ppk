@@ -1,7 +1,7 @@
 """
 Коммуникация query и т.п.
 """
-
+import gc
 import asyncio
 import json
 import os
@@ -13,10 +13,47 @@ import inspect
 import numpy as np
 import sys
 import time
+import tracemalloc
 
+#tracemalloc.start()
+def show_biggest_objects(limit=10):
+    return
+    # Get current memory usage statistics
+    print("getting snapchot",flush=True)
+    snapshot = tracemalloc.take_snapshot()
+    top_stats = snapshot.statistics('lineno')
+
+    print("[ Top 10 ] @@@@@@@@@@@@@@@@@@@@@@@")
+    for stat in top_stats[:10]:
+        print(stat)
+
+def show_biggest_objects2(limit=10):
+    gc.collect()
+    objects = gc.get_objects()
+    
+    # Сортируем по размеру
+    objects_with_size = []
+    for obj in objects:
+        try:
+            size = sys.getsizeof(obj)
+            objects_with_size.append((size, type(obj).__name__, obj))
+        except:
+            pass
+    
+    # ИСПРАВЛЕНИЕ: явно указываем сортировку только по первому элементу (size)
+    objects_with_size.sort(key=lambda x: x[0], reverse=True)
+    
+    print(f"Топ {limit} объектов:")
+    for size, obj_type, obj in objects_with_size[:limit]:
+        print(f"{size:>10} bytes - {obj_type}")
+
+
+#################
 #F-PACK-SEND = эксперимент с серизализацией значений
 # здесь мы сериализатор выясняем на основе типа объекта
 # и упаковываем значения перед передачей в сеть, и при приёме из нее
+
+# todo переделать это все по нормальному, с внешними универсальными сериализаторами и тп
 
 def encode_arrays(arrays_dict):
     """
@@ -52,10 +89,41 @@ def decode_arrays(data_bytes, metadata):
     return arrays
 
 # вообще тут может быть на будущее сокет имеет смысл передать
+def deserialize_from_network(msg,attach_bytes):
+    if attach_bytes is not None and "decoder" in msg:
+        decoder = msg["decoder"]
+        decoder_type = msg["decoder"]["type"]
+        if decoder_type == "array":
+            arr = np.frombuffer(attach_bytes, dtype=decoder['etype'])
+            arr = arr.reshape(decoder['shape'])
+            return arr
+        elif decoder_type == "dict_of_np":
+            dict_of_arrays = decode_arrays( attach_bytes,decoder["metadata"] )
+            return dict_of_arrays
+
+    return attach_bytes
+
+# вообще тут может быть на будущее сокет имеет смысл передать
 def serialize_for_network(msg):
     # value у нас используется каналами так-то...
     # т.е когда в канал говорят put(x) то этот x уходит в value
     # кроме того см value_to_message
+    if "payload" in msg:
+        v = msg["payload"]
+        # @idea вообще идея посылать там список да и все, и всегда
+        if isinstance(v, np.ndarray):
+            msg = msg.copy()
+            #del msg["value"]
+            msg["payload"] = v.tobytes()
+            msg["decoder"] = dict(type="array",etype=str(v.dtype),len=len(v),shape=v.shape)
+            #todo optimize - совместить с payload чтобы 2 раза сообщение не копировать
+        elif isinstance(v,dict) and len(v.values()) > 0 and isinstance( list(v.values())[0], np.ndarray):
+            data_bytes, metadata = encode_arrays(v)
+            msg["payload"] = data_bytes
+            msg["decoder"] = dict(type="dict_of_np",metadata=metadata)
+            # todo десериализацию...
+
+    """
     if "value" in msg:
         v = msg["value"]
         if isinstance(v, np.ndarray):
@@ -64,11 +132,12 @@ def serialize_for_network(msg):
             msg["payload"] = v.tobytes()
             msg["decoder"] = dict(type="array",etype=str(v.dtype),len=len(v),shape=v.shape)
             #todo optimize - совместить с payload чтобы 2 раза сообщение не копировать
-        elif isinstance(v,dict) and isinstance( v.values()[0], np.ndarray):
+        elif isinstance(v,dict) and len(v.values()) > 0 and isinstance( list(v.values())[0], np.ndarray):
             data_bytes, metadata = encode_arrays(v)
             msg["payload"] = data_bytes
             msg["decoder"] = dict(type="dict_of_np",metadata=metadata)
             # todo десериализацию...
+    """
     return msg
 
 
@@ -118,22 +187,21 @@ class QueryTcp:
             return
 
         #F-PACK-SEND эксперимент с серизализацией значений
-        msg = serialize_for_network(msg)
-
         # print("do_query_send called",msg,arg)
         
         attach = None
         sending_msg = msg
         if "payload" in msg:
-            attach = msg["payload"]
+            sending_msg = msg.copy()
+            sending_msg = serialize_for_network(sending_msg)
+            attach = sending_msg["payload"]
+            del sending_msg["payload"]
             #if "tobytes" in attach:
                 #attach = attach.tobytes()
             # #F-SENDING-KEEP-PAYLOAD надо сохранять payload в оригинальном сообщении т.к. его еще будут посылать может быть
             # поэтому мы делаем копию сообщения
             # todo возможно тут это излишне - копию уже сделали в канале        
-            orig_msg = msg
-            sending_msg = msg.copy()
-            del sending_msg["payload"]
+            #orig_msg = msg
 
         query_id_bytes = arg["query_id"].to_bytes(4,"big")
         #packet = {"query_id": arg["query_id"],  "m": msg } ыыы
@@ -148,7 +216,7 @@ class QueryTcp:
         attach_len_bytes = attach_len.to_bytes(4,"big")
 
         client = await self.get_client_tcp( target_url )
-        # print("sending as tcp client",target_url,msglen)#,"=",len(len_bytes),"attach=",attach_len_bytes)
+        print("do_query_send, sending as tcp client",target_url,"json len=",msglen,"attach len=",attach_len)
         
         client.write( query_id_bytes )
         client.write( len_bytes )
@@ -159,6 +227,8 @@ class QueryTcp:
             #print("FAIL! attaches not supported")
             # #F-MSGFORMAT-V2
             client.write( attach )
+            show_biggest_objects()
+
             # получается attach это должно быть что-то что можно писать в tcp
             # типа bytes или bytesarray
             # https://docs.python.org/3/library/stdtypes.html#bytes
@@ -315,6 +385,7 @@ class QueryTcp:
     # пришел ответ на квери
     async def on_message(self,query_id, msg_text,attach=None):
         packet = json.loads(msg_text)
+        attach = deserialize_from_network(packet,attach)
         await self.on_packet( query_id, packet, attach )
 
     async def on_packet( self, query_id, packet, attach=None):

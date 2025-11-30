@@ -1,17 +1,53 @@
+import gc
 import os
 import sys
 
 import ppk
 import ppk.genesis as gen
 
-import numpy as np
-import asyncio
-import imageio
-
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["TBB_NUM_THREADS"] = "1"
+
+
+import numpy as np
+import asyncio
+import imageio
+
+import tracemalloc
+
+#tracemalloc.start()
+def show_biggest_objects(limit=10):
+    return
+    # Get current memory usage statistics
+    print("getting snapchot",flush=True)
+    snapshot = tracemalloc.take_snapshot()
+    top_stats = snapshot.statistics('lineno')
+
+    print("[ Top 10 ] @@@@@@@@@@@@@@@@@@@@@@@")
+    for stat in top_stats[:10]:
+        print(stat)
+
+def show_biggest_objects2(limit=10):
+    gc.collect()
+    objects = gc.get_objects()
+    
+    # Сортируем по размеру
+    objects_with_size = []
+    for obj in objects:
+        try:
+            size = sys.getsizeof(obj)
+            objects_with_size.append((size, type(obj).__name__, obj))
+        except:
+            pass
+    
+    # ИСПРАВЛЕНИЕ: явно указываем сортировку только по первому элементу (size)
+    objects_with_size.sort(key=lambda x: x[0], reverse=True)
+    
+    print(f"Топ {limit} объектов:")
+    for size, obj_type, obj in objects_with_size[:limit]:
+        print(f"{size:>10} bytes - {obj_type}")
 
 
 class VoxelCubeRenderer:
@@ -371,7 +407,7 @@ class voxel_volume_paint_sw:
         self.shape = ppk.local.Cell()
         self.input = ppk.local.Channel()
 
-        print("voxel_volume_paint_pv item created")
+        print("voxel_volume_paint_sw item created")
 
         self.setup_painting()
 
@@ -399,7 +435,7 @@ class voxel_volume_paint_sw:
             volume = v
 
             #eye = (15.0, 15.0, -25.0)
-            eye = (0, 0, 100.0)
+            eye = (100, 100, 100.0)
             center = (5.0, 5.0, 5.0)
             up = (0.0, 1.0, 0.0)
 
@@ -420,7 +456,8 @@ class voxel_volume_paint_sw:
             print(f"voxel_volume_paint_sw frame {frame_id}: color={rgb.shape}, depth={depth.shape}, object_id=",self.external_id)
             frame_id += 1
 
-            msg = {"payload":[rgb, depth]}
+            #msg = {"payload":[rgb, depth]}
+            msg = {"payload":{"rgb":rgb,"depth":depth}}
             self.output.put(msg)
             #imageio.imwrite(f"voxels_cubes_edges_{self.external_id}.png", rgb)
 
@@ -488,7 +525,7 @@ class ImageMergeSimple:
                     object_id=object_id,
                     total=self.total
                     )                
-        workers[0].put( {"description":nodes,"action":"create"} )        
+        workers[0].put( {"description":nodes,"action":"create"} )
 
         for i in range(self.total):
             d = [ workers[0], object_id ]
@@ -594,6 +631,8 @@ def compose_rgb_depth(
 
     return out_rgb, out_depth    
 
+import tracemalloc
+
 class image_merge_item:
     def __init__(self,rapi,description,parent):
         #self.id = gen.id_generator()        
@@ -603,6 +642,14 @@ class image_merge_item:
         self.input = ppk.local.Channel()
         self.input2 = ppk.local.Channel()
         self.total = ppk.local.Cell().put(0)
+        self.cnt = 0
+
+        # hack
+        self.ready = rapi.channel("render_ready")
+
+        #tracemalloc.start()
+
+        #tracemalloc.stop()        
 
         print("image_merge_item item created")
 
@@ -619,17 +666,29 @@ class image_merge_item:
                 rgbs = []
                 zbufs = []
                 for item in pair:
-                    rgbs.append( item[0] )
-                    zbufs.append( item[1] )
+                    rgbs.append( item["payload"]["rgb"] )
+                    zbufs.append( item["payload"]["depth"] )
 
                 rgb = compose_rgb_depth_final( rgbs, zbufs )
                 imageio.imwrite(f"online_{self.external_id}.png", rgb)
+                f2 = f"online_{self.external_id}_{self.cnt:05d}.png"
+                imageio.imwrite(f2, rgb)
+                print("image_merge_item: image saved!",f2)
+                self.cnt = self.cnt+1                
 
                 pair = []
+                #gc.collect()
+
+    
 
                 #msg = [rgb, depth]
+                #msg = {"payload":{"rgb":rgb,"depth":depth}}
+                msg = {"payload":{"rgb":rgb}}
                 self.output.put(msg)
-            #imageio.imwrite(f"voxels_cubes_edges_{self.external_id}.png", rgb)
+                self.ready.put(1)
+                #imageio.imwrite(f"voxels_cubes_edges_{self.external_id}.png", rgb)
+                show_biggest_objects()
+                
 
         self.input.react( on_input )
         self.input2.react( on_input )

@@ -81,7 +81,7 @@ def interleave_hyper_link_in( object, channel_id, channel_id_2, target_label):
         cnt = cnt + 1
 
 """
-создает ссылку в объекта A пучка .x из простой метки B
+создает ссылку в объекта A пучка .x из канала B
 """
 def single_hyper_link_in( object, channel_id, target_label ):
     distr = object.distribution
@@ -161,7 +161,7 @@ async def main():
         vv = plugins.voxel.VoxelVolume( size=10,shape=shape )
         init = plugins.life.RandomVoxels( shape=shape )
         gamestep = plugins.life.GameOfLife3D( shape=shape )
-        pass_data = plugins.common.Pass3D( shape=shape,n=1000*1000 )
+        pass_data = plugins.common.TriggerPass3D( shape=shape,n=1000*1000 )
         paint = voxpaint.VoxelVolumePaint( size=10,shape=shape )
         #paint = voxpaint.VoxelVolumePaint( size=10,shape=shape )
         merge = voxpaint.ImageMergeSimple( total=shape[0]*shape[1]*shape[2])
@@ -189,7 +189,9 @@ async def main():
         single_hyper_link_in( vv, "input","start")
 
         hyper_link_out( gamestep,"output","D2")
+
         hyper_link_in( pass_data,"input","D2")
+        single_hyper_link_in( pass_data, "trigger","render_ready")
         hyper_link_out( pass_data,"output","D1")
 
         hyper_link_in( paint,"input","D2")
