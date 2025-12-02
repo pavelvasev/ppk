@@ -19,7 +19,7 @@ class RandomVoxels:
         for w in workers:
             object_id = f"random_voxels"                        
             print("deploy random_voxels to worker",w.id)            
-            nodes = gen.node( "random_voxels")
+            nodes = gen.node( "random_voxels", tags=["ecs_system"])
             w.put( {"description":nodes,"action":"create"})
 
 import plugins.ecs as ecs
@@ -29,19 +29,24 @@ class random_voxels:
         print("random_voxels item created")
         gen.apply_description( rapi, self, description )
         print("random_voxels item adds to ecs.LOCAL_SYSTEMS")
-        LOCAL_SYSTEMS.append(self)
-        print("random_voxels: ecs.LOCAL_SYSTEMS len=",len(LOCAL_SYSTEMS))
+        self.local_systems = description["local_systems"]
+        self.local_systems.append(self)
+        print("random_voxels: ecs.LOCAL_SYSTEMS len=",len(self.local_systems))
 
     def process_ecs(self,i,world):
         print("random_voxels:process_ecs called")
         ents = world.get_entities_with_components("voxel_init")
-        for e in ents:
-            grid = e.components["voxel_volume"]
-            size = grid.shape[0]
+        print("random_voxels:ents=",ents)
+        for entity_id in ents:
+            #grid = e.components["voxel_volume"]
+            e = world.get_entity( entity_id )
+            grid = e.get_component("voxel_volume_params")
+            #grid = world.get_component( e, "voxel_volume_params" )
+            size = grid["size"]
             print("random_voxels creates random of size",size)
             # пришел такт данных на grid надо сделать шаг
             #density = self.density.value
-            density = 0.1        
+            density = 0.1
             grid = np.random.random((size, size, size)) < density
             e.update_component("voxel_volume_value",{"payload":grid})
             e.remove_component("voxel_init")

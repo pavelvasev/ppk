@@ -6,21 +6,29 @@ import ppk.genesis as gen
 
 import numpy as np
 import asyncio
+import traceback
 
+"""
 class Entity:
     def __init__(self, entity_id):
         self.id = entity_id
+"""        
 
 class World:
     def __init__(self):
         self.entities = {}
         self.components = {} # Stores components by type, then by entity ID
 
+    """
     def create_entity(self,entity_id):
         #entity_id = len(self.entities) # Simple ID generation
         entity = Entity(entity_id)
         self.entities[entity_id] = entity
         return entity_id
+    """    
+
+    def add_entity( self, entity_id, entity ):
+        self.entities[ entity_id ] = entity
 
     def add_component(self, entity_id, component_type, component):
         #component_type = type(component)
@@ -33,6 +41,9 @@ class World:
 
     def get_component(self, entity_id, component_type):
         return self.components.get(component_type, {}).get(entity_id)
+
+    def get_entity(self, id):
+        return self.entities[id]
 
     def get_entities_with_components(self, *component_types):
         # Returns entity IDs that have all specified component types
@@ -57,8 +68,10 @@ class LoopComponent:
     Компонента, которая запускает вечный цикл в отдельной задаче.
     """
     
-    def __init__(self):        
+    def __init__(self,local_systems,local_world):
         self._running = False
+        self.local_systems = local_systems
+        self.local_world = local_world
         # Создаем и запускаем задачу
         self._task = asyncio.create_task(self._run_loop())
     
@@ -71,18 +84,26 @@ class LoopComponent:
             while self._running:
                 # Здесь ваша логика работы
                 iteration += 1
-                print(f"Итерация {iteration} len(LOCAL_SYSTEMS)=",len(LOCAL_SYSTEMS))
-                for s in LOCAL_SYSTEMS:
-                    s.process_ecs( iteration, LOCAL_WORLD )
+                print(f"LoopComponent: Итерация {iteration} len(LOCAL_SYSTEMS)=",len(self.local_systems),flush=True)
+                for s in self.local_systems:
+                    s.process_ecs( iteration, self.local_world )
+                print("LoopComponent: Итерация успешно завершена",flush=True)
 
                 # Передаем управление event loop'у
                 await asyncio.sleep(1)
 
         except asyncio.CancelledError:
-            print("Задача была отменена")
+            print("LoopComponent: Задача была отменена")
             raise
+        except Exception as e:
+            print("LoopComponent: Произошла ошибка",e)
+            #traceback.print_exc()
+            #traceback.print_stack()
+            traceback.print_exc()
+
+
         finally:
-            print("Цикл завершен")
+            print("LoopComponent: Цикл завершен")
     
     async def stop(self):
         """Остановка компоненты."""
@@ -99,6 +120,7 @@ class LoopComponent:
         return self._running and self._task and not self._task.done()
 
 
+# немного странно что мы данные храним и в мире и в entity но пока сойдет
 class entity:
     def __init__(self,rapi,description,parent):
         self.rapi = rapi
@@ -111,7 +133,9 @@ class entity:
         # исходящие сигналы при обновлении компонент
         self.component_channels = dict()
 
-        LOCAL_WORLD.create_entity( self.id )
+        self.local_world = description["local_world"]
+
+        self.local_world.add_entity( self.id, self )
 
         #self.output = ppk.local.Channel()
         #self.result = ppk.local.Channel() # итого
@@ -135,14 +159,17 @@ class entity:
 
         gen.apply_description( rapi, self, description )
 
+    def get_component( self, component_name ):
+        return self.components[ component_name ]
+
     def remove_component( self, component_name ):
         del self.components[ component_name ]
-        LOCAL_WORLD.remove_component( self.id,component_name)
+        self.local_world.remove_component( self.id,component_name)
 
     def update_component( self,component_name, component_value ):
         self.components[ component_name ] = component_value
 
-        LOCAL_WORLD.add_component( self.id,component_name, component_value )
+        self.local_world.add_component( self.id,component_name, component_value )
 
         if not component_name in self.component_channels:
             c = self.rapi.channel(f"{self.id}_{component_name}")
@@ -167,12 +194,12 @@ class simulation:
 
 ################
 
-LOCAL_WORLD = World()
-LOCAL_SYSTEMS = []
-ECS_PROCESSOR = None
+#LOCAL_WORLD = World()
+#LOCAL_SYSTEMS = []
+#ECS_PROCESSOR = None
 
-import builtins
-builtins.LOCAL_SYSTEMS = LOCAL_SYSTEMS
+#import builtins
+#builtins.LOCAL_SYSTEMS = LOCAL_SYSTEMS
 
 ################
 
@@ -180,4 +207,4 @@ def init(*args):
     gen.register({"entity":entity})    
     #gen.register({"simulation":simulation})    
     #nonlocal ECS_PROCESSOR
-    ECS_PROCESSOR = LoopComponent()
+    #ECS_PROCESSOR = LoopComponent()

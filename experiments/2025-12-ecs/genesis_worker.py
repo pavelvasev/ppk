@@ -29,6 +29,10 @@ import matplotlib.pyplot as plt
 import io
 
 import plugins.active
+import plugins.ecs
+
+LOCAL_WORLD = plugins.ecs.World()
+LOCAL_SYSTEMS = []
 
 rapi = ppk.Client()
 
@@ -37,6 +41,8 @@ async def main():
     print("worker connecting to",url)
     await rapi.connect( url=url )
     print("connected")
+
+    RUN_SYSTEMS = plugins.ecs.LoopComponent(LOCAL_SYSTEMS,LOCAL_WORLD)
 
     input = rapi.channel( os.environ["PPK_INPUT_CHANNEL"] )
     report = rapi.channel( os.environ.get("PPK_REPORT_CHANNEL","genesis-worker-report") )
@@ -52,6 +58,8 @@ async def main():
         #arg = msg["arg"]
         arg = msg # пока так
         if msg["action"] == "create":
+            arg["description"]["local_world"] = LOCAL_WORLD
+            arg["description"]["local_systems"] = LOCAL_SYSTEMS
             objs = gen.create_objects( rapi, arg["description"],arg.get("target_id",None) )
         elif msg["action"] == "update":
             object_id = msg["id"]

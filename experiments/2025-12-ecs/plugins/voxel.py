@@ -33,7 +33,7 @@ class VoxelVolume:
                     i = i + 1
                     nodes = gen.node( "entity",
                                 components={
-                                  "voxel_volume": dict(
+                                  "voxel_volume_params": dict(
                                     pos=pos,
                                     shape=self.shape,
                                     size=self.size,
