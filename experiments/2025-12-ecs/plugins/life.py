@@ -72,14 +72,6 @@ class game_of_life_3d:
         self.local_systems = description["local_systems"]
         self.local_systems.append(self)
 
-        #self.id = gen.id_generator()        
-        #self.positions = rapi.channel(self.id + 'positions').cell()
-
-        self.input = ppk.local.Channel()
-        self.output = ppk.local.Channel()
-        self.pos = ppk.local.Cell()        
-        self.shape = ppk.local.Cell()
-
         rule = "4555"
         # Парсим правила
         if rule == "4555":
@@ -94,9 +86,7 @@ class game_of_life_3d:
         # Ядро для подсчёта соседей (3x3x3 куб)
         self.kernel = np.ones((3, 3, 3), dtype=int)
         self.kernel[1, 1, 1] = 0  # Не считаем саму клетку
-
-        self.input.react( self.on_input )
-
+        
         print("game_of_life_3d item created")
 
         gen.apply_description( rapi, self, description )
@@ -137,7 +127,7 @@ class game_of_life_3d:
             e = world.get_entity( entity_id )
             params = e.get_component("voxel_volume_params")
             grid = e.get_component("voxel_volume_value")["payload"]
-            print("see entity",entity_id,"grid=",grid)
+            #print("see entity",entity_id,"grid=",grid)
             new_grid = self.step( grid )
             e.update_component("voxel_volume_value",{"payload":new_grid})
 

@@ -24,7 +24,7 @@ class VoxelVolume:
                 for nz in range(self.shape[2]):                    
                     n =  i % len(workers)
                     # todo добавить guid
-                    object_id = f"vv_{i}"
+                    object_id = f"vv_{i:04d}"
                     pos = [nx,ny,nz]
                     print("deploy vv ",dict(pos=pos,
                                 shape=self.shape,

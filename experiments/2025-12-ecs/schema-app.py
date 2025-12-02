@@ -107,6 +107,12 @@ async def main():
         game = plugins.life.GameOfLife3D()
         game.deploy( worker_channels )
 
+        paint = voxpaint.VoxelVolumePaint( size=10,shape=shape )
+        paint.deploy( worker_channels )
+
+        saver = plugins.common.ImageSaver()
+        saver.deploy( worker_channels )
+
         """
         init = plugins.life.RandomVoxels( shape=shape )
         gamestep = plugins.life.GameOfLife3D( shape=shape )

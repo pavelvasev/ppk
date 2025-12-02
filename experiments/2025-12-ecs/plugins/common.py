@@ -6,6 +6,43 @@ import ppk.genesis as gen
 
 import numpy as np
 import asyncio
+import imageio
+
+# сохраняет картинки png из указанного компонента
+class ImageSaver:
+    def __init__(self):
+        self.distribution = []
+
+    def deploy( self,workers ):
+        for w in workers:
+            print("deploy voxel_volume_paint_sw to worker",w.id)
+            nodes = gen.node( "image_saver", tags=["ecs_system"])
+            w.put( {"description":nodes,"action":"create"})
+
+
+# todo 2 варианта просто рисовалка и с учетом сдвига
+class image_saver:
+    def __init__(self,rapi,description,parent):
+        self.local_systems = description["local_systems"]
+        self.local_systems.append(self)
+
+        print("image_saver item created")
+
+        gen.apply_description( rapi, self, description )
+
+    def process_ecs(self,i,world):
+        print("image_saver:process_ecs called")
+        # todo искать указаннный в параметре компонент
+        ents = world.get_entities_with_components("image")
+        print("image_saver:ents=",ents)
+        for entity_id in ents:
+            #grid = e.components["voxel_volume"]
+            e = world.get_entity( entity_id )
+            image = e.get_component("image")
+            rgb = image["payload"]["rgb"]
+            
+            imageio.imwrite(f"{entity_id}_iter_{i:05d}.png", rgb)
+
 
 # todo voxel-volume-pass назвать
 class Pass3D:
@@ -153,5 +190,7 @@ class trigger_pass3d_item:
 def init(*args):
     gen.register({"pass3d_item":pass3d_item})
     gen.register({"trigger_pass3d_item":trigger_pass3d_item})
+    gen.register({"image_saver":image_saver})
+    
 
 ################

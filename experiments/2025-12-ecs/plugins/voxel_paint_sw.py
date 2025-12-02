@@ -368,55 +368,23 @@ class VoxelVolumePaint:
         self.distribution = []
 
     def deploy( self,workers ):
-        total = self.shape[0] * self.shape[1] * self.shape[2]
-        #for i in range(total):
-        i = 0
-        for nx in range(self.shape[0]):
-            for ny in range(self.shape[1]):
-                for nz in range(self.shape[2]):                    
-                    n =  i % len(workers)
-                    # todo добавить guid
-                    object_id = f"paint_{i}"
-                    pos = [nx,ny,nz]
-                    print("deploy voxel_volume_paint_sw ",dict(pos=pos,
-                                shape=self.shape,
-                                size=self.size,
-                                id=object_id))
-                    i = i + 1
-                    nodes = gen.node( "voxel_volume_paint_sw",
-                                pos=pos,
-                                shape=self.shape,
-                                size=self.size,
-                                object_id=object_id
-                                )
-                    workers[n].put( {"description":nodes,"action":"create"} )
-
-                    # объект канала воркера, id воркера локальный там удаленный
-                    d = [ workers[n], object_id ]
-                    self.distribution.append( d )
+        for w in workers:
+            print("deploy voxel_volume_paint_sw to worker",w.id)
+            nodes = gen.node( "voxel_volume_paint_sw", tags=["ecs_system"])
+            w.put( {"description":nodes,"action":"create"})
 
 
+# todo 2 варианта просто рисовалка и с учетом сдвига
 class voxel_volume_paint_sw:
     def __init__(self,rapi,description,parent):
-        #self.id = gen.id_generator()        
-        #self.positions = rapi.channel(self.id + 'positions').cell()
-
-        self.output = ppk.local.Channel()
-        self.pos = ppk.local.Cell()
-        self.size = ppk.local.Cell()
-        self.shape = ppk.local.Cell()
-        self.input = ppk.local.Channel()
+        self.local_systems = description["local_systems"]
+        self.local_systems.append(self)
 
         print("voxel_volume_paint_sw item created")
 
-        self.setup_painting()
-
-        gen.apply_description( rapi, self, description )
-
-    def setup_painting(self):
         width, height = 1200, 800
 
-        renderer = VoxelCubeRenderer(
+        self.renderer = VoxelCubeRenderer(
             img_width=width,
             img_height=height,
             dx=0,dy=0,dz=0,
@@ -426,43 +394,42 @@ class voxel_volume_paint_sw:
             cube_color=(200, 220, 255),   # светлые грани
             edge_color=(20, 40, 120),     # тёмные рёбра
             edge_thickness=1,
-        )
+        )        
 
-        frame_id = 0
-        def on_input(v):
-            print("voxel_volume_paint_sw: see input message, sending grid. object_id=",self.external_id) #,self.grid
-        
-            volume = v
+        gen.apply_description( rapi, self, description )
+
+    def process_ecs(self,i,world):
+        print("voxel_volume_paint_sw:process_ecs called")
+        ents = world.get_entities_with_components("voxel_volume_value")
+        print("voxel_volume_paint_sw:ents=",ents)
+        for entity_id in ents:
+            #grid = e.components["voxel_volume"]
+            e = world.get_entity( entity_id )
+            params = e.get_component("voxel_volume_params")
+            grid = e.get_component("voxel_volume_value")["payload"]
+            #print("see entity",entity_id,"grid=",grid)
+            #new_grid = self.step( grid )
+            #e.update_component("voxel_volume_value",{"payload":new_grid})
 
             #eye = (15.0, 15.0, -25.0)
             eye = (100, 100, 100.0)
             center = (5.0, 5.0, 5.0)
             up = (0.0, 1.0, 0.0)
 
-            pos = self.pos.value   # положение блока в сетке блоков
-            size = volume.shape[0] # число ячеек в блоке
+            
+            pos = params["pos"]   # положение блока в сетке блоков
+            size = params["shape"][0] # число ячеек в блоке
 
-            renderer.dx = pos[0] * size
-            renderer.dy = pos[1] * size
-            renderer.dz = pos[2] * size
+            self.renderer.dx = pos[0] * size
+            self.renderer.dy = pos[1] * size
+            self.renderer.dz = pos[2] * size
+            
+            rgb, depth = self.renderer.render(grid, eye=eye, center=center, up=up)
 
-            rgb, depth = renderer.render(volume, eye=eye, center=center, up=up)        
-
-            # depth: 0..1 – линейная глубина между near и far.
-            # Реальная дистанция в тех же единицах, что и сцена:
-            # real_depth = near + depth * (far - near)
-
-            nonlocal frame_id
-            print(f"voxel_volume_paint_sw frame {frame_id}: color={rgb.shape}, depth={depth.shape}, object_id=",self.external_id)
-            frame_id += 1
-
-            #msg = {"payload":[rgb, depth]}
             msg = {"payload":{"rgb":rgb,"depth":depth}}
-            self.output.put(msg)
-            #imageio.imwrite(f"voxels_cubes_edges_{self.external_id}.png", rgb)
+            e.update_component("image",msg)
+            #imageio.imwrite(f"{entity_id}_iter_{i:05d}.png", rgb)
 
-        self.input.react( on_input )
-        print("setup_painting 4")
 
 
 # вход - пара (картинка, z-buffer)
