@@ -145,6 +145,7 @@ class entity:
 
         def on_update_component(v):
             component_name  = v["component_name"]
+            print("ecs: entity",self.entity_id,"got external component",component_name)            
             self.update_component(component_name,v)
 
         self.update_component_channel.react( on_update_component )
@@ -176,7 +177,10 @@ class entity:
             self.component_channels[component_name] = c
 
         # и теперь послать сигнал
-        self.component_channels[component_name].put( component_value )
+        ch = self.component_channels[component_name]
+        print("ecs: update_component: sending update",component_name,"to ch",ch.id)
+        component_value["component_name"] = component_name
+        ch.put( component_value )
         
 
         #component_name  = v["component_name"]

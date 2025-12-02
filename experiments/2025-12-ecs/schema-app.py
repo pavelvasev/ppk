@@ -110,8 +110,19 @@ async def main():
         paint = voxpaint.VoxelVolumePaint( size=10,shape=shape )
         paint.deploy( worker_channels )
 
+        # порядок важен. это фишка
+        total = shape[0]*shape[1]*shape[2]
+        merger = plugins.common.ImageMerger(rapi,total)
+        merger.deploy( worker_channels )
+
+        pass2merger = plugins.common.PassImagesToMerger(rapi,total)
+        pass2merger.deploy( worker_channels )
+
+        # idea worker в аргументы классу? но зачем нам сразу раскидывать...
         saver = plugins.common.ImageSaver()
         saver.deploy( worker_channels )
+
+
 
         """
         init = plugins.life.RandomVoxels( shape=shape )

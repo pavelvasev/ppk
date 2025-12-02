@@ -9,13 +9,14 @@ import asyncio
 import imageio
 
 # сохраняет картинки png из указанного компонента
+# todo аргумент список доп компонент, имя компоненты с картинкой
 class ImageSaver:
     def __init__(self):
         self.distribution = []
 
     def deploy( self,workers ):
         for w in workers:
-            print("deploy voxel_volume_paint_sw to worker",w.id)
+            print("deploy image_saver to worker",w.id)
             nodes = gen.node( "image_saver", tags=["ecs_system"])
             w.put( {"description":nodes,"action":"create"})
 
@@ -33,15 +34,198 @@ class image_saver:
     def process_ecs(self,i,world):
         print("image_saver:process_ecs called")
         # todo искать указаннный в параметре компонент
-        ents = world.get_entities_with_components("image")
+        #ents = world.get_entities_with_components("image")
+        ents = world.get_entities_with_components("image","final_image")
         print("image_saver:ents=",ents)
         for entity_id in ents:
             #grid = e.components["voxel_volume"]
             e = world.get_entity( entity_id )
             image = e.get_component("image")
             rgb = image["payload"]["rgb"]
-            
+
             imageio.imwrite(f"{entity_id}_iter_{i:05d}.png", rgb)
+
+
+# копирует картинки из воксельного рендеринга в мержер
+# todo может это лишнее и в мержер подать на вход набор исходных энтитей
+# todo список исходных энтитей это аргумент
+# idea может быть это универсальный линк кстати и там набор целевых итемов
+# кстати это классная идея - вот можно будет массово линковать процессы обработки
+# информации а точнее их энтити. это хорошо!№
+class PassImagesToMerger:
+    def __init__(self,rapi,total):
+        self.total = total
+        self.rapi=rapi
+
+    def deploy( self,workers ):
+        for i in range(self.total):
+            src = f"vv_{i:04d}_image"
+            tgt = f"image_merge_level0_{i}"
+            print("ENTITY COMPONENT BIND",src,"----->",tgt)
+            self.rapi.bind(src,tgt)
+
+
+# соединяет картинки на основе з-буфера
+# чтобы мержер заработал
+# должна быть проведена запись в энтити
+# f"image_merge_level0_{i}"
+# в компоненту image
+class ImageMerger:
+    def __init__(self,rapi,total):
+        self.distribution = []
+        self.total=total
+        self.rapi = rapi
+
+    def deploy( self,workers ):
+
+        level = 0
+        items_on_level = self.total
+
+        while items_on_level > 0:
+            print("ImageMerger generating level",level,"items_on_level=",items_on_level)
+
+            for i in range(items_on_level):
+                entity_id = f"image_merge_level{level}_{i}"
+                nodes = gen.node( "entity",
+                            components={
+                              "image_merge_entity": dict(),                          
+                            },
+                            entity_id=entity_id
+                            )
+                if items_on_level == 1:
+                    # ставим отметку что это финальная картинка
+                    nodes["params"]["components"]["final_image"] = dict()
+
+                n =  i % len(workers)
+                print("deploy image_merge entity ",entity_id,"to worker",n)
+                workers[n].put( {"description":nodes,"action":"create"} )
+
+                if items_on_level > 1:
+                    # если это не финальная картинка то
+                    # ссылка на следующую энтити
+                    next_entity_id = f"image_merge_{level+1}_{i//2}"
+                    next_input = ["input1","input2"][i % 2]
+                    src = f"{entity_id}_image"
+                    tgt = f"{next_entity_id}_{next_input}"
+                    print("ENTITY COMPONENT BIND",src,"----->",tgt)
+                    self.rapi.bind(src,tgt)
+
+            items_on_level = items_on_level // 2
+            level = level + 1
+
+        for w in workers:
+            print("deploy image_merger to worker",w.id)
+            nodes = gen.node( "image_merger", tags=["ecs_system"])
+            w.put( {"description":nodes,"action":"create"})
+
+
+
+def compose_rgb_depth(
+    list_rgb,
+    list_depth,
+    bg_color=(0, 0, 0),
+    empty_depth_value=0.0,
+):
+    """
+    Объединяет несколько кадров (rgb + depth) в один по минимальному z.
+
+    Параметры
+    ---------
+    list_rgb : list[np.ndarray]
+        Список кадров цвета, каждый массив формы:
+        - [H, W, 3] uint8 (RGB), или
+        - [H, W, 4] uint8 (RGBA).
+    list_depth : list[np.ndarray]
+        Список depth-карт, каждый массив формы [H, W] float32.
+        Допущение: depth <= 0 или NaN означает «нет геометрии» (фон).
+    bg_color : tuple(int, int, int)
+        Цвет фона (R, G, B) в диапазоне 0–255.
+    empty_depth_value : float
+        Значение глубины в итоговой карте для пикселей, где ни на одном
+        входном кадре нет геометрии.
+
+    Возвращает
+    ----------
+    out_rgb : np.ndarray
+        Итоговый цвет [H, W, 3] uint8.
+    out_depth : np.ndarray
+        Итоговый z-буфер [H, W] float32.
+    """
+    if not list_rgb or not list_depth:
+        raise ValueError("list_rgb и list_depth не должны быть пустыми")
+    if len(list_rgb) != len(list_depth):
+        raise ValueError("list_rgb и list_depth должны быть одинаковой длины")
+
+    # Стек RGB (обрежем альфу, если есть)
+    rgb_stack = np.stack(
+        [img[..., :3] for img in list_rgb],
+        axis=0
+    )  # [N, H, W, 3]
+
+    # Стек depth
+    depth_stack = np.stack(list_depth, axis=0)  # [N, H, W]
+
+    # Маска «есть геометрия» (depth > 0 и не NaN)
+    has_geom = (depth_stack > 0) & np.isfinite(depth_stack)
+
+    # Там, где геометрии нет, подставляем +inf, чтобы не выигрывало при argmin
+    depth_clean = np.where(has_geom, depth_stack, np.inf)
+
+    # Индексы минимальной глубины по каждому пикселю
+    idx_min = np.argmin(depth_clean, axis=0)  # [H, W]
+    min_depth = depth_clean[idx_min, np.arange(depth_clean.shape[1])[None, :]]
+
+    # Общая маска: есть ли хоть один источник с геометрией для этого пикселя
+    any_geom = np.isfinite(min_depth)
+
+    h, w, _ = rgb_stack.shape[1:]
+    out_rgb = np.zeros((h, w, 3), dtype=rgb_stack.dtype)
+    out_rgb[:] = bg_color
+
+    out_depth = np.full((h, w), empty_depth_value, dtype=depth_stack.dtype)
+
+    # Заполняем по источникам
+    for i in range(len(list_rgb)):
+        mask = (idx_min == i) & any_geom
+        if not np.any(mask):
+            continue
+        out_rgb[mask] = rgb_stack[i][mask]
+        out_depth[mask] = depth_stack[i][mask]
+
+    return out_rgb, out_depth   
+
+
+class image_merger:
+    def __init__(self,rapi,description,parent):
+        self.local_systems = description["local_systems"]
+        self.local_systems.append(self)
+
+        print("image_merger item created")
+
+        gen.apply_description( rapi, self, description )
+
+    def process_ecs(self,i,world):
+        print("image_merger:process_ecs called")
+        # todo искать указаннный в параметре компонент
+        ents = world.get_entities_with_components("image1","image2")
+        print("image_merger:ents=",ents)
+        for entity_id in ents:
+            #grid = e.components["voxel_volume"]
+            e = world.get_entity( entity_id )
+            image1 = e.get_component("image1")
+            image2 = e.get_component("image2")
+            rgb1 = image1["payload"]["rgb"]
+            rgb2 = image2["payload"]["rgb"]
+
+            list_rgb =[ image1["payload"]["rgb"], image2["payload"]["rgb"]]
+            list_depth =[ image1["payload"]["depth"], image2["payload"]["depth"]]
+
+            rgb,depth = compose_rgb_depth( list_rgb, list_depth )
+            
+            #imageio.imwrite(f"{entity_id}_iter_{i:05d}.png", rgb)
+            msg = {"payload":{"rgb":rgb,"depth":depth}}
+            e.update_component("image",msg)
+
 
 
 # todo voxel-volume-pass назвать
@@ -191,6 +375,8 @@ def init(*args):
     gen.register({"pass3d_item":pass3d_item})
     gen.register({"trigger_pass3d_item":trigger_pass3d_item})
     gen.register({"image_saver":image_saver})
+    gen.register({"image_merger":image_merger})
+    
     
 
 ################
