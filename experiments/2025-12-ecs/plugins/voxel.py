@@ -38,7 +38,7 @@ class VoxelVolume:
                                     shape=self.shape,
                                     size=self.size,
                                   ),
-                                  "voxel_init": dict(pending=1)
+                                  "voxel_random_init": dict(density=0.1)
                                 },                              
                                 entity_id=object_id
                                 )

@@ -35,58 +35,43 @@ class random_voxels:
 
     def process_ecs(self,i,world):
         print("random_voxels:process_ecs called")
-        ents = world.get_entities_with_components("voxel_init")
+        ents = world.get_entities_with_components("voxel_random_init")
         print("random_voxels:ents=",ents)
         for entity_id in ents:
             #grid = e.components["voxel_volume"]
             e = world.get_entity( entity_id )
-            grid = e.get_component("voxel_volume_params")
+            params = e.get_component("voxel_volume_params")
             #grid = world.get_component( e, "voxel_volume_params" )
-            size = grid["size"]
-            print("random_voxels creates random of size",size)
+            size = params["size"]
+            
             # пришел такт данных на grid надо сделать шаг
             #density = self.density.value
-            density = 0.1
+            #density = 0.1
+            density = e.get_component("voxel_random_init")["density"]
+            print("random_voxels creates random of size",size,"with density",density,"on entity_id",entity_id)
             grid = np.random.random((size, size, size)) < density
             e.update_component("voxel_volume_value",{"payload":grid})
-            e.remove_component("voxel_init")
+            e.remove_component("voxel_random_init")
             #self.output.put( grid )
 
 class GameOfLife3D:
-    def __init__(self,shape):
+    def __init__(self):
         #self.size = size # сторона кубика (кол-во ячеек)
-        self.shape = shape # [cx,cy,cz] число кубиков
+        #self.shape = shape # [cx,cy,cz] число кубиков
         self.distribution = []
 
     def deploy( self,workers ):
-        total = self.shape[0] * self.shape[1] * self.shape[2]
-        #for i in range(total):
-        i = 0
-        for nx in range(self.shape[0]):
-            for ny in range(self.shape[1]):
-                for nz in range(self.shape[2]):                    
-                    object_id = f"game_of_life_3d_{i}"
-                    n =  i % len(workers)
-                    pos = [nx,ny,nz]
-                    print("deploy game_of_life_3d ",dict(pos=pos,
-                                shape=self.shape,
-                                object_id=object_id
-                                ))
-                    i = i + 1
-                    nodes = gen.node( "game_of_life_3d",
-                                pos=pos,
-                                shape=self.shape,
-                                object_id=object_id                                
-                                )
-                    workers[n].put( {"description":nodes,"action":"create"})
-
-                    # объект канала воркера, id воркера локальный там удаленный
-                    d = [ workers[n], object_id ]
-                    self.distribution.append( d )
-
+        for w in workers:
+            print("deploy game_of_life_3d to worker",w.id)
+            nodes = gen.node( "game_of_life_3d", tags=["ecs_system"])
+            w.put( {"description":nodes,"action":"create"})
 
 class game_of_life_3d:
     def __init__(self,rapi,description,parent):
+
+        self.local_systems = description["local_systems"]
+        self.local_systems.append(self)
+
         #self.id = gen.id_generator()        
         #self.positions = rapi.channel(self.id + 'positions').cell()
 
@@ -142,6 +127,20 @@ class game_of_life_3d:
         grid = new_grid
         #return np.sum(grid)  # Возвращаем количество живых клеток
         return grid
+
+    def process_ecs(self,i,world):
+        print("game_of_life_3d:process_ecs called")
+        ents = world.get_entities_with_components("voxel_volume_value")
+        print("game_of_life_3d:ents=",ents)
+        for entity_id in ents:
+            #grid = e.components["voxel_volume"]
+            e = world.get_entity( entity_id )
+            params = e.get_component("voxel_volume_params")
+            grid = e.get_component("voxel_volume_value")["payload"]
+            print("see entity",entity_id,"grid=",grid)
+            new_grid = self.step( grid )
+            e.update_component("voxel_volume_value",{"payload":new_grid})
+
 
 
 def init(*args):

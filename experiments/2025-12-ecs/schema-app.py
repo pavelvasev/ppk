@@ -104,6 +104,9 @@ async def main():
         init = plugins.life.RandomVoxels()
         init.deploy( worker_channels )
 
+        game = plugins.life.GameOfLife3D()
+        game.deploy( worker_channels )
+
         """
         init = plugins.life.RandomVoxels( shape=shape )
         gamestep = plugins.life.GameOfLife3D( shape=shape )

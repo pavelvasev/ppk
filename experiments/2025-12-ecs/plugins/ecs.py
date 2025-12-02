@@ -87,7 +87,7 @@ class LoopComponent:
                 print(f"LoopComponent: Итерация {iteration} len(LOCAL_SYSTEMS)=",len(self.local_systems),flush=True)
                 for s in self.local_systems:
                     s.process_ecs( iteration, self.local_world )
-                print("LoopComponent: Итерация успешно завершена",flush=True)
+                print(f"LoopComponent: Итерация {iteration} успешно завершена",flush=True)
 
                 # Передаем управление event loop'у
                 await asyncio.sleep(1)
