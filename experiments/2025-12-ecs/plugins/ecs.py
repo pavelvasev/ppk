@@ -127,11 +127,12 @@ class entity:
         self.id = description["params"]["entity_id"]
         self.entity_id = self.id # ну тоже закопируют
         #gen.id_generator()        
-        self.update_component_channel = rapi.channel(self.id)
+        #self.update_component_channel = rapi.channel(self.id)
         self.components = dict()
 
         # исходящие сигналы при обновлении компонент
-        self.component_channels = dict()
+        self.component_channels_out = dict()
+        self.component_channels_in = dict()
 
         self.local_world = description["local_world"]
 
@@ -143,18 +144,12 @@ class entity:
         #self.n = ppk.local.Cell()
         #self.cnt = 0
 
-        def on_update_component(v):
-            component_name  = v["component_name"]
-            print("ecs: entity",self.entity_id,"got external component",component_name)            
-            self.update_component(component_name,v)
-
-        self.update_component_channel.react( on_update_component )
+        #self.update_component_channel.react( on_update_component )
 
         # внедряем присланные компоненты
         if "components" in description["params"]:
             for cname,cvalue in description["params"]["components"].items():
-                cvalue["component_name"] = cname
-                on_update_component( cvalue )
+                self.update_component(cname,cvalue)                
 
         print("ecs-entity item created")
 
@@ -172,14 +167,27 @@ class entity:
 
         self.local_world.add_component( self.id,component_name, component_value )
 
-        if not component_name in self.component_channels:
-            c = self.rapi.channel(f"{self.id}_{component_name}")
-            self.component_channels[component_name] = c
+        # ppk todo возникает задача мониторить деревья каналов в смысле a/b/c : a/*
+        # это нужно для оптимизации
+        # и еще пока этого не сделать то компонент обязательно должен быть создан
+        # заранее (статично или динамично), чтобы принимать обновления
+
+        # исходящие каналы
+        if not component_name in self.component_channels_out:
+            c = self.rapi.channel(f"{self.id}/{component_name}/out")
+            self.component_channels_out[component_name] = c
+        # входящие каналы для обновления компонент
+        if not component_name in self.component_channels_in:
+            c = self.rapi.channel(f"{self.id}/{component_name}/in")
+            self.component_channels_in[component_name] = c
+            def on_update_component(v):
+                print("ecs: entity",self.entity_id,"got external component value",component_name)
+                self.update_component(component_name,v)
+            c.react(on_update_component)
 
         # и теперь послать сигнал
-        ch = self.component_channels[component_name]
-        print("ecs: update_component: sending update",component_name,"to ch",ch.id)
-        component_value["component_name"] = component_name
+        ch = self.component_channels_out[component_name]
+        print("ecs: update_component: sending update",component_name,"to ch",ch.id)        
         ch.put( component_value )
         
 

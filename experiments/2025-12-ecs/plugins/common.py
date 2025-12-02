@@ -41,6 +41,8 @@ class image_saver:
             #grid = e.components["voxel_volume"]
             e = world.get_entity( entity_id )
             image = e.get_component("image")
+            if not "payload" in image:
+                continue
             rgb = image["payload"]["rgb"]
 
             imageio.imwrite(f"{entity_id}_iter_{i:05d}.png", rgb)
@@ -59,8 +61,8 @@ class PassImagesToMerger:
 
     def deploy( self,workers ):
         for i in range(self.total):
-            src = f"vv_{i:04d}_image"
-            tgt = f"image_merge_level0_{i}"
+            src = f"vv_{i:04d}/image/out"
+            tgt = f"image_merge_level0_{i}/image/in"
             print("ENTITY COMPONENT BIND",src,"----->",tgt)
             self.rapi.bind(src,tgt)
 
@@ -70,6 +72,9 @@ class PassImagesToMerger:
 # должна быть проведена запись в энтити
 # f"image_merge_level0_{i}"
 # в компоненту image
+
+# level0 соответствует исходному разбиению данных и рендеринга,
+# имеет вход image и он пересылает на level1 на image1/2
 class ImageMerger:
     def __init__(self,rapi,total):
         self.distribution = []
@@ -88,7 +93,10 @@ class ImageMerger:
                 entity_id = f"image_merge_level{level}_{i}"
                 nodes = gen.node( "entity",
                             components={
-                              "image_merge_entity": dict(),                          
+                              "image": dict(),
+                              "image1": dict(),
+                              "image2": dict(),
+                              "image_merge_entity": dict(),
                             },
                             entity_id=entity_id
                             )
@@ -103,10 +111,10 @@ class ImageMerger:
                 if items_on_level > 1:
                     # если это не финальная картинка то
                     # ссылка на следующую энтити
-                    next_entity_id = f"image_merge_{level+1}_{i//2}"
-                    next_input = ["input1","input2"][i % 2]
-                    src = f"{entity_id}_image"
-                    tgt = f"{next_entity_id}_{next_input}"
+                    next_entity_id = f"image_merge_level{level+1}_{i//2}"
+                    next_input = ["image1","image2"][i % 2]
+                    src = f"{entity_id}/image/out"
+                    tgt = f"{next_entity_id}/{next_input}/in"
                     print("ENTITY COMPONENT BIND",src,"----->",tgt)
                     self.rapi.bind(src,tgt)
 
@@ -118,6 +126,58 @@ class ImageMerger:
             nodes = gen.node( "image_merger", tags=["ecs_system"])
             w.put( {"description":nodes,"action":"create"})
 
+
+def merge_by_depth(
+    rgb_a: np.ndarray,
+    depth_a: np.ndarray,
+    rgb_b: np.ndarray,
+    depth_b: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Объединяет два изображения по z-буферу.
+
+    На каждом пикселе выбирается цвет того изображения, у которого глубина меньше
+    (ближе к камере). Предполагается, что меньший z = ближе.
+
+    Параметры
+    ---------
+    rgb_a : np.ndarray
+        Цвета первого изображения [H, W, 3], dtype=uint8.
+    depth_a : np.ndarray
+        z-буфер первого изображения [H, W], dtype=float32.
+    rgb_b : np.ndarray
+        Цвета второго изображения [H, W, 3], dtype=uint8.
+    depth_b : np.ndarray
+        z-буфер второго изображения [H, W], dtype=float32.
+
+    Возвращает
+    ----------
+    rgb : np.ndarray
+        Итоговый цвет [H, W, 3], uint8.
+    depth : np.ndarray
+        Итоговый z-буфер [H, W], float32.
+    """
+
+    if rgb_a.shape != rgb_b.shape:
+        raise ValueError(f"rgb_a.shape {rgb_a.shape} != rgb_b.shape {rgb_b.shape}")
+    if depth_a.shape != depth_b.shape:
+        raise ValueError(f"depth_a.shape {depth_a.shape} != depth_b.shape {depth_b.shape}")
+    if rgb_a.shape[:2] != depth_a.shape:
+        raise ValueError("Пространственные размеры rgb и depth не совпадают")
+
+    # Маска: где второе изображение ближе (depth_b < depth_a)
+    mask_b_closer = depth_b < depth_a  # [H, W], bool
+
+    # Расширяем маску до [H, W, 1] для работы с цветом
+    mask_b_closer_3 = mask_b_closer[..., None]
+
+    # Выбираем глубины
+    depth_out = np.where(mask_b_closer, depth_b, depth_a).astype(np.float32)
+
+    # Выбираем цвета
+    rgb_out = np.where(mask_b_closer_3, rgb_b, rgb_a).astype(np.uint8)
+
+    return rgb_out, depth_out
 
 
 def compose_rgb_depth(
@@ -211,16 +271,28 @@ class image_merger:
         print("image_merger:ents=",ents)
         for entity_id in ents:
             #grid = e.components["voxel_volume"]
+            print("processing",entity_id)
             e = world.get_entity( entity_id )
             image1 = e.get_component("image1")
             image2 = e.get_component("image2")
-            rgb1 = image1["payload"]["rgb"]
-            rgb2 = image2["payload"]["rgb"]
 
-            list_rgb =[ image1["payload"]["rgb"], image2["payload"]["rgb"]]
-            list_depth =[ image1["payload"]["depth"], image2["payload"]["depth"]]
+            if not "payload" in image1:
+                print("no payload in image1, skipping")
+                continue
+            if not "payload" in image2:
+                print("no payload in image2, skipping")
+                continue
+            print("merger has all data, merging!!!!!!!!!!!!")
 
-            rgb,depth = compose_rgb_depth( list_rgb, list_depth )
+            #rgb1 = image1["payload"]["rgb"]
+            #rgb2 = image2["payload"]["rgb"]
+
+            #list_rgb =[ image1["payload"]["rgb"], image2["payload"]["rgb"]]
+            #list_depth =[ image1["payload"]["depth"], image2["payload"]["depth"]]
+
+            #rgb,depth = compose_rgb_depth( list_rgb, list_depth )
+            rgb,depth = merge_by_depth( image1["payload"]["rgb"], image1["payload"]["depth"], image2["payload"]["rgb"], image2["payload"]["depth"] )
+
             
             #imageio.imwrite(f"{entity_id}_iter_{i:05d}.png", rgb)
             msg = {"payload":{"rgb":rgb,"depth":depth}}
