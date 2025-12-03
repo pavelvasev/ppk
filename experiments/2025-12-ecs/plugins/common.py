@@ -277,12 +277,12 @@ class image_merger:
             image2 = e.get_component("image2")
 
             if not "payload" in image1:
-                print("no payload in image1, skipping")
+                #print("no payload in image1, skipping")
                 continue
             if not "payload" in image2:
-                print("no payload in image2, skipping")
+                #print("no payload in image2, skipping")
                 continue
-            print("merger has all data, merging!!!!!!!!!!!!")
+            #print("merger has all data, merging!!!!!!!!!!!!")
 
             #rgb1 = image1["payload"]["rgb"]
             #rgb2 = image2["payload"]["rgb"]

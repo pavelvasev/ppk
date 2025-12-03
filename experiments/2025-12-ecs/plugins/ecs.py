@@ -91,6 +91,8 @@ class LoopComponent:
 
                 # Передаем управление event loop'у
                 await asyncio.sleep(1)
+                #await asyncio.sleep(0.1)
+                #await asyncio.sleep(0.0000001)
 
         except asyncio.CancelledError:
             print("LoopComponent: Задача была отменена")

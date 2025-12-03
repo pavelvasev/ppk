@@ -412,7 +412,8 @@ class voxel_volume_paint_sw:
             #e.update_component("voxel_volume_value",{"payload":new_grid})
 
             #eye = (15.0, 15.0, -25.0)
-            eye = (100, 100, 100.0)
+            #eye = (100, 100, 100.0)
+            eye = (50, 50, 100.0)
             center = (5.0, 5.0, 5.0)
             up = (0.0, 1.0, 0.0)
 
