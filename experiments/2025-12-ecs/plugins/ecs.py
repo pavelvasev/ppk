@@ -131,6 +131,7 @@ class entity:
         #gen.id_generator()        
         #self.update_component_channel = rapi.channel(self.id)
         self.components = dict()
+        self.maybe_components = []
 
         # исходящие сигналы при обновлении компонент
         self.component_channels_out = dict()
@@ -148,6 +149,8 @@ class entity:
 
         #self.update_component_channel.react( on_update_component )
 
+        gen.apply_description( rapi, self, description )
+
         # внедряем присланные компоненты
         if "components" in description["params"]:
             for cname,cvalue in description["params"]["components"].items():
@@ -160,10 +163,9 @@ class entity:
 
         print("ecs-entity item created")
 
+        
 
-        gen.apply_description( rapi, self, description )
-
-    def get_component( self, component_name ):( cname )
+    def get_component( self, component_name ):
         return self.components[ component_name ]
 
     def remove_component( self, component_name ):
@@ -172,6 +174,7 @@ class entity:
 
     def create_component_links( self,component_name ):
         # исходящие каналы
+        #print("create_component_links entity",self.entity_id,"component",component_name)
         if not component_name in self.component_channels_out:
             c = self.rapi.channel(f"{self.id}/{component_name}/out")
             self.component_channels_out[component_name] = c
@@ -180,7 +183,7 @@ class entity:
             c = self.rapi.channel(f"{self.id}/{component_name}/in")
             self.component_channels_in[component_name] = c
             def on_update_component(v):
-                print("ecs: entity",self.entity_id,"got external component value",component_name)
+                print("ecs: entity",self.entity_id,"got external update to component",component_name)
                 self.update_component(component_name,v)
             c.react(on_update_component)
 

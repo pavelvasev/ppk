@@ -23,8 +23,8 @@ def on_worker_msg(msg):
 
 async def start_worker_process(url, worker_id, input_channel_id, output_channel_id,logdir):
     env = os.environ.copy() | {"PPK_INPUT_CHANNEL":input_channel_id,"PPK_REPORT_CHANNEL":output_channel_id,"PPK_URL":url}
-    log = os.open(f"{logdir}/{worker_id}.log",os.O_WRONLY | os.O_CREAT,0o644)
-    logerr = os.open(f"{logdir}/{worker_id}.err.log",os.O_WRONLY | os.O_CREAT,0o644)
+    log = os.open(f"{logdir}/{worker_id}.log",os.O_WRONLY | os.O_CREAT | os.O_TRUNC,0o644)
+    logerr = os.open(f"{logdir}/{worker_id}.err.log",os.O_WRONLY | os.O_CREAT | os.O_TRUNC,0o644)
 
     # subprocess.popen уместнее было бы
     p = await asyncio.create_subprocess_exec(sys.executable,"./genesis_worker.py",env=env,stdin=subprocess.DEVNULL,stderr=logerr,stdout=log)

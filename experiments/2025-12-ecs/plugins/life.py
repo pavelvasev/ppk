@@ -159,7 +159,7 @@ class VoxelVolumeSync:
         for nx in range(self.shape[0]):
             for ny in range(self.shape[1]):
                 for nz in range(self.shape[2]):
-                    n =  i % len(workers)
+                    #n =  i % len(workers)
                     # todo добавить guid
                     #object_id = f"vv_{i:04d}"
                     object_id = self.get_entity_id( nx, ny, nz )
@@ -167,20 +167,21 @@ class VoxelVolumeSync:
                     # копируем результат вычислений на вход в эту же сущность
                     src = f"{object_id}/voxel_volume_result/out"
                     tgt = f"{object_id}/voxel_volume_income/in"
+                    print("ENTITY COMPONENT BIND",src,"----->",tgt)
                     self.rapi.bind(src,tgt)
 
                     # ссылки на грани
                     if nx > 0:
                         other_object_id = self.get_entity_id( nx-1, ny, nz )
-                        src = f"{object_id}/nx_first/out"
-                        tgt = f"{other_object_id}/nx_first_income/in"
-                        #print("ENTITY COMPONENT BIND",src,"----->",tgt)
+                        src = f"{object_id}/sx_first/out"
+                        tgt = f"{other_object_id}/sx_last_income/in"
+                        print("ENTITY COMPONENT BIND",src,"----->",tgt)
                         self.rapi.bind(src,tgt)
                     if nx < self.shape[0]-1:
                         other_object_id = self.get_entity_id( nx+1, ny, nz )
-                        src = f"{object_id}/nx_last/out"
-                        tgt = f"{other_object_id}/nx_last_income/in"
-                        #print("ENTITY COMPONENT BIND",src,"----->",tgt)
+                        src = f"{object_id}/sx_last/out"
+                        tgt = f"{other_object_id}/sx_first_income/in"
+                        print("ENTITY COMPONENT BIND",src,"----->",tgt)
                         self.rapi.bind(src,tgt)
 
 
@@ -190,16 +191,16 @@ class voxel_volume_sync:
         self.local_systems = description["local_systems"]
         self.local_systems.append(self)
 
-    def extract_faces_3d(arr):
+    def extract_faces_3d(self,arr):
         """Извлекает 6 граней 3D массива"""
         S = SHADOW
         faces = {
-            'nx_first': arr[S, :, :].copy(),      # первая плоскость по оси 0
-            'nx_last': arr[-S, :, :].copy(),      # последняя плоскость по оси 0
-            'ny_first': arr[:, S, :].copy(),     # первая плоскость по оси 1
-            'ny_last': arr[:, -S, :].copy(),      # последняя плоскость по оси 1
-            'nz_first': arr[:, :, S].copy(),      # первая плоскость по оси 2
-            'nz_last': arr[:, :, -S].copy()     # последняя плоскость по оси 2
+            'sx_first': arr[S, :, :].copy(),      # первая плоскость по оси 0
+            'sx_last': arr[-S, :, :].copy(),      # последняя плоскость по оси 0
+            'sy_first': arr[:, S, :].copy(),     # первая плоскость по оси 1
+            'sy_last': arr[:, -S, :].copy(),      # последняя плоскость по оси 1
+            'sz_first': arr[:, :, S].copy(),      # первая плоскость по оси 2
+            'sz_last': arr[:, :, -S].copy()     # последняя плоскость по оси 2
         }
         return faces
 
@@ -215,9 +216,31 @@ class voxel_volume_sync:
             params = e.get_component("voxel_volume_params")
             grid = e.get_component("voxel_volume_result")["payload"]
 
-            faces = extract_faces_3d( grid )
+            faces = self.extract_faces_3d( grid )
             for fname, fvalue in faces.items():            
                 e.update_component(f"{fname}",{"payload":fvalue})
+        # входящие
+
+        ents = world.get_entities_with_components("voxel_volume_income","sx_first_income","sx_last_income")
+        print("voxel_volume_sync: import shadow, ents=",ents)
+        for entity_id in ents:
+            #grid = e.components["voxel_volume"]
+            e = world.get_entity( entity_id )
+            params = e.get_component("voxel_volume_params")
+            grid = e.get_component("voxel_volume_income")["payload"]
+            sx_first = e.get_component("sx_first_income")
+            sx_last = e.get_component("sx_last_income")
+            S = SHADOW
+            if "payload" in sx_first: # настоящее, не граничное
+                grid[S, :, :] = sx_first["payload"]
+                e.remove_component("sx_first_income")
+            if "payload" in sx_last: # настоящее, не граничное
+                grid[-S, :, :] = sx_last["payload"]
+                e.remove_component("sx_last_income")
+            e.update_component("voxel_volume_value",{"payload":grid})
+            e.remove_component("voxel_volume_income")
+
+
 
 def init(*args):
     gen.register({"random_voxels":random_voxels})

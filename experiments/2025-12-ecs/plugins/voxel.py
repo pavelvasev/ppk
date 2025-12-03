@@ -19,10 +19,10 @@ class VoxelVolume:
                    for i in range(self.shape[2])]
 
     # трехмерный массив
-    def entities_3d()
+    def entities_3d():
         return self.entities_list_3d
 
-    def entities()
+    def entities():
         return self.entities_list
 
     def deploy( self,workers ):
@@ -44,20 +44,39 @@ class VoxelVolume:
                                 size=self.size,
                                 id=object_id))
                     i = i + 1
-                    nodes = gen.node( "entity",
-                                maybe_comonents=[
-                                    "nx_first","nx_last", "nx_first_income","nx_last_income",
-                                    "nz_first","nz_last", "nz_first_income","nz_last_income",
-                                    "ny_first","ny_last", "ny_first_income","ny_last_income",
-                                    ],
-                                components={
+                    cc = {
                                   "voxel_volume_params": dict(
                                     pos=pos,
                                     shape=self.shape,
                                     size=self.size,
                                   ),
                                   "voxel_random_init": dict(density=0.1)
-                                },                              
+                          }
+                    if nx == 0:
+                        #cc["sx_first_is_permanent"] = dict()
+                        cc["sx_first_income"] = dict(permanent=1)
+                    if nx == self.shape[0]-1:
+                        #cc["sx_last_is_permanent"] = dict()
+                        cc["sx_last_income"] = dict(permanent=1)
+                    """
+                    if nx > 0:
+                        cc["non_nx_first_side"] = dict()
+                    else:
+                        cc["nx_first_side"] = dict()
+                    if nx < res.shape[0]-1:
+                        cc["nx_last_side"] = dict()
+                    else:
+                        cc["non_nx_last_side"] = dict()
+                    """
+
+                    nodes = gen.node( "entity",
+                                maybe_components=[
+                                    "sx_first","sx_last", "sx_first_income","sx_last_income",
+                                    "sz_first","sz_last", "sz_first_income","sz_last_income",
+                                    "sy_first","sy_last", "sy_first_income","sy_last_income",
+                                    "voxel_volume_result","voxel_volume_income"
+                                    ],
+                                components=cc,                              
                                 entity_id=object_id
                                 )
                     workers[n].put( {"description":nodes,"action":"create"} )
