@@ -52,12 +52,19 @@ class VoxelVolume:
                                   ),
                                   "voxel_random_init": dict(density=0.1)
                           }
-                    if nx == 0:
-                        #cc["sx_first_is_permanent"] = dict()
+                    if nx == 0:                        
                         cc["sx_first_income"] = dict(permanent=1)
-                    if nx == self.shape[0]-1:
-                        #cc["sx_last_is_permanent"] = dict()
+                    if nx == self.shape[0]-1:                        
                         cc["sx_last_income"] = dict(permanent=1)
+                    if ny == 0:                        
+                        cc["sy_first_income"] = dict(permanent=1)
+                    if ny == self.shape[1]-1:                        
+                        cc["sy_last_income"] = dict(permanent=1)    
+                    if nz == 0:                        
+                        cc["sz_first_income"] = dict(permanent=1)
+                    if nz == self.shape[2]-1:                        
+                        cc["sz_last_income"] = dict(permanent=1)                            
+
                     """
                     if nx > 0:
                         cc["non_nx_first_side"] = dict()

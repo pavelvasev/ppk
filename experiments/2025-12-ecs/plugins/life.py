@@ -183,6 +183,30 @@ class VoxelVolumeSync:
                         tgt = f"{other_object_id}/sx_first_income/in"
                         print("ENTITY COMPONENT BIND",src,"----->",tgt)
                         self.rapi.bind(src,tgt)
+                    if ny > 0:
+                        other_object_id = self.get_entity_id( nx, ny-1, nz )
+                        src = f"{object_id}/sy_first/out"
+                        tgt = f"{other_object_id}/sy_last_income/in"
+                        print("ENTITY COMPONENT BIND",src,"----->",tgt)
+                        self.rapi.bind(src,tgt)
+                    if ny < self.shape[1]-1:
+                        other_object_id = self.get_entity_id( nx, ny+1, nz )
+                        src = f"{object_id}/sy_last/out"
+                        tgt = f"{other_object_id}/sy_first_income/in"
+                        print("ENTITY COMPONENT BIND",src,"----->",tgt)
+                        self.rapi.bind(src,tgt)
+                    if nz > 0:
+                        other_object_id = self.get_entity_id( nx, ny, nz-1 )
+                        src = f"{object_id}/sz_first/out"
+                        tgt = f"{other_object_id}/sz_last_income/in"
+                        print("ENTITY COMPONENT BIND",src,"----->",tgt)
+                        self.rapi.bind(src,tgt)
+                    if nz < self.shape[2]-1:
+                        other_object_id = self.get_entity_id( nx, ny, nz+1 )
+                        src = f"{object_id}/sz_last/out"
+                        tgt = f"{other_object_id}/sz_first_income/in"
+                        print("ENTITY COMPONENT BIND",src,"----->",tgt)
+                        self.rapi.bind(src,tgt)                        
 
 
 class voxel_volume_sync:
@@ -218,25 +242,51 @@ class voxel_volume_sync:
 
             faces = self.extract_faces_3d( grid )
             for fname, fvalue in faces.items():            
+                print("SHADOW updating component ",fname,"fvalue=",fvalue)
                 e.update_component(f"{fname}",{"payload":fvalue})
         # входящие
 
-        ents = world.get_entities_with_components("voxel_volume_income","sx_first_income","sx_last_income")
+        ents = world.get_entities_with_components("voxel_volume_income",
+                "sx_first_income","sx_last_income",
+                "sy_first_income","sy_last_income"
+                "sz_first_income","sz_last_income"
+                )
         print("voxel_volume_sync: import shadow, ents=",ents)
         for entity_id in ents:
             #grid = e.components["voxel_volume"]
             e = world.get_entity( entity_id )
             params = e.get_component("voxel_volume_params")
             grid = e.get_component("voxel_volume_income")["payload"]
+
+            S = 0 # вставляем в край
             sx_first = e.get_component("sx_first_income")
-            sx_last = e.get_component("sx_last_income")
-            S = SHADOW
+            sx_last = e.get_component("sx_last_income")            
             if "payload" in sx_first: # настоящее, не граничное
                 grid[S, :, :] = sx_first["payload"]
                 e.remove_component("sx_first_income")
             if "payload" in sx_last: # настоящее, не граничное
                 grid[-S, :, :] = sx_last["payload"]
                 e.remove_component("sx_last_income")
+
+
+            sx_first = e.get_component("sy_first_income")
+            sx_last = e.get_component("sy_last_income")            
+            if "payload" in sx_first: # настоящее, не граничное
+                grid[:, S, :] = sx_first["payload"]
+                e.remove_component("sy_first_income")
+            if "payload" in sy_last: # настоящее, не граничное
+                grid[:, -S, :] = sx_last["payload"]
+                e.remove_component("sy_last_income")
+
+            sx_first = e.get_component("sz_first_income")
+            sx_last = e.get_component("sz_last_income")            
+            if "payload" in sx_first: # настоящее, не граничное
+                grid[:, :, S] = sx_first["payload"]
+                e.remove_component("sz_first_income")
+            if "payload" in sy_last: # настоящее, не граничное
+                grid[:, :, -S] = sx_last["payload"]
+                e.remove_component("sz_last_income")
+
             e.update_component("voxel_volume_value",{"payload":grid})
             e.remove_component("voxel_volume_income")
 
