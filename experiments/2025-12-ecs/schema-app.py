@@ -100,17 +100,21 @@ async def main():
         
         shape = [4,4,4]
         vv = plugins.voxel.VoxelVolume( size=10,shape=shape )
-        vv.deploy( worker_channels )
+        vv_entities_list_3d = vv.deploy( worker_channels )
+        
         init = plugins.life.RandomVoxels()
         init.deploy( worker_channels )
 
         game = plugins.life.GameOfLife3D()
         game.deploy( worker_channels )
 
+        gamesync = plugins.life.VoxelVolumeSync( rapi, shape, vv_entities_list_3d )
+        gamesync.deploy( worker_channels )
+
         paint = voxpaint.VoxelVolumePaint( size=10,shape=shape )
         paint.deploy( worker_channels )
 
-        # порядок важен. это фишка
+        # порядок важен. это фишка метода
         total = shape[0]*shape[1]*shape[2]
         merger = plugins.common.ImageMerger(rapi,total)
         merger.deploy( worker_channels )

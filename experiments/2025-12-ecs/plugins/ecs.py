@@ -151,29 +151,26 @@ class entity:
         # внедряем присланные компоненты
         if "components" in description["params"]:
             for cname,cvalue in description["params"]["components"].items():
-                self.update_component(cname,cvalue)                
+                self.update_component(cname,cvalue)
+
+        # создание ссылок        
+        if "maybe_components" in description["params"]:
+            for cname in description["params"]["maybe_components"]:
+                self.create_component_links( cname )
 
         print("ecs-entity item created")
 
+
         gen.apply_description( rapi, self, description )
 
-    def get_component( self, component_name ):
+    def get_component( self, component_name ):( cname )
         return self.components[ component_name ]
 
     def remove_component( self, component_name ):
         del self.components[ component_name ]
         self.local_world.remove_component( self.id,component_name)
 
-    def update_component( self,component_name, component_value ):
-        self.components[ component_name ] = component_value
-
-        self.local_world.add_component( self.id,component_name, component_value )
-
-        # ppk todo возникает задача мониторить деревья каналов в смысле a/b/c : a/*
-        # это нужно для оптимизации
-        # и еще пока этого не сделать то компонент обязательно должен быть создан
-        # заранее (статично или динамично), чтобы принимать обновления
-
+    def create_component_links( self,component_name ):
         # исходящие каналы
         if not component_name in self.component_channels_out:
             c = self.rapi.channel(f"{self.id}/{component_name}/out")
@@ -186,6 +183,18 @@ class entity:
                 print("ecs: entity",self.entity_id,"got external component value",component_name)
                 self.update_component(component_name,v)
             c.react(on_update_component)
+
+    def update_component( self,component_name, component_value ):
+        self.components[ component_name ] = component_value
+
+        self.local_world.add_component( self.id,component_name, component_value )
+
+        self.create_component_links( component_name )
+
+        # ppk todo возникает задача мониторить деревья каналов в смысле a/b/c : a/*
+        # это нужно для оптимизации
+        # и еще пока этого не сделать то компонент обязательно должен быть создан
+        # заранее (статично или динамично), чтобы принимать обновления
 
         # и теперь послать сигнал
         ch = self.component_channels_out[component_name]
