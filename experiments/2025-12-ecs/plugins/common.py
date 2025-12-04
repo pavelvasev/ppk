@@ -49,6 +49,8 @@ class image_saver:
             rgb = image["payload"]["rgb"]
 
             imageio.imwrite(f"{entity_id}_iter_{i:05d}.png", rgb)
+            # чисто тест
+            imageio.imwrite(f"online.png", rgb)
 
 
 # копирует картинки из воксельного рендеринга в мержер
