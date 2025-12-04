@@ -400,14 +400,20 @@ class voxel_volume_paint_sw:
 
     def process_ecs(self,i,world):
         print("voxel_volume_paint_sw:process_ecs called")
-        ents = world.get_entities_with_components("voxel_volume_value")
+        ents = world.get_entities_with_components("voxel_volume_result")
         print("voxel_volume_paint_sw:ents=",ents)
         for entity_id in ents:
             #grid = e.components["voxel_volume"]
             e = world.get_entity( entity_id )
             params = e.get_component("voxel_volume_params")
-            grid = e.get_component("voxel_volume_value")["payload"]
-            #print("see entity",entity_id,"grid=",grid)
+
+            val = e.get_component("voxel_volume_result")
+            if "paint_processed" in val:
+                continue
+            val["paint_processed"] = 1
+
+            grid = val["payload"]
+            print("voxel_volume_paint_sw: painting entity",entity_id )#,"grid=",grid)
             #new_grid = self.step( grid )
             #e.update_component("voxel_volume_value",{"payload":new_grid})
 

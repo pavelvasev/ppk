@@ -14,6 +14,28 @@ class Entity:
         self.id = entity_id
 """        
 
+def print_world( w ):
+    print("################################### world begin")
+    print("################ entities view")    
+    for entity_id, e in w.entities.items():
+        print( " * ",entity_id, ":", " ".join(sorted(e.components.keys())) )
+    print("################ components view")
+    for component_name, e in w.components.items():
+        print( " - ",component_name, ":"," ".join(sorted(w.components[component_name].keys()) ))        
+    print("################################### world done")        
+
+def print_world1( w ):
+    print("################################### world begin")
+    print("################ entities view")    
+    for entity_id, e in w.entities.items():
+        print( " * ",entity_id )
+        for component_name,cv in e.components.items():
+            print("     - ",component_name)
+    print("################ components view")
+    for component_name, e in w.components.items():
+        print( " - ",component_name, ":"," ".join(w.components[component_name].keys() ))        
+    print("################################### world done")        
+
 class World:
     def __init__(self):
         self.entities = {}
@@ -63,6 +85,33 @@ class World:
 
         return first_component_entities
 
+    def get_entities_with_components_verbose(self, *component_types):
+        # Returns entity IDs that have all specified component types
+        print("get_entities_with_components_verbose: component_types=",component_types)
+        if not component_types:
+            print("no component_types, return empty set")
+            return self.entities.keys()
+
+        first_component_entities = set(self.components.get(component_types[0], {}).keys())
+        print("* first_component_entities=",first_component_entities)        
+        
+        if not first_component_entities:
+            print("no first_component_entities, return empty set")
+            return set()
+
+        print("entering loop")
+
+        for comp_type in component_types[1:]:
+            current_component_entities = set(self.components.get(comp_type, {}).keys())
+            print("* component",comp_type,"entities =",current_component_entities)
+            first_component_entities.intersection_update(current_component_entities)
+            print("  current result",first_component_entities)
+            if not first_component_entities:                
+                break # Optimization: if intersection becomes empty, no need to continue
+
+        print("loop finished. result:",first_component_entities)
+        return first_component_entities        
+
 class LoopComponent:
     """
     Компонента, которая запускает вечный цикл в отдельной задаче.
@@ -89,9 +138,11 @@ class LoopComponent:
                     s.process_ecs( iteration, self.local_world )
                 print(f"LoopComponent: Итерация {iteration} успешно завершена",flush=True)
 
+                print_world( self.local_world )
+
                 # Передаем управление event loop'у
-                await asyncio.sleep(1)
-                #await asyncio.sleep(0.1)
+                #await asyncio.sleep(1)
+                await asyncio.sleep(0.1)
                 #await asyncio.sleep(0.0000001)
 
         except asyncio.CancelledError:
@@ -169,9 +220,11 @@ class entity:
         return self.components[ component_name ]
 
     def remove_component( self, component_name ):
+        print("entity",self.entity_id,"remove component",component_name)
         del self.components[ component_name ]
         self.local_world.remove_component( self.id,component_name)
 
+    # создает каналы для чтения и записи компонент
     def create_component_links( self,component_name ):
         # исходящие каналы
         #print("create_component_links entity",self.entity_id,"component",component_name)

@@ -7,6 +7,14 @@ import ppk.genesis as gen
 import numpy as np
 import asyncio
 
+"""
+voxel_volume_income - входящая грида
+  + грани входящие
+voxel_volume_value - входящая грида с внедренными теневыми гранями
+voxel_volume_result - исходящая грида с резульатом вычислений
+  + грани исходящие
+"""
+
 # todo this is binary.. add type?
 class VoxelVolume:
     def __init__(self,size,shape):
@@ -81,7 +89,8 @@ class VoxelVolume:
                                     "sx_first","sx_last", "sx_first_income","sx_last_income",
                                     "sz_first","sz_last", "sz_first_income","sz_last_income",
                                     "sy_first","sy_last", "sy_first_income","sy_last_income",
-                                    "voxel_volume_result","voxel_volume_income"
+                                    "voxel_volume_result","voxel_volume_income",
+                                    "allow_sync_income"
                                     ],
                                 components=cc,                              
                                 entity_id=object_id

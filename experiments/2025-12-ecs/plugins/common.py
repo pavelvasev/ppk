@@ -43,6 +43,9 @@ class image_saver:
             image = e.get_component("image")
             if not "payload" in image:
                 continue
+            if "image_saver_processed" in image:
+                continue
+            image["image_saver_processed"] = 1
             rgb = image["payload"]["rgb"]
 
             imageio.imwrite(f"{entity_id}_iter_{i:05d}.png", rgb)
@@ -80,6 +83,7 @@ class ImageMerger:
         self.distribution = []
         self.total=total
         self.rapi = rapi
+        self.final_ch = rapi.channel("final_image_ready")
 
     def deploy( self,workers ):
 
@@ -92,10 +96,8 @@ class ImageMerger:
             for i in range(items_on_level):
                 entity_id = f"image_merge_level{level}_{i}"
                 nodes = gen.node( "entity",
+                            maybe_components=["image","image1","image2"],
                             components={
-                              "image": dict(),
-                              "image1": dict(),
-                              "image2": dict(),
                               "image_merge_entity": dict(),
                             },
                             entity_id=entity_id
@@ -103,6 +105,7 @@ class ImageMerger:
                 if items_on_level == 1:
                     # ставим отметку что это финальная картинка
                     nodes["params"]["components"]["final_image"] = dict()
+                    self.rapi.bind(f"{entity_id}/image_done/out",self.final_ch)
 
                 n =  i % len(workers)
                 print("deploy image_merge entity ",entity_id,"to worker",n)
@@ -277,10 +280,10 @@ class image_merger:
             image2 = e.get_component("image2")
 
             if not "payload" in image1:
-                #print("no payload in image1, skipping")
+                print("no payload in image1, skipping")
                 continue
             if not "payload" in image2:
-                #print("no payload in image2, skipping")
+                print("no payload in image2, skipping")
                 continue
             #print("merger has all data, merging!!!!!!!!!!!!")
 
@@ -297,6 +300,11 @@ class image_merger:
             #imageio.imwrite(f"{entity_id}_iter_{i:05d}.png", rgb)
             msg = {"payload":{"rgb":rgb,"depth":depth}}
             e.update_component("image",msg)
+            # простая отметка для рассылки
+            e.update_component("image_done",dict())
+            # убираем чтобы не повторяться
+            e.remove_component("image1")
+            e.remove_component("image2")
 
 
 

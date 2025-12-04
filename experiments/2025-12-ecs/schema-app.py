@@ -126,7 +126,8 @@ async def main():
         saver = plugins.common.ImageSaver()
         saver.deploy( worker_channels )
 
-
+        # todo вопросики, наверное надо после сохранения
+        rapi.bind( merger.final_ch, gamesync.continue_ch )
 
         """
         init = plugins.life.RandomVoxels( shape=shape )
