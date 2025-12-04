@@ -53,7 +53,7 @@ class random_voxels:
             density = e.get_component("voxel_random_init")["density"]
             print("random_voxels creates random of size",size,"with density",density,"on entity_id",entity_id)
             grid = np.random.random((size, size, size)) < density
-            e.update_component("voxel_volume_value",{"payload":grid})
+            e.update_component("voxel_volume_value",{"payload":grid,"iter_num":0})
             e.remove_component("voxel_random_init")
             #self.output.put( grid )
 
@@ -132,9 +132,10 @@ class game_of_life_3d:
             grid = val["payload"]
             #print("see entity",entity_id,"grid=",grid)
             new_grid = self.step( grid )
-            e.update_component("voxel_volume_result",{"payload":new_grid})
+            iter_num = val["iter_num"] + 1
+            e.update_component("voxel_volume_result",{"payload":new_grid,"iter_num":iter_num})
 
-            e.update_component("game_of_life_3d_processed",{})
+            #e.update_component("game_of_life_3d_processed",{})
             
             # hack ну видимо пока так - чтобы нельзя было повторять life3d-цикл
             #e.remove_component("voxel_volume_value") 
@@ -282,7 +283,8 @@ class voxel_volume_sync:
             #grid = e.components["voxel_volume"]
             e = world.get_entity( entity_id )
             params = e.get_component("voxel_volume_params")
-            grid = e.get_component("voxel_volume_income")["payload"]
+            income = e.get_component("voxel_volume_income")
+            grid = income["payload"]
 
             # заказываем ждать такта явно
             e.remove_component("allow_sync_income") # т.о. мы ждем явного такта
@@ -316,7 +318,9 @@ class voxel_volume_sync:
                 grid[:, :, -S] = sx_last["payload"]
                 e.remove_component("sz_last_income")
 
-            e.update_component("voxel_volume_value",{"payload":grid})
+            iter_num = income["iter_num"]
+
+            e.update_component("voxel_volume_value",{"payload":grid,"iter_num":iter_num})
             e.remove_component("voxel_volume_income")
 
 

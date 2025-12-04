@@ -48,7 +48,8 @@ class image_saver:
             image["image_saver_processed"] = 1
             rgb = image["payload"]["rgb"]
 
-            imageio.imwrite(f"{entity_id}_iter_{i:05d}.png", rgb)
+            iter_num = image["iter_num"]
+            imageio.imwrite(f"{entity_id}_iter_{iter_num:05d}.png", rgb)
             # чисто тест
             imageio.imwrite(f"online.png", rgb)
 
@@ -300,7 +301,8 @@ class image_merger:
 
             
             #imageio.imwrite(f"{entity_id}_iter_{i:05d}.png", rgb)
-            msg = {"payload":{"rgb":rgb,"depth":depth}}
+            iter_num = image1["iter_num"]
+            msg = {"payload":{"rgb":rgb,"depth":depth},"iter_num":iter_num}
             e.update_component("image",msg)
             # простая отметка для рассылки
             e.update_component("image_done",dict())

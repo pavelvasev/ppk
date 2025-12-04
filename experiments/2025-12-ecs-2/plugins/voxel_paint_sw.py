@@ -430,7 +430,12 @@ class voxel_volume_paint_sw:
             
             rgb, depth = self.renderer.render(grid, eye=eye, center=center, up=up)
 
-            msg = {"payload":{"rgb":rgb,"depth":depth}}
+            if "iter_num" in val:
+                iter_num = val["iter_num"]
+                print("paint: have source iter_num!",iter_num)
+            else:
+                print("paint: have no source iter_num!")
+            msg = {"payload":{"rgb":rgb,"depth":depth},"iter_num":iter_num}
             e.update_component("image",msg)
             #imageio.imwrite(f"{entity_id}_iter_{i:05d}.png", rgb)
 

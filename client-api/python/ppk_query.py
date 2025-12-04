@@ -216,7 +216,7 @@ class QueryTcp:
         attach_len_bytes = attach_len.to_bytes(4,"big")
 
         client = await self.get_client_tcp( target_url )
-        print("do_query_send, sending as tcp client",target_url,"json len=",msglen,"attach len=",attach_len)
+        #print("do_query_send, sending as tcp client",target_url,"json len=",msglen,"attach len=",attach_len)
         
         client.write( query_id_bytes )
         client.write( len_bytes )
