@@ -129,6 +129,9 @@ async def main():
         # todo вопросики, наверное надо после сохранения
         rapi.bind( merger.final_ch, gamesync.continue_ch )
 
+        sim = plugins.ecs.Simulation()
+        sim.deploy( worker_channels )
+
         """
         init = plugins.life.RandomVoxels( shape=shape )
         gamestep = plugins.life.GameOfLife3D( shape=shape )

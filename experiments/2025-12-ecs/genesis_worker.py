@@ -42,7 +42,7 @@ async def main():
     await rapi.connect( url=url )
     print("connected")
 
-    RUN_SYSTEMS = plugins.ecs.LoopComponent(LOCAL_SYSTEMS,LOCAL_WORLD)
+    #RUN_SYSTEMS = plugins.ecs.LoopComponent(LOCAL_SYSTEMS,LOCAL_WORLD)
 
     input = rapi.channel( os.environ["PPK_INPUT_CHANNEL"] )
     report = rapi.channel( os.environ.get("PPK_REPORT_CHANNEL","genesis-worker-report") )

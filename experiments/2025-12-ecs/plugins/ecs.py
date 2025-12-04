@@ -263,13 +263,30 @@ class entity:
         #if "payload" in v:
         #    component_value["data"] = v["payload"]                    
 
-# что ето
-"""
+# цикл ecs
+# сделан отдельно потому что оказалось надо контролировать когда он может начинать работу
+# ибо если не все загрузить то перекашивается (уже идут отправки но нет еще подписчиков между воркерами)
+# ну и плюс для управляемости на будущее
+class Simulation:
+    def __init__(self):
+        self.distribution = []
+
+    def deploy( self,workers ):
+        for w in workers:
+            print("deploy simulation to worker",w.id)
+            nodes = gen.node( "simulation" )
+            w.put( {"description":nodes,"action":"create"})
+
 class simulation:
     def __init__(self,rapi,description,parent):
-        print("simulation item created")
+        print("ecs simulation item created")
         gen.apply_description( rapi, self, description )
-"""        
+
+        self.local_world = description["local_world"]
+        self.local_systems = description["local_systems"]
+
+        self.RUN_SYSTEMS = LoopComponent(self.local_systems,self.local_world)
+
 
 ################
 
@@ -284,6 +301,6 @@ class simulation:
 
 def init(*args):
     gen.register({"entity":entity})    
-    #gen.register({"simulation":simulation})    
+    gen.register({"simulation":simulation})
     #nonlocal ECS_PROCESSOR
     #ECS_PROCESSOR = LoopComponent()
