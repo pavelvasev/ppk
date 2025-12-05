@@ -206,6 +206,14 @@ class entity:
         self.components = dict()
         self.maybe_components = []
 
+        self.outgoing_links = dict()
+        c = self.rapi.channel(f"{self.id}/{component_name}/in")
+        self.component_channels_in[component_name] = c
+        def on_update_component(v):
+            print("ecs: entity",self.entity_id,"got external update to component",component_name)
+            self.update_component(component_name,v)
+        c.react(on_update_component)        
+
         # исходящие сигналы при обновлении компонент
         self.component_channels_out = dict()
         self.component_channels_in = dict()
@@ -242,8 +250,7 @@ class entity:
     def has_component( self, component_name ):
         if component_name in self.components:
             return True
-        return False
-        
+        return False        
 
     def get_component( self, component_name ):
         return self.components[ component_name ]
