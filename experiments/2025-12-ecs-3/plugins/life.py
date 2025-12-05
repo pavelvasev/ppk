@@ -178,54 +178,54 @@ class VoxelVolumeSync:
                     #object_id = f"vv_{i:04d}"
                     object_id = self.get_entity_id( nx, ny, nz )
 
-                    src = self.continue_ch.id
-                    tgt = f"{object_id}/allow_sync_income/in"
-                    print("ENTITY COMPONENT BIND",src,"----->",tgt)
-                    self.rapi.bind(src,tgt)                    
+                    #src = self.continue_ch.id
+                    #tgt = f"{object_id}/allow_sync_income/in"
+                    #print("ENTITY COMPONENT BIND",src,"----->",tgt)
+                    #self.rapi.bind(src,tgt)                    
 
                     # копируем результат вычислений на вход в эту же сущность
-                    src = f"{object_id}/voxel_volume_result/out"
-                    tgt = f"{object_id}/voxel_volume_income/in"
-                    print("ENTITY COMPONENT BIND",src,"----->",tgt)
-                    self.rapi.bind(src,tgt)
+                    src = [object_id,"voxel_volume_result"]
+                    tgt = [object_id,"voxel_volume_income"]
+                    #print("ENTITY COMPONENT BIND",src,"----->",tgt)
+                    self.rapi.bind_entity(src,tgt)
 
                     # ссылки на грани
                     if nx > 0:
                         other_object_id = self.get_entity_id( nx-1, ny, nz )
-                        src = f"{object_id}/sx_first/out"
-                        tgt = f"{other_object_id}/sx_last_income/in"
-                        print("ENTITY COMPONENT BIND",src,"----->",tgt)
-                        self.rapi.bind(src,tgt)
+                        src = [object_id,"sx_first"]
+                        tgt = [other_object_id,"sx_last_income"]
+                        #print("ENTITY COMPONENT BIND",src,"----->",tgt)
+                        self.rapi.bind_entity(src,tgt)
                     if nx < self.shape[0]-1:
                         other_object_id = self.get_entity_id( nx+1, ny, nz )
-                        src = f"{object_id}/sx_last/out"
-                        tgt = f"{other_object_id}/sx_first_income/in"
-                        print("ENTITY COMPONENT BIND",src,"----->",tgt)
-                        self.rapi.bind(src,tgt)
+                        src = [object_id,"sx_last"]
+                        tgt = [other_object_id,"sx_first_income"]                        
+                        #print("ENTITY COMPONENT BIND",src,"----->",tgt)
+                        self.rapi.bind_entity(src,tgt)
                     if ny > 0:
                         other_object_id = self.get_entity_id( nx, ny-1, nz )
-                        src = f"{object_id}/sy_first/out"
-                        tgt = f"{other_object_id}/sy_last_income/in"
-                        print("ENTITY COMPONENT BIND",src,"----->",tgt)
-                        self.rapi.bind(src,tgt)
+                        src = [object_id,"sy_first"]
+                        tgt = [other_object_id,"sy_last_income"]
+                        #print("ENTITY COMPONENT BIND",src,"----->",tgt)
+                        self.rapi.bind_entity(src,tgt)
                     if ny < self.shape[1]-1:
                         other_object_id = self.get_entity_id( nx, ny+1, nz )
-                        src = f"{object_id}/sy_last/out"
-                        tgt = f"{other_object_id}/sy_first_income/in"
-                        print("ENTITY COMPONENT BIND",src,"----->",tgt)
-                        self.rapi.bind(src,tgt)
+                        src = [object_id,"sy_last"]
+                        tgt = [other_object_id,"sy_first_income"]
+                        #print("ENTITY COMPONENT BIND",src,"----->",tgt)
+                        self.rapi.bind_entity(src,tgt)
                     if nz > 0:
                         other_object_id = self.get_entity_id( nx, ny, nz-1 )
-                        src = f"{object_id}/sz_first/out"
-                        tgt = f"{other_object_id}/sz_last_income/in"
-                        print("ENTITY COMPONENT BIND",src,"----->",tgt)
-                        self.rapi.bind(src,tgt)
+                        src = [object_id,"sz_first"]
+                        tgt = [other_object_id,"sz_last_income"]
+                        #print("ENTITY COMPONENT BIND",src,"----->",tgt)
+                        self.rapi.bind_entity(src,tgt)
                     if nz < self.shape[2]-1:
                         other_object_id = self.get_entity_id( nx, ny, nz+1 )
-                        src = f"{object_id}/sz_last/out"
-                        tgt = f"{other_object_id}/sz_first_income/in"
-                        print("ENTITY COMPONENT BIND",src,"----->",tgt)
-                        self.rapi.bind(src,tgt)                        
+                        src = [object_id,"sz_last"]
+                        tgt = [other_object_id,"sz_first_income"]
+                        #print("ENTITY COMPONENT BIND",src,"----->",tgt)
+                        self.rapi.bind_entity(src,tgt)                        
 
 
 class voxel_volume_sync:

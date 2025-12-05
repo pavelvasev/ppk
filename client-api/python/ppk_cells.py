@@ -187,6 +187,11 @@ class Channel:
 
         return stop
 
+    # синхронный запрос
+    def sync_request( self, value, callback ):
+        value_as_message = self.value_to_message(value)
+        t = self.rapi.sync_request( value_as_message, callback )
+
     # удобная вещь вроде.. прочитать следующее значение..
     async def read_next( self ):
         f = asyncio.Future()

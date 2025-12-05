@@ -18,6 +18,26 @@ import plugins.voxel_paint_sw as voxpaint
 import plugins.life
 import plugins.common
 
+##############################
+class BindEntityFeature:
+    #### request
+    def __init__(self,rapi):
+        self.rapi = rapi        
+        rapi.bind_entity = self.bind_entity
+
+    def bind_entity( self, src, tgt ):
+        print("ENTITY COMPONENT BIND",src,"----->",tgt)
+        msg = dict( label = src[0] + "/manage", 
+                        component_name = src[1],
+                        target_entity_id = tgt[0],
+                        target_component_name = tgt[1]
+                        )
+        self.rapi.put_msg( msg )
+        #  [f"vv_{i:04d}","image"],[f"image_merge_level0_{i}", "image"] 
+
+ppk.DEFAULT_EXTENSIONS["bind_entity"] = BindEntityFeature
+##############################
+
 def on_worker_msg(msg):
     print("msg from worker: ",msg)
 

@@ -23,10 +23,12 @@ class RequestReplyFeature:
         self.reply_label = None
 
         self.rapi = rapi        
-        rapi.request = self.request        
+        rapi.request = self.request
         rapi.reply = self.reply            
         rapi.request_p = self.request_p
         rapi.request_pp = self.request_pp
+        rapi.sync_request = self.sync_request
+        rapi.sync_reply = self.sync_reply            
 
     # версия с callback
     async def request( self, msg, callback ):
@@ -106,3 +108,12 @@ class RequestReplyFeature:
             
         """    
         return await self.rapi.msg( output_msg )
+
+    def sync_reply( self, input_msg, data):
+        t = self.reply( input_msg, data )
+        self.rapi.add_async_item(t)
+
+    # синхронный запрос
+    def sync_request( self, value, callback ):
+        t = self.request( value, callback )
+        self.rapi.add_async_item( t )        

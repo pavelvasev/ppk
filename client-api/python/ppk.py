@@ -514,6 +514,10 @@ class Client:
         await asyncio.gather( *res_arr )
         """
 
+    def put_msg( self, msg ):
+        t = self.msg( msg )
+        self.add_async_item(t)
+
     # idea разместить счетчик N прямо в реакции?
     # action - это словарь с описанием действия
     async def reaction( self, crit, action ):

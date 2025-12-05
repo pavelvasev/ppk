@@ -69,8 +69,9 @@ class PassImagesToMerger:
         for i in range(self.total):
             src = f"vv_{i:04d}/image/out"
             tgt = f"image_merge_level0_{i}/image/in"
-            print("ENTITY COMPONENT BIND",src,"----->",tgt)
-            self.rapi.bind(src,tgt)
+            
+            #self.rapi.bind(src,tgt)
+            self.rapi.bind_entity( [f"vv_{i:04d}","image"],[f"image_merge_level0_{i}", "image"] )
 
 
 # соединяет картинки на основе з-буфера
@@ -105,10 +106,10 @@ class ImageMerger:
                             },
                             entity_id=entity_id
                             )
-                if items_on_level == 1:
-                    # ставим отметку что это финальная картинка
-                    nodes["params"]["components"]["final_image"] = dict()
-                    self.rapi.bind(f"{entity_id}/image_done/out",self.final_ch)
+                #if items_on_level == 1:
+                #    # ставим отметку что это финальная картинка
+                #    nodes["params"]["components"]["final_image"] = dict()
+                #    self.rapi.bind(f"{entity_id}/image_done/out",self.final_ch)
 
                 n =  i % len(workers)
                 print("deploy image_merge entity ",entity_id,"to worker",n)
@@ -119,10 +120,11 @@ class ImageMerger:
                     # ссылка на следующую энтити
                     next_entity_id = f"image_merge_level{level+1}_{i//2}"
                     next_input = ["image1","image2"][i % 2]
-                    src = f"{entity_id}/image/out"
-                    tgt = f"{next_entity_id}/{next_input}/in"
-                    print("ENTITY COMPONENT BIND",src,"----->",tgt)
-                    self.rapi.bind(src,tgt)
+                    src = [entity_id,"image"]
+                    tgt = [next_entity_id,next_input]
+                    #print("ENTITY COMPONENT BIND",src,"----->",tgt)
+                    #self.rapi.bind(src,tgt)
+                    self.rapi.bind_entity(src,tgt)
 
             items_on_level = items_on_level // 2
             level = level + 1

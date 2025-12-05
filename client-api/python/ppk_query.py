@@ -155,6 +155,7 @@ class QueryTcp:
         self.verbose = rapi.verbose
         self.rapi = rapi
         rapi.query = self.query
+        rapi.sync_query= self.sync_query
 
         self.query_id_cnt = 0
         #self.send_cnt = 0
@@ -304,6 +305,10 @@ class QueryTcp:
 
         result = await self.results_url_promise
         return result
+
+    def sync_query( self, crit, callback, N=-1):
+        t = self.query( crit, callback, N )
+        self.rapi.add_async_item(t)
 
     async def query( self, crit, callback, N=-1):
         #print("query called",crit)
