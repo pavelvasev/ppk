@@ -209,7 +209,7 @@ async def main():
 
     print("done, waiting forever 20")
     #await asyncio.Future()
-    await asyncio.sleep( 5 )
+    await asyncio.sleep( 20 )
     #print("stopping")
 
     print("calling workers exit")

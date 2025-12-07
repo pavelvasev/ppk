@@ -225,7 +225,7 @@ class VoxelVolumeSync:
                         src = [object_id,"sz_last"]
                         tgt = [other_object_id,"sz_first_income"]
                         #print("ENTITY COMPONENT BIND",src,"----->",tgt)
-                        self.rapi.bind_entity(src,tgt)                        
+                        self.rapi.bind_entity(src,tgt)
 
 
 class voxel_volume_sync:
@@ -276,8 +276,12 @@ class voxel_volume_sync:
                 "sx_first_income","sx_last_income",
                 "sy_first_income","sy_last_income",
                 "sz_first_income","sz_last_income",
-                marker="voxel_volume_sync"
+                marker="sync_in",
+                verbose=True
                 )
+        # идея в том что мы создадим пустые входящие теневые грани для границ большого вокс куба
+        # и будем всегда их тут находить, но пропускать по критерию payload
+
         print("voxel_volume_sync: import shadow, ents=",ents)
         for entity_id in ents:
             #grid = e.components["voxel_volume"]
@@ -295,9 +299,13 @@ class voxel_volume_sync:
             if "payload" in sx_first: # настоящее, не граничное
                 grid[S, :, :] = sx_first["payload"]
                 e.remove_component("sx_first_income")
+            else:
+                del sx_first["sync_in"]    
             if "payload" in sx_last: # настоящее, не граничное
                 grid[-S, :, :] = sx_last["payload"]
                 e.remove_component("sx_last_income")
+            else:
+                del sx_last["sync_in"]                
 
 
             sx_first = e.get_component("sy_first_income")
@@ -305,18 +313,27 @@ class voxel_volume_sync:
             if "payload" in sx_first: # настоящее, не граничное
                 grid[:, S, :] = sx_first["payload"]
                 e.remove_component("sy_first_income")
+            else:
+                del sx_first["sync_in"]
+
             if "payload" in sx_last: # настоящее, не граничное
                 grid[:, -S, :] = sx_last["payload"]
                 e.remove_component("sy_last_income")
+            else:
+                del sx_last["sync_in"]                
 
             sx_first = e.get_component("sz_first_income")
             sx_last = e.get_component("sz_last_income")            
             if "payload" in sx_first: # настоящее, не граничное
                 grid[:, :, S] = sx_first["payload"]
                 e.remove_component("sz_first_income")
+            else:
+                del sx_first["sync_in"]
             if "payload" in sx_last: # настоящее, не граничное
                 grid[:, :, -S] = sx_last["payload"]
                 e.remove_component("sz_last_income")
+            else:
+                del sx_last["sync_in"]
 
             iter_num = income["iter_num"]
 

@@ -285,7 +285,7 @@ class Client:
         self.sender = sender
         self.lists = {}
         self.operations = Operations( self )
-        self.verbose = True #False
+        self.verbose = False
         self.client_id = self.mkguid()
 
         self.function_counter = 0
@@ -416,7 +416,8 @@ class Client:
             print(self.exit_callbacks)
         cnt = 1
         for x in self.exit_callbacks:
-            print("exit cb", cnt,"ctrl",len(self.exit_callbacks))
+            if self.verbose:
+                print("exit cb", cnt,"ctrl",len(self.exit_callbacks))
             try:
                 if asyncio.iscoroutinefunction(x):
                     if self.verbose:

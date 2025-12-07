@@ -106,10 +106,10 @@ class ImageMerger:
                             },
                             entity_id=entity_id
                             )
-                #if items_on_level == 1:
-                #    # ставим отметку что это финальная картинка
-                #    nodes["params"]["components"]["final_image"] = dict()
-                #    self.rapi.bind(f"{entity_id}/image_done/out",self.final_ch)
+                if items_on_level == 1:
+                    # ставим отметку что это финальная картинка
+                    nodes["params"]["components"]["final_image"] = dict()
+                    #self.rapi.bind(f"{entity_id}/image_done/out",self.final_ch)
 
                 n =  i % len(workers)
                 print("deploy image_merge entity ",entity_id,"to worker",n)
