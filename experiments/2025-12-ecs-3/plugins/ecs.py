@@ -44,9 +44,10 @@ def print_world( w ):
                     for k in e.pending_processes[component_name]:
                         component_name_s = component_name_s + " proc: " + k
 
-            if component_name in e.outgoing_links:
-                for rec in e.outgoing_links[component_name]:
-                    component_name_s = component_name_s + " @" + rec["target_key"]
+            outgoing_links = e.get_outgoing_links()
+            if component_name in outgoing_links:
+                for rec in outgoing_links[component_name]:
+                    component_name_s = component_name_s + " @" + rec.target_key
 
             print( "   -",component_name_s)
         #, ":", " ".join(sorted(e.components.keys())) )
@@ -76,6 +77,9 @@ class World:
         self.entities = {}
         self.components = {} # Stores components by type, then by entity ID
 
+        # таблица entity_id -> {component} -> [outgoing-links-objects]
+        self.links = {}
+
         # таблица имя-компоненты -> список обрабатывающих процессов (в форме словаря)
         self.component_processes = {}
 
@@ -86,6 +90,16 @@ class World:
         self.entities[entity_id] = entity
         return entity_id
     """    
+
+    def add_link( self, link ):
+        if link.src_entity_id not in self.links:
+            self.links[ link.src_entity_id ] = {}
+        if link.src_component_name not in self.links[ link.src_entity_id ]:
+            self.links[ link.src_entity_id ][link.src_component_name] = []
+
+        self.links[ link.src_entity_id ][link.src_component_name].append(link)
+
+        print("local world appended link:",link.src_key, "to key",link.target_key)
 
     def add_entity( self, entity_id, entity ):
         self.entities[ entity_id ] = entity
@@ -247,6 +261,25 @@ class LoopComponent:
         return self._running and self._task and not self._task.done()
 
 
+class link:
+    def __init__(self,rapi,description,parent):
+        self.rapi = rapi
+
+        self.src_entity_id = None
+        self.src_component_name = None
+        self.target_entity_id = None
+        self.target_component_name = None
+        gen.apply_description( rapi, self, description )
+        # после этого аттрибуты выше - заполнены
+
+        self.local_world = description["local_world"]
+        self.src_key = self.src_entity_id + "/" + self.src_component_name
+        self.target_key = self.target_entity_id + "/" + self.target_component_name
+        self.target_put_request_label = self.target_entity_id + "/put_request"
+        self.target_put_label = self.target_entity_id + "/put"
+
+        self.local_world.add_link( self )
+
 # немного странно что мы данные храним и в мире и в entity но пока сойдет
 class entity:
     def __init__(self,rapi,description,parent):
@@ -310,44 +343,19 @@ class entity:
                 print("component has no pending processes more")
                 for v in self.pending_updates[component_name]:
                     print("sending reply to allow put operation",self.entity_id + "/" + component_name)
-                    self.rapi.sync_reply( v, {"may_submit":True})
+                    self.rapi.put_reply( v, {"may_submit":True})
                 self.pending_updates[component_name] = []
+
+    def get_outgoing_links(self):
+        if self.entity_id not in self.local_world.links:
+            return []
+        return self.local_world.links[ self.entity_id ]
 
     #F-COMP-SYNC    
     def setup_sync(self):
 
         self.active_processes = {} #F-ACTIVE-PROC
         # список процессов которые обрабатывают эту сущность
-
-        ################################
-        ### добавление исходящих ссылок
-        # идея если надо можем положить и во входящих
-        self.outgoing_links = dict()
-        c = self.rapi.channel(f"{self.id}/manage")        
-        def on_manage(v):
-            print("ecs: entity",self.entity_id,"got external link info to component",v)
-            #self.update_component(component_name,v)
-            component_name = v["component_name"]            
-            if not component_name in self.outgoing_links:
-                self.outgoing_links[component_name] = []    
-
-            # todo может достаточно и канала, это мб было бы и лучше
-            # с точки зрения маршрутизации. ну посмотрим
-            target_channel_id = v["target_entity_id"] + "/put_request"
-            target_channel = self.rapi.channel(target_channel_id)
-            target_channel_id2 = v["target_entity_id"] + "/put"
-            target_channel2 = self.rapi.channel(target_channel_id2)
-
-            rec = { "target_entity_id": v["target_entity_id"], 
-                    "target_component_name": v["target_component_name"],
-                    "target_key": v["target_entity_id"] + "/" + v["target_component_name"],
-                    "target_put_request_id":target_channel_id,
-                    "target_put_request_ch":target_channel,
-                    "target_put_ch":target_channel2,
-                    "locks": {} }
-            self.outgoing_links[component_name].append(rec)
-        c.react(on_manage)
-        self.manage_ch = c
 
         ### входящий запрос на обновление компоненты
         # таблица компонента -> [сообщения]
@@ -365,11 +373,12 @@ class entity:
 
         def on_put_request(v):
             
-            # ну вот нам прислали
+            # ну вот нам прислали запрос чтобы обновить компоненту
             #component_name = v["component_name"]
-            component_name = v["value"]["component_name"]
+            component_name = v["component_name"]
             opkey = self.entity_id + "/" + component_name
             print(">> put request to entity ", opkey)
+            #print("v=",v)
             #print(">> request to update component_name=",component_name)
             if self.has_component( component_name ):
                 c = self.get_component( component_name )
@@ -399,7 +408,7 @@ class entity:
 
                 if len(locks) == 0:
                     print(">> sending OK - no locks on component", opkey)
-                    self.rapi.sync_reply( v, {"may_submit":True})
+                    self.rapi.put_reply( v, {"may_submit":True})
                 else:
                     if component_name not in self.pending_updates:
                         self.pending_updates[ component_name ] = []
@@ -415,7 +424,7 @@ class entity:
             else:
                 # компоненты такой нет, присылайте
                 print(">> sending OK - may put - no component.",opkey)
-                self.rapi.sync_reply( v, {"may_submit":True})
+                self.rapi.put_reply( v, {"may_submit":True})
             
 
         #self.put_request_ch = self.rapi.channel(f"{self.id}/put_request")
@@ -429,6 +438,7 @@ class entity:
             component_name = v["component_name"]
             #print(">> component_name=",component_name)
             print(">> got incoming put! ",self.entity_id + "/" + component_name)
+            #print("v=",v)
             #self.pending_updates[component_name] = [] очищается в другом месте
             #self.pending_processes[component_name] = {}
             #self.pending_outputs[component_name] = {}
@@ -503,49 +513,51 @@ class entity:
                     "target_component_name": v["target_component_name"],
                     "locks": {} }
         """
-        if component_name in self.outgoing_links:
-            recs = self.outgoing_links[component_name]
+        outgoing_links = self.get_outgoing_links()
+        if component_name in outgoing_links:
+            recs = outgoing_links[component_name]
             print("have outgoing_links",len(recs))
             for rec in recs:
-                tgt_channel = rec["target_put_request_ch"]
+                #tgt_channel = rec["target_put_request_ch"]
                 #msg = component_value
                 msg = {}
-                msg["component_name"] = rec["target_component_name"]
+                msg["component_name"] = rec.target_component_name
 
                 def mk_may_submit(rec,component_name, component_value):
                     def may_submit(okmsg): # можно посылать                    
                         #print("ecs: update_component: got reply to update request...")
-                        tgt_put_channel = rec["target_put_ch"]
-                        msg = component_value                    
-                        msg["component_name"] = rec["target_component_name"]
-                        # разрешили - получите
-                        opkey = rec["target_entity_id"] + "/" + rec["target_component_name"]
-                        print("ecs: update_component: got reply to update request, now sending value to remote:", opkey,"to channel",tgt_put_channel.id)
-                        tgt_put_channel.put( msg )
+                        #tgt_put_channel = rec["target_put_ch"]
+                        msg = component_value
+                        msg["component_name"] = rec.target_component_name
+                        msg["label"] = rec.target_put_label
+                        # разрешили - получите                        
+                        print("ecs: update_component: got reply to update request, now sending value to remote:", rec.target_key,"to channel",rec.target_put_label)
+                        #tgt_put_channel.put( msg )
+                        self.rapi.put_msg( msg )
                 
                         # очистим список исходящих блокировок                        
-                        if component_name in self.pending_outputs:
-                            key = rec["target_entity_id"] + "/" + rec["target_component_name"]        
-                            if key in self.pending_outputs[component_name]:
-                                del self.pending_outputs[component_name][key]
+                        if component_name in self.pending_outputs:                            
+                            if rec.target_key in self.pending_outputs[component_name]:
+                                del self.pending_outputs[component_name][rec.target_key]
 
                     return may_submit
 
-                key = rec["target_entity_id"] + "/" + rec["target_component_name"]                            
-                print("ecs: update_component: sending request to update",key,"to ch",tgt_channel.id)
+                print("ecs: update_component: sending request to update",rec.target_key,"to ch",rec.target_put_request_label)
                 #print("ecs: update_component: sending request to update",component_name,"to ch",tgt_channel.id, "msg=",msg)
                 
                 if component_name not in self.pending_outputs:
                     self.pending_outputs[component_name] = {}
                 # todo должна быть одна тут, может стоит ругаться
-                key = rec["target_entity_id"] + "/" + rec["target_component_name"]
-                if tgt_channel.id not in self.pending_outputs[component_name]:
+                key = rec.target_key
+                if rec.target_put_request_label not in self.pending_outputs[component_name]:
                     self.pending_outputs[component_name][key] = 1
                 else:                    
-                    self.pending_outputs[component_name][key] = self.pending_outputs[component_name][tgt_channel.id] + 1
+                    self.pending_outputs[component_name][key] = self.pending_outputs[component_name][rec.target_put_request_label] + 1
                     print("warning: more than one pending output in entity",self.entity_id,"component_name=",component_name,"remote=",key)
 
-                tgt_channel.sync_request( msg,mk_may_submit(rec,component_name, component_value) )
+                #tgt_channel.sync_request( msg,mk_may_submit(rec,component_name, component_value) )
+                msg["label"] = rec.target_put_request_label                
+                self.rapi.put_request( msg, mk_may_submit(rec,component_name, component_value) )
         else:
             print("have 0 outgoing_links")
 
@@ -593,6 +605,7 @@ class simulation:
 
 def init(*args):
     gen.register({"entity":entity})    
+    gen.register({"link":link})
     gen.register({"simulation":simulation})
     #nonlocal ECS_PROCESSOR
     #ECS_PROCESSOR = LoopComponent()

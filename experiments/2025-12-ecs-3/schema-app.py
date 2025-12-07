@@ -25,14 +25,26 @@ class BindEntityFeature:
         self.rapi = rapi        
         rapi.bind_entity = self.bind_entity
 
-    def bind_entity( self, src, tgt ):
+    def bind_entity( self, src, tgt, workers ):
         print("ENTITY COMPONENT BIND",src,"----->",tgt)
+
+        nodes = gen.node( "link",
+            src_entity_id = src[0],
+            src_component_name = src[1],
+            target_entity_id = tgt[0],
+            target_component_name = tgt[1],
+            tags=["ecs_system"])
+        for w in workers:
+            w.put( {"description":nodes,"action":"create"})
+
+        """
         msg = dict( label = src[0] + "/manage", 
                         component_name = src[1],
                         target_entity_id = tgt[0],
                         target_component_name = tgt[1]
                         )
         self.rapi.put_msg( msg )
+        """
         #  [f"vv_{i:04d}","image"],[f"image_merge_level0_{i}", "image"] 
 
 ppk.DEFAULT_EXTENSIONS["bind_entity"] = BindEntityFeature

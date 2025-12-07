@@ -71,7 +71,7 @@ class PassImagesToMerger:
             tgt = f"image_merge_level0_{i}/image/in"
             
             #self.rapi.bind(src,tgt)
-            self.rapi.bind_entity( [f"vv_{i:04d}","image"],[f"image_merge_level0_{i}", "image"] )
+            self.rapi.bind_entity( [f"vv_{i:04d}","image"],[f"image_merge_level0_{i}", "image"], workers )
 
 
 # соединяет картинки на основе з-буфера
@@ -124,7 +124,7 @@ class ImageMerger:
                     tgt = [next_entity_id,next_input]
                     #print("ENTITY COMPONENT BIND",src,"----->",tgt)
                     #self.rapi.bind(src,tgt)
-                    self.rapi.bind_entity(src,tgt)
+                    self.rapi.bind_entity(src,tgt, workers)
 
             items_on_level = items_on_level // 2
             level = level + 1
