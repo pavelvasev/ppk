@@ -41,6 +41,7 @@ class World:
         self.entities = {}
         self.components = {} # Stores components by type, then by entity ID
 
+        # таблица имя-компоненты -> список обрабатывающих процессов
         self.component_processes = {}
 
     """
@@ -69,7 +70,7 @@ class World:
     def get_entity(self, id):
         return self.entities[id]
 
-    def get_entities_with_components(self, *component_types, marker=None):
+    def get_entities_with_components(self, *component_types, marker):
         # Returns entity IDs that have all specified component types
         if not component_types:
             return self.entities.keys()
@@ -78,8 +79,8 @@ class World:
         if marker is not None:
             for comp_type in component_types:
                 if comp_type not in self.component_processes:
-                    self.component_processes[ comp_type ] = []
-                self.component_processes[ comp_type ].append(marker)
+                    self.component_processes[ comp_type ] = {}
+                self.component_processes[ comp_type ][marker] = 1
 
         first_component_entities = set(self.components.get(component_types[0], {}).keys())
         
@@ -173,8 +174,8 @@ class LoopComponent:
 
                 # Передаем управление event loop'у
                 #await asyncio.sleep(1)
-                #await asyncio.sleep(0.1)
-                await asyncio.sleep(0.0000001)
+                await asyncio.sleep(0.1)
+                #await asyncio.sleep(0.0000001)
 
         except asyncio.CancelledError:
             print("LoopComponent: Задача была отменена")
@@ -257,12 +258,12 @@ class entity:
 
         if component_name in self.pending_processes:
             print("see component in pending_processes")
-            del e.pending_processes[component_name][process_id]
+            del self.pending_processes[component_name][process_id]
 
-            if len(e.pending_processes[component_name].keys()) == 0:
+            if len(self.pending_processes[component_name].keys()) == 0:
                 # дождались
                 print("component has no pending processes more")
-                for v in e.pending_updates:
+                for v in self.pending_updates:
                     print("sending reply to allow put operation",v)
                     self.rapi.sync_reply( v, {"may_submit":True})
 
@@ -286,7 +287,7 @@ class entity:
             target_channel_id = v["target_entity_id"] + "/put_request"
             target_channel = self.rapi.channel(target_channel_id)
             target_channel_id2 = v["target_entity_id"] + "/put"
-            target_channel2 = self.rapi.channel(target_channel_id)
+            target_channel2 = self.rapi.channel(target_channel_id2)
 
             rec = { "target_entity_d": v["target_entity_id"], 
                     "target_component_name": v["target_component_name"],
@@ -299,18 +300,25 @@ class entity:
         self.manage_ch = c
 
         ### входящий запрос на обновление компоненты
+        # таблица компонента -> сообщения
+        # список запросов на обновления, которые надо разослать когда компонента освободится
         self.pending_updates = {}
+
+        # таблица компонента -> процессы
+        # список процессов, которые ожидает компонента для обработки
+        # чтобы получить входящие обновления
         self.pending_processes = {}
         def on_put_request(v):
-            print("entity ",self.entity_id,"got put request",v)
+            print(">> entity ",self.entity_id,"got put request",v)
             # ну вот нам прислали
             #component_name = v["component_name"]
             component_name = v["value"]["component_name"]
+            print(">> request to update component_name=",component_name)
             if self.has_component( component_name ):
                 c = self.get_component( component_name )
 
-                # список процессов которые вычитывают эту компоненту
-                known_processes_arr = self.local_world.component_processes[component_name]
+                # список процессов которые вычитывают эту компоненту                
+                known_processes_arr = list( self.local_world.component_processes[component_name].keys() )
 
                 locks = []
                 for marker in known_processes_arr:
@@ -318,16 +326,18 @@ class entity:
                         # уже обработано процессом этим
                         pass
                     else:
-                        locks.append( marker ) # причина блокировки
+                        # этот процесс пока не обрабатывал эту компоненту
+                        # сообразно это есть причина блокировки (одна из)
+                        locks.append( marker ) 
 
                 if len(locks) == 0:
-                    print("sending OK - no locks on component")
+                    print(">> sending OK - no locks on component")
                     self.rapi.sync_reply( v, {"may_submit":True})
                 else:
                     if component_name not in self.pending_updates:
                         self.pending_updates[ component_name ] = []
                     self.pending_updates[ component_name ].append( v )
-                    print("not sending - adding locks",locks)
+                    print(">> not sending - adding locks",locks)
 
                     for marker in locks:
                         if component_name not in self.pending_processes:
@@ -337,7 +347,7 @@ class entity:
                         # и затем ее готовы обновить
             else:
                 # компоненты такой нет, присылайте
-                print("sending OK - no component. v=",v)
+                print(">> sending OK - no component. v=",v)
                 self.rapi.sync_reply( v, {"may_submit":True})
             
 
@@ -348,9 +358,10 @@ class entity:
         ### управление входящими компонентами        
         def on_put(v):
             # ну вот нам прислали входящее значение
-            print("entity ",self.entity_id,"got put!",v)
+            print(">> entity ",self.entity_id,"got put!")
             #component_name = v["component_name"]
             component_name = v["component_name"]
+            print(">> component_name=",component_name)
             self.update_component( component_name, v)
 
         self.put_component_ch = self.rapi.channel(f"{self.id}/put")
@@ -432,6 +443,7 @@ class entity:
 
                 def mk_may_submit(rec,component_value):
                     def may_submit(okmsg): # можно посылать                    
+                        #print("ecs: update_component: got reply to update request...")
                         tgt_put_channel = rec["target_put_ch"]
                         msg = component_value                    
                         msg["component_name"] = rec["target_component_name"]

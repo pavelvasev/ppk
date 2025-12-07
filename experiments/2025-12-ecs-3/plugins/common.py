@@ -35,7 +35,7 @@ class image_saver:
         print("image_saver:process_ecs called")
         # todo искать указаннный в параметре компонент
         #ents = world.get_entities_with_components("image")
-        ents = world.get_entities_with_components("image","final_image")
+        ents = world.get_entities_with_components("image","final_image",marker="image_saver")
         print("image_saver:ents=",ents)
         for entity_id in ents:
             #grid = e.components["voxel_volume"]

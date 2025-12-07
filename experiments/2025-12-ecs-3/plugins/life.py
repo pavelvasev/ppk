@@ -38,7 +38,7 @@ class random_voxels:
 
     def process_ecs(self,i,world):
         print("random_voxels:process_ecs called")
-        ents = world.get_entities_with_components("voxel_random_init")
+        ents = world.get_entities_with_components("voxel_random_init",marker="random_voxels")
         print("random_voxels:ents=",ents)
         for entity_id in ents:
             #grid = e.components["voxel_volume"]
@@ -273,10 +273,10 @@ class voxel_volume_sync:
 
         ents = world.get_entities_with_components(
                 "voxel_volume_income",
-                "allow_sync_income",
                 "sx_first_income","sx_last_income",
                 "sy_first_income","sy_last_income",
-                "sz_first_income","sz_last_income"
+                "sz_first_income","sz_last_income",
+                marker="voxel_volume_sync"
                 )
         print("voxel_volume_sync: import shadow, ents=",ents)
         for entity_id in ents:
@@ -287,7 +287,7 @@ class voxel_volume_sync:
             grid = income["payload"]
 
             # заказываем ждать такта явно
-            e.remove_component("allow_sync_income") # т.о. мы ждем явного такта
+            #e.remove_component("allow_sync_income") # т.о. мы ждем явного такта
 
             S = 0 # вставляем в край
             sx_first = e.get_component("sx_first_income")
