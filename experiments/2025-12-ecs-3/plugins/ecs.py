@@ -17,12 +17,43 @@ class Entity:
 def print_world( w ):
     print("################################### world begin")
     print("################ entities view")    
+    #for entity_id, e in w.entities.items():
+    #    print( " * ",entity_id, ":", " ".join(sorted(e.components.keys())) )
     for entity_id, e in w.entities.items():
-        print( " * ",entity_id, ":", " ".join(sorted(e.components.keys())) )
+        #print( " * ",entity_id, ":", " ".join(sorted(e.components.keys())) )
+        print( " *",entity_id)
+        for component_name in sorted(e.components.keys()):
+            component_name_s = component_name
+
+            # есть исходящие обновления, ждет разрешения от получателя
+            if component_name in e.pending_outputs:
+                cnt = len(e.pending_outputs[component_name].keys())
+                if cnt > 0:
+                    component_name_s = component_name_s + " >>>"
+                    # добавим получателей
+                    #print("blocked outputs:")
+                    for k in e.pending_outputs[component_name].keys():
+                        component_name_s = component_name_s + " remote: " + k
+
+            # есть входящие сообщения, ждет процессов чтобы пропустить
+            if component_name in e.pending_updates:
+                cnt = len(e.pending_updates[component_name])
+                if cnt > 0:
+                    component_name_s = " >>> " + component_name_s
+                    # добавим процессы блокирующие xxx
+                    for k in e.pending_processes[component_name]:
+                        component_name_s = component_name_s + " proc: " + k
+
+            print( "   -",component_name_s)
+        #, ":", " ".join(sorted(e.components.keys())) )
+
     print("################ components view")
     for component_name, e in w.components.items():
-        print( " - ",component_name, ":"," ".join(sorted(w.components[component_name].keys()) ))        
-    print("################################### world done")        
+        print( " -",component_name)
+        print( "   entities :"," ".join(sorted(w.components[component_name].keys()) ))          
+        if component_name in w.component_processes:
+            print( "   processes :"," ".join(sorted(w.component_processes.get(component_name,{}).keys()) ))
+    print("################################### world done",flush=True)
 
 def print_world1( w ):
     print("################################### world begin")
@@ -41,7 +72,7 @@ class World:
         self.entities = {}
         self.components = {} # Stores components by type, then by entity ID
 
-        # таблица имя-компоненты -> список обрабатывающих процессов
+        # таблица имя-компоненты -> список обрабатывающих процессов (в форме словаря)
         self.component_processes = {}
 
     """
@@ -170,7 +201,7 @@ class LoopComponent:
                     s.process_ecs( iteration, self.local_world )
                 print(f"LoopComponent: Итерация {iteration} успешно завершена",flush=True)
 
-                #print_world( self.local_world )
+                print_world( self.local_world )
 
                 # Передаем управление event loop'у
                 #await asyncio.sleep(1)
@@ -192,8 +223,10 @@ class LoopComponent:
     
     async def stop(self):
         """Остановка компоненты."""
+        print("Loop: stop called")
         if self._task and not self._task.done():
             self._running = False
+            print("calling task.cancel")
             self._task.cancel()
             try:
                 await self._task
@@ -258,7 +291,8 @@ class entity:
 
         if component_name in self.pending_processes:
             print("see component in pending_processes")
-            del self.pending_processes[component_name][process_id]
+            if process_id in self.pending_processes[component_name]:
+                del self.pending_processes[component_name][process_id]
 
             if len(self.pending_processes[component_name].keys()) == 0:
                 # дождались
@@ -289,7 +323,7 @@ class entity:
             target_channel_id2 = v["target_entity_id"] + "/put"
             target_channel2 = self.rapi.channel(target_channel_id2)
 
-            rec = { "target_entity_d": v["target_entity_id"], 
+            rec = { "target_entity_id": v["target_entity_id"], 
                     "target_component_name": v["target_component_name"],
                     "target_put_request_id":target_channel_id,
                     "target_put_request_ch":target_channel,
@@ -308,6 +342,11 @@ class entity:
         # список процессов, которые ожидает компонента для обработки
         # чтобы получить входящие обновления
         self.pending_processes = {}
+
+        # неотправленные значения которые ждут разрешения
+        # таблица компонента -> id канала цели -> счетчик
+        self.pending_outputs = {}
+
         def on_put_request(v):
             print(">> entity ",self.entity_id,"got put request",v)
             # ну вот нам прислали
@@ -341,7 +380,7 @@ class entity:
 
                     for marker in locks:
                         if component_name not in self.pending_processes:
-                            self.pending_processes[ component_name ] = {}    
+                            self.pending_processes[ component_name ] = {}
                         self.pending_processes[ component_name ][marker] = 1
                         # запомнили что компонента ждет обработки процессом marker
                         # и затем ее готовы обновить
@@ -362,6 +401,10 @@ class entity:
             #component_name = v["component_name"]
             component_name = v["component_name"]
             print(">> component_name=",component_name)
+            self.pending_updates[component_name] = []
+            self.pending_processes[component_name] = {}
+            self.pending_outputs[component_name] = {}
+            
             self.update_component( component_name, v)
 
         self.put_component_ch = self.rapi.channel(f"{self.id}/put")
@@ -453,6 +496,17 @@ class entity:
                     return may_submit
 
                 print("ecs: update_component: sending request to update",component_name,"to ch",tgt_channel.id, "msg=",msg)
+                
+                if component_name not in self.pending_outputs:
+                    self.pending_outputs[component_name] = {}
+                # todo должна быть одна тут, может стоит ругаться
+                key = rec["target_entity_id"] + "/" + rec["target_component_name"]
+                if tgt_channel.id not in self.pending_outputs[component_name]:
+                    self.pending_outputs[component_name][key] = 1
+                else:                    
+                    self.pending_outputs[component_name][key] = self.pending_outputs[component_name][tgt_channel.id] + 1
+                    print("warning: more than one pending output in entity",self.entity_id,"component_name=",component_name,"remote=",key)
+
                 tgt_channel.sync_request( msg,mk_may_submit(rec,component_value) )
         else:
             print("have 0 outgoing_links")
@@ -485,6 +539,7 @@ class simulation:
         self.local_systems = description["local_systems"]
 
         self.RUN_SYSTEMS = LoopComponent(self.local_systems,self.local_world)
+        rapi.atexit( self.RUN_SYSTEMS.stop )
 
 
 ################

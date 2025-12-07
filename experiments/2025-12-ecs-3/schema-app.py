@@ -207,20 +207,33 @@ async def main():
 
     ####################################
 
-    print("done, waiting forever")
-    await asyncio.Future()
+    print("done, waiting forever 20")
+    #await asyncio.Future()
+    await asyncio.sleep( 5 )
+    #print("stopping")
+
+    print("calling workers exit")
+    for w in worker_channels:
+        w.put( {"action":"exit"})
+    await asyncio.sleep( 0.1 )
  
-    print("Exiting")
-    await c.exit()
+    print("calling exit")
+    #exit(0)
+    #sys.exit()
+    print("Exiting client")    
+    await rapi.exit() #todo зависает
+    print("Exiting server")
     await s.exit()
+    print("Exiting main")
 
 #loop = asyncio.get_event_loop()
 #loop.run_until_complete( main() )
 #loop.close()
 try:
-  asyncio.run( main() )#,debug=True )
+    asyncio.run( main() )#,debug=True )
 except Exception as e:
     print(f"Caught an exception in my_coroutine: {e}")  
     traceback.print_exc()
 finally:
-  sys.exit()
+    print("sys.exit")
+    sys.exit()

@@ -50,6 +50,8 @@ async def main():
     print("loading plugins")
     plugins.active.init(rapi)
 
+    stop_f = asyncio.Future()
+
     # см причем grafix/web/public/app.js будем делать 1 протокол
     # call_tag, put_tag, remove..
     async def qcb(msg):
@@ -65,6 +67,15 @@ async def main():
             object_id = msg["id"]
             obj = gen.get_object_by_id( object_id )
             gen.apply_description(rapi,obj,arg["description"])
+        elif msg["action"] == "exit":
+            print("got exit message -> exiting")
+            stop_f.set_result(1)
+            #print("calling rapi.exit")
+            #await rapi.exit()
+            #await asyncio.sleep(0.0001)
+            #print("calling exit(0)")
+            #exit(0)
+            #return
 
         #await rapi.reply( msg, {"content_type":"image/png","payload":image} )
         # ну сделаем чтобы можно было посылать запросы.. ну например..
@@ -74,11 +85,13 @@ async def main():
 
     report.put({"status":"worker-started","input_channel":input.id})
 
-    while True:
-        await asyncio.sleep( 1*100000 )
+    #while True:
+    #    await asyncio.sleep( 1*100000 )
+    await stop_f
     print("Exiting")
-    await c.exit()
-    await s.exit()
+    print("calling rapi.exit")
+    await rapi.exit()    
+    print("finishing main")
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete( main() )

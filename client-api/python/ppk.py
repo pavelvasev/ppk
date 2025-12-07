@@ -285,7 +285,7 @@ class Client:
         self.sender = sender
         self.lists = {}
         self.operations = Operations( self )
-        self.verbose = False
+        self.verbose = True #False
         self.client_id = self.mkguid()
 
         self.function_counter = 0
@@ -399,7 +399,7 @@ class Client:
             print(traceback.format_exc())
 
         if self.verbose:
-            print("run: exited loop")
+            print("run: ppk exited message loop")
 
     async def exit(self):
         # idea если будут глюки то подождать с закрытием ws.close (см ниже)?        
@@ -413,15 +413,28 @@ class Client:
 
         if self.verbose:
             print("rapi: exit: calling exit_callbacks, total",len(self.exit_callbacks))
+            print(self.exit_callbacks)
+        cnt = 1
         for x in self.exit_callbacks:
-            if self.verbose:
-                print("... waiting exit callback",x)
-            if asyncio.iscoroutinefunction(x):
-                await x()
-            else:
-                x()
-            if self.verbose:
-                print("... done waiting",x)
+            print("exit cb", cnt,"ctrl",len(self.exit_callbacks))
+            try:
+                if asyncio.iscoroutinefunction(x):
+                    if self.verbose:
+                        print("... waiting exit callback",x)                    
+                        await x()                
+                    if self.verbose:
+                        print("... done waiting",x)
+                else:
+                    if self.verbose:
+                        print("... calling exit callback",x)
+                    x()
+                    if self.verbose:
+                        print("... call finished")            
+            except Exception as e:
+                    print("exception during callback",e)
+
+            cnt = cnt + 1
+                
         self.exit_callbacks = []
         if self.verbose:
             print("rapi: exit: callbacks finished. closing ws connection")
@@ -440,8 +453,11 @@ class Client:
         #.add_done_callback(asyncio.current_task().cancel)
         # print("wait closed ok")
 
-    def atexit( self, method ):
+    def atexit( self, method ):        
         self.exit_callbacks.append( method )
+        if self.verbose:
+            print("rapi: register atexit callback",method)
+            print("rapi: current number of callbacks",len(self.exit_callbacks))
 
     #def run(self): #, on_open:Callable):
         #self.on_open_cb = on_open

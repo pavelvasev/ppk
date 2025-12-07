@@ -277,27 +277,36 @@ class QueryTcp:
             #print("created task ttt",task)
             async def close_site():
                 
-                #print("ppk_query: close_site - stopping q", task)
+                print("ppk_query: close_site - stopping q", task)
                 """
                 print("stopping server",dir(self.server), self.server.sockets )
 
                 for s in self.server.sockets:
                     print("s=",dir(s))
                     s.shutdown()
+                
                 """
+                print("ppk_query: task cancel call")
                 task.cancel()
+                print("ppk_query: task cancel called")
                 try:
                     #print("enter task await, server =",self.server)
                     #print("methods=",dir(self.server))
                     # короче это ток в питоне 3.13 #todo
                     #self.server.close_clients() # hack см https://github.com/python/cpython/issues/123720
-                    await task
+                    print("ppk_query: awaiting task")
+                    # висит вечно...
+                    #await task
                     self.server.close()
-                    await self.server.wait_closed()
-                    #print("task await done is_serving()=",self.server.is_serving())
+                    print("ppk_query: task await enter server wait_closed")
+                    # висит зараза...
+                    #await self.server.wait_closed()
+                    print("ppk_query: task await done is_serving()=",self.server.is_serving())
                 except asyncio.CancelledError:                    
-                    #print("stopping q done - CancelledError")
+                    print("ppk_query:stopping q done - CancelledError")
                     return
+                except Exception as e:
+                    print("ppk_query: stopping q done - Error",e)
 
             self.rapi.atexit( close_site )
             # см также 
