@@ -144,6 +144,17 @@ class World:
             if not first_component_entities:
                 break # Optimization: if intersection becomes empty, no need to continue
 
+        # заблокируем обработку сущностей которые ждут исходящей выгрузки компонент                
+        for entity_id in first_component_entities:
+            e = self.get_entity( entity_id )
+            for component_name in e.pending_outputs:
+                recs =  e.pending_outputs[component_name]
+                total = len(recs.keys())
+                if total > 0:
+                    #if verbose:
+                    print("entity",entity_id,"is blocked, it has pending_output on component_name=",component_name)
+                    return set()
+
         if marker is not None:
             # фильтр по маркеру
             # правило: никакая из запрошенных компонент не должна содержать данный маркер
@@ -170,33 +181,7 @@ class World:
             return cc
 
         return first_component_entities
-
-    def get_entities_with_components_verbose(self, *component_types):
-        # Returns entity IDs that have all specified component types
-        print("get_entities_with_components_verbose: component_types=",component_types)
-        if not component_types:
-            print("no component_types, return empty set")
-            return self.entities.keys()
-
-        first_component_entities = set(self.components.get(component_types[0], {}).keys())
-        print("* first_component_entities=",first_component_entities)        
-        
-        if not first_component_entities:
-            print("no first_component_entities, return empty set")
-            return set()
-
-        print("entering loop")
-
-        for comp_type in component_types[1:]:
-            current_component_entities = set(self.components.get(comp_type, {}).keys())
-            print("* component",comp_type,"entities =",current_component_entities)
-            first_component_entities.intersection_update(current_component_entities)
-            print("  current result",first_component_entities)
-            if not first_component_entities:                
-                break # Optimization: if intersection becomes empty, no need to continue
-
-        print("loop finished. result:",first_component_entities)
-        return first_component_entities        
+  
 
 class LoopComponent:
     """
