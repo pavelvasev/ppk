@@ -405,7 +405,7 @@ class voxel_volume_paint_sw:
 
     def process_ecs(self,i,world):
         print("voxel_volume_paint_sw:process_ecs called")
-        ents = world.get_entities_with_components("voxel_volume_result","paint",marker="paint")
+        ents = world.get_entities_with_components("voxel_volume_result","paint",marker="paint",updates=["image"])
         print("voxel_volume_paint_sw:ents=",ents)
         for entity_id in ents:
             #grid = e.components["voxel_volume"]

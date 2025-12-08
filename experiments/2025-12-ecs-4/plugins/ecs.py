@@ -58,12 +58,14 @@ def print_world( w ):
             print( "   -",component_name_s)
         #, ":", " ".join(sorted(e.components.keys())) )
 
+    """
     print("################ components view")
     for component_name, e in w.components.items():
         print( " -",component_name)
         print( "   entities :"," ".join(sorted(w.components[component_name].keys()) ))          
         if component_name in w.component_processes:
             print( "   processes :"," ".join(sorted(w.component_processes.get(component_name,{}).keys()) ))
+    """
     print("################################### world done",flush=True)
 
 def print_world1( w ):
@@ -122,7 +124,7 @@ class World:
 
     def apply_rules( self ):
         for r in self.rules:
-            ent_ids = self.get_entities_with_components( *r.component_names, marker=None )
+            ent_ids = self.get_entities_with_components( *r.component_names, marker=None,updates=[] )
             for entity_id in ent_ids:
                 e = self.get_entity( entity_id )
                 if not e.has_component( r.target_component_name ):
@@ -154,7 +156,8 @@ class World:
     def get_entity(self, id):
         return self.entities[id]
 
-    def get_entities_with_components(self, *component_types, marker,verbose=False):
+    # will_update = список компонент которые будут обновлены (update)
+    def get_entities_with_components(self, *component_types, marker,updates, verbose=False,):
         if verbose:
             print("get_entities_with_components: component_types=",component_types,"marker=",marker)
         
@@ -193,15 +196,24 @@ class World:
             # а то так вообще то может получиться что будет шпарить 1-я
             # и никогда дело не дойдет до 2-й
             # TODO!!!!
+            cc = set()
             for entity_id in first_component_entities:
                 e = self.get_entity( entity_id )
+                skip_entity = False
+
                 for component_name in e.pending_outputs:
                     recs =  e.pending_outputs[component_name]
                     total = len(recs.keys())
-                    if total > 0:
+                    if total > 0 and (component_name in updates):
                         #if verbose:
-                        print("skipping entity",entity_id,"is blocked, it has pending_output on component_name=",component_name)
-                        return set()
+                        print("skipping entity",entity_id,"is blocked, it has pending_output on component_name=",component_name,"which is in updates=",updates)
+                        skip_entity = True
+                        break
+                        #return set()
+                
+                if not skip_entity:
+                    cc.add( entity_id )
+            first_component_entities = cc
 
         if marker is not None:
             # фильтр по маркеру
@@ -228,7 +240,7 @@ class World:
                     for component_name in component_types:
                         e.component_processed( component_name, marker )
 
-            return cc
+            first_component_entities = cc
 
         return first_component_entities
   
@@ -448,17 +460,23 @@ class entity:
                 """
                 locks = []
 
+                print("entity is in systems:",list(self.systems.keys()))
+
                 for system_id in self.systems.keys():
                     cc = self.local_world.get_system_components( system_id )
                     if cc is None:
                         print("ALARM! get_system_components is emtpy for system",system_id, file=sys.stderr)
+                    print("  - checking system ",system_id)
                     if component_name in cc:
+                        print("     component is in this system")
                         # система system_id обрабатывает компоненту component_name
                         if system_id in c:
                             # уже обработала
+                            print("     system processed this component, no lock")
                             pass
                         else:
                             locks.append( system_id )
+                            print("     system waits for this component, adding lock")
 
                 if len(locks) == 0:
                     print(">> sending OK - no locks on component", opkey)

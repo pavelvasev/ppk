@@ -41,7 +41,7 @@ class image_saver:
         # todo искать указаннный в параметре компонент
         #ents = world.get_entities_with_components("image")
         #ents = world.get_entities_with_components("image","final_image",marker="image_saver")
-        ents = world.get_entities_with_components("image","image_saver",marker="image_saver")
+        ents = world.get_entities_with_components("image","image_saver",marker="image_saver",updates=[])
         print("image_saver:ents=",ents)
         for entity_id in ents:
             #grid = e.components["voxel_volume"]
@@ -55,9 +55,9 @@ class image_saver:
             rgb = image["payload"]["rgb"]
 
             iter_num = image["iter_num"]
-            imageio.imwrite(f"{entity_id}_iter_{iter_num:05d}.png", rgb)
+            imageio.imwrite(f"log/{entity_id}_iter_{iter_num:05d}.png", rgb)
             # чисто тест
-            imageio.imwrite(f"online.png", rgb)
+            imageio.imwrite(f"log/online.png", rgb)
 
 
 # копирует картинки из воксельного рендеринга в мержер
@@ -286,12 +286,13 @@ class image_merger:
     def get_components(self):
         return ["image1","image2" ]
 
+
     #def process_entities( self, world, ents ):
 
     def process_ecs(self,i,world):
         print("image_merger:process_ecs called")
         # todo искать указаннный в параметре компонент
-        ents = world.get_entities_with_components("image1","image2","merge",marker="merge")
+        ents = world.get_entities_with_components("image1","image2","merge",marker="merge",updates=["image"])
         print("image_merger:ents=",ents)
         for entity_id in ents:
             #grid = e.components["voxel_volume"]

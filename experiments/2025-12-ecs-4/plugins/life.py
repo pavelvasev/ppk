@@ -42,7 +42,7 @@ class random_voxels:
 
     def process_ecs(self,i,world):
         print("random_voxels:process_ecs called")
-        ents = world.get_entities_with_components("voxel_random_init",marker="voxel_random_init")
+        ents = world.get_entities_with_components("voxel_random_init",marker="voxel_random_init",updates=["voxel_volume_value"])
         print("random_voxels:ents=",ents)
         for entity_id in ents:
             #grid = e.components["voxel_volume"]
@@ -83,6 +83,8 @@ class game_of_life_3d:
 
         self.system_id = "life3d"
 
+        self.cnt = 0
+
         #rapi.bind()
 
         rule = "4555"
@@ -122,6 +124,8 @@ class game_of_life_3d:
         
         grid = new_grid
         #return np.sum(grid)  # Возвращаем количество живых клеток
+
+
         return grid
 
     def get_components(self):
@@ -130,18 +134,25 @@ class game_of_life_3d:
     def process_ecs(self,i,world):
         print("game_of_life_3d:process_ecs called")
 
-        ents = world.get_entities_with_components("voxel_volume_value","life3d",marker="life3d")
+        self.cnt = self.cnt + 1
+        if self.cnt % 10 != 0:
+            print("skipping game_of_life_3d due to test, gonna do every N")
+            return
+        print("passed game_of_life_3d due to test, gonna do every N")            
+
+        ents = world.get_entities_with_components("voxel_volume_value","life3d",marker="life3d",updates=["voxel_volume_result"])
         print("game_of_life_3d:ents=",ents)
         for entity_id in ents:
             #grid = e.components["voxel_volume"]
             e = world.get_entity( entity_id )
             params = e.get_component("voxel_volume_params")
             val = e.get_component("voxel_volume_value")
-            
+            iter_num = val["iter_num"] + 1
+
             grid = val["payload"]
             #print("see entity",entity_id,"grid=",grid)
             new_grid = self.step( grid )
-            iter_num = val["iter_num"] + 1
+            
             e.update_component("voxel_volume_result",{"payload":new_grid,"iter_num":iter_num})
 
             #e.update_component("game_of_life_3d_processed",{})
@@ -268,7 +279,8 @@ class voxel_volume_sync_out:
         print("voxel_volume_sync_out:process_ecs called")
         
         # исходящие теневые грани
-        ents = world.get_entities_with_components("voxel_volume_result","sync_out",marker="sync_out")
+        ents = world.get_entities_with_components("voxel_volume_result","sync_out",
+                marker="sync_out",updates=["sx_first","sx_last","sy_first","sy_last","sz_first","sz_last"])
         print("voxel_volume_sync_out: make shadow, ents=",ents)
         for entity_id in ents:
             #grid = e.components["voxel_volume"]
@@ -310,6 +322,7 @@ class voxel_volume_sync_in:
                 "sy_first_income","sy_last_income",
                 "sz_first_income","sz_last_income",
                 marker="sync_in",
+                updates=["voxel_volume_value"],
                 verbose=True
                 )
         # идея в том что мы создадим пустые входящие теневые грани для границ большого вокс куба
