@@ -87,9 +87,10 @@ class RequestReplyFeature:
         res = cb( reply_msg["result"] )
         if inspect.isawaitable(res): 
             await res
-        #
-        #lambda msg: callback( msg["result"] )
-           
+
+        # эксперимент по очистке памяти
+        del self.reply_callbacks[ reply_msg["request_id"] ]           
+
 
     async def reply( self, input_msg, data ):
         # для юзабилити. надоело просто снаружи это проверять

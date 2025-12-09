@@ -96,6 +96,7 @@ class World:
         self.component_processes = {}
 
         #F-RULES локальные правила развертывания систем
+        # если заданы имена компонент [a,b,c] то развернуть компоненту d=value с признаком system=1
         self.rules = []
 
     """
@@ -282,8 +283,8 @@ class LoopComponent:
 
                 # Передаем управление event loop'у
                 #await asyncio.sleep(1)
-                await asyncio.sleep(0.1)
-                #await asyncio.sleep(0.0000001)
+                #await asyncio.sleep(0.1)
+                await asyncio.sleep(0.0000001)
 
         except asyncio.CancelledError:
             print("LoopComponent: Задача была отменена")
@@ -501,7 +502,7 @@ class entity:
 
         #self.put_request_ch = self.rapi.channel(f"{self.id}/put_request")
         #self.put_request_ch.react( on_put_request )        
-        self.rapi.sync_query( f"{self.id}/put_request",on_put_request )
+        self.rapi.put_query( f"{self.id}/put_request",on_put_request )
 
         ### управление входящими компонентами        
         def on_put(v):

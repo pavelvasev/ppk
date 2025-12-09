@@ -140,7 +140,10 @@ async def main():
     print("Start main code 2")
     try:
         
-        shape = [2,2,2]
+        shape = [4,4,4]
+        T=240
+        #shape = [2,2,2]
+        #T=40
         vv = plugins.voxel.VoxelVolume( size=10,shape=shape )
         vv_entities_list_3d = vv.deploy( worker_channels )
         
@@ -231,7 +234,7 @@ async def main():
 
     ####################################
 
-    T=40
+    
     print("done, waiting forever T=",T)
     #await asyncio.Future()
     await asyncio.sleep( T )

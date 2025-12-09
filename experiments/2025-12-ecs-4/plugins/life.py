@@ -134,11 +134,13 @@ class game_of_life_3d:
     def process_ecs(self,i,world):
         print("game_of_life_3d:process_ecs called")
 
+        """
         self.cnt = self.cnt + 1
         if self.cnt % 10 != 0:
             print("skipping game_of_life_3d due to test, gonna do every N")
             return
         print("passed game_of_life_3d due to test, gonna do every N")            
+        """
 
         ents = world.get_entities_with_components("voxel_volume_value","life3d",marker="life3d",updates=["voxel_volume_result"])
         print("game_of_life_3d:ents=",ents)
