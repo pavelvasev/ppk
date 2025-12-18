@@ -159,7 +159,7 @@ def ch_bind_out_links(rapi, obj, links):
 
                 def callback(value):              
                     for ch in global_channels:
-                        print("   cb of ch_bind_out_links: sending local channel ",local_name,"value to global",ch_name,"object_id=",obj.external_id)
+                        #print("   cb of ch_bind_out_links: sending local channel ",local_name,"value to global",ch_name,"object_id=",obj.external_id)
                         #rapi.msg({"label": ch_name, "value": value})
                         ch.put( value )
                 return callback

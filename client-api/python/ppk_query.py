@@ -123,7 +123,9 @@ def serialize_for_network(msg):
             msg["decoder"] = dict(type="dict_of_np",metadata=metadata)
             # todo десериализацию...
 
-    """
+    # каналы используют поле value
+    # TODO сейчас получается value отправка сработает через каналы из питона в js
+    # а вот что будет в питон-питон пока неясно, todo разобраться.
     if "value" in msg:
         v = msg["value"]
         if isinstance(v, np.ndarray):
@@ -137,7 +139,7 @@ def serialize_for_network(msg):
             msg["payload"] = data_bytes
             msg["decoder"] = dict(type="dict_of_np",metadata=metadata)
             # todo десериализацию...
-    """
+    
     return msg
 
 
@@ -411,7 +413,7 @@ class QueryTcp:
         m = packet
         if attach is not None:
             m["payload"] = attach
-            ### xxx
+            ### todo тут возможно надо поле value прописать в случае работы с каналом
         
         if self.rapi.verbose:
             print("query got message:",packet,"cb=",cb)
