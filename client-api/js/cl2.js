@@ -644,7 +644,7 @@ export function create_binding_when_any( list, q ) {
 export function when_all_once( list ) {
 	let q = create_channel()
 	//SSconsole.log("create_binding_when_any, list=",list)
-	let values = new Array( list )
+	let values = new Array( list.length )
 	let counter = list.length
 	let index = 0
 	for (let k of list) {
@@ -676,14 +676,14 @@ export function when_all( list ) {
 	let q2 = create_channel()
 	let b = create_binding_delayed( q, q2 )
 	//SSconsole.log("create_binding_when_any, list=",list)
-	let values = new Array( list )
-	let masks = new Array( list )
+	let values = new Array( list.length )
+	let masks = new Array( list.length )
 	let unsubs = []
 
 	let mode_gathered = false;
 
   function ff( value, index) {
-			//console.log("when-all mode 2 got value for emit to q, index=",index,"value=",value)
+  	  //if (index == 0)	console.log("when-all mode 2 got value for emit to q, index=",index,"value=",value)
 			values[index] = value
 
 			if (mode_gathered) {
