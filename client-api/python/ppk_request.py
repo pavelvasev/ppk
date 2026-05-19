@@ -77,7 +77,7 @@ class RequestReplyFeature:
     async def on_reply( self, reply_msg ):
         #print("reply_msg",reply_msg,type(reply_msg))
         k = reply_msg["request_id"]
-        #print("k=",k)
+        #print("self.reply_callbacks=",self.reply_callbacks)
         cb = self.reply_callbacks[ reply_msg["request_id"] ]
 
         if cb is None:
@@ -89,13 +89,20 @@ class RequestReplyFeature:
             await res
 
         # эксперимент по очистке памяти
-        del self.reply_callbacks[ reply_msg["request_id"] ]           
+        # но это тема только если подразумевается ровно 1 ответ
+        # а если больше?+
+        # todo это проблема, ответов реально может быть больше
+        # но не все они могут прийти. значит надо как-то в каллбеке
+        # обозначать интересуют ли еще ответы по этой теме
+        del self.reply_callbacks[ reply_msg["request_id"] ]
+        # print("deleted reply_callbacks with id",reply_msg["request_id"])
 
 
     async def reply( self, input_msg, data ):
         # для юзабилити. надоело просто снаружи это проверять
         # как вариант, можно какой-то флаг вернуть
         if not "reply_msg" in input_msg:
+            print("warning, reply_msg is not in input_msg, no reply will be sent!",input_msg,flush=True)
             return
 
         output_msg = dict(input_msg["reply_msg"])
