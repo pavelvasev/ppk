@@ -422,7 +422,7 @@ class Client:
                 if asyncio.iscoroutinefunction(x):
                     if self.verbose:
                         print("... waiting exit callback",x)                    
-                        await x()                
+                    await x()                
                     if self.verbose:
                         print("... done waiting",x)
                 else:

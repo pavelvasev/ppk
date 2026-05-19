@@ -18,7 +18,9 @@ class Feature:
 
     def __init__(self,rapi):
         self.rapi = rapi
+        # эта для всех задач
         self.rapi.sa_queue1 = SyncAsyncQueue(rapi,"sa_queue1")
+        # а эта особая для списков
         self.rapi.sa_queue2 = SyncAsyncQueue(rapi,"sa_queue2")
         self.rapi.add_async_item = self.rapi.sa_queue1.add_async_item
 
@@ -59,10 +61,10 @@ class SyncAsyncQueue:
             #print("####QSIZE=",self.sync_async_queue.qsize())
             #print(self.title,": got item, awaiting",item)
             try:
-                #print("-----> await begin")
+                #print(self.title,"-----> await begin")
                 res = await item
-                #print("-----> await end")
-                #print(self.title,": item awaited OK",item)
+                #print(self.title,"-----> await end")
+                ##print(self.title,": item awaited OK",item)
                 #item.ppk_queue_result = res
                 if result_f is not None:
                     result_f.set_result( res )
@@ -70,4 +72,4 @@ class SyncAsyncQueue:
                 # handle the exception
                 print(self.title,"ppk: exception occurred:", error) # An exception occurred: division by zero
                 print(self.title,"traceback:",traceback.format_exc())
-            #print("sync_async_queue: item await DONE")
+            #print(self.title,"sync_async_queue: item await DONE")

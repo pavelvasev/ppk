@@ -14,6 +14,7 @@ import numpy as np
 import sys
 import time
 import tracemalloc
+from weakref import WeakSet
 
 #tracemalloc.start()
 def show_biggest_objects(limit=10):
@@ -166,6 +167,8 @@ class QueryTcp:
         rapi.operations.do_query_send = self.do_query_send
         rapi.get_incoming_endpoint = self.get_incoming_endpoint
 
+        self.remote_clients = WeakSet()
+
     async def do_query_send( self,msg, arg):
 
         target_url = arg["results_url"]
@@ -208,7 +211,14 @@ class QueryTcp:
 
         query_id_bytes = arg["query_id"].to_bytes(4,"big")
         #packet = {"query_id": arg["query_id"],  "m": msg } ыыы
-        s = json.dumps( sending_msg )
+        try:
+            s = json.dumps( sending_msg )
+        except Exception as e:
+            print("============= error packing value to json")
+            print( sending_msg)
+            print("=============")
+            print(e)
+            raise e
         # print("do_query_send: encoded packet is len:",len(s))
         bytes = s.encode()
         #print("bytes="=)
@@ -248,9 +258,10 @@ class QueryTcp:
             #print("create client tcp, url=",url)
             reader, writer = await asyncio.open_connection(url["host"], url["port"])
             p.set_result( writer )
+            #p.set_result( [reader,writer] )
         pp = self.clients[ surl ]
         await pp
-        return pp.result()
+        return pp.result() #[1]
 
     # запускает сервер входящих сообщений
     # возвращает endpoint для получения сообщений
@@ -279,7 +290,7 @@ class QueryTcp:
             #print("created task ttt",task)
             async def close_site():
                 
-                print("ppk_query: close_site - stopping q", task)
+                #print("ppk_query: close_site - stopping q", task)
                 """
                 print("stopping server",dir(self.server), self.server.sockets )
 
@@ -288,22 +299,33 @@ class QueryTcp:
                     s.shutdown()
                 
                 """
-                print("ppk_query: task cancel call")
+                #print("ppk_query: task cancel call")
                 task.cancel()
-                print("ppk_query: task cancel called")
+                #print("ppk_query: task cancel called")
                 try:
                     #print("enter task await, server =",self.server)
                     #print("methods=",dir(self.server))
                     # короче это ток в питоне 3.13 #todo
                     #self.server.close_clients() # hack см https://github.com/python/cpython/issues/123720
-                    print("ppk_query: awaiting task")
+                    #print("ppk_query: awaiting task")
                     # висит вечно...
                     #await task
                     self.server.close()
-                    print("ppk_query: task await enter server wait_closed")
+                    #print("ppk_query: task await enter server wait_closed")
                     # висит зараза...
+                    #print("clients=",len(self.clients.values()))
+                    #for c in self.clients.values():
+                    for writer in self.remote_clients:
+                        #writer = c.result()
+                        #print("closing writer",writer)
+                        writer.close()
+                        await asyncio.wait_for(writer.wait_closed(),timeout=0.05)
+                        #await writer.wait_closed()
+                    self.remote_clients = WeakSet()
+                    #print("so server wait_closed")
                     #await self.server.wait_closed()
-                    print("ppk_query: task await done is_serving()=",self.server.is_serving())
+                    await asyncio.wait_for(self.server.wait_closed(),timeout=1)
+                    #print("ppk_query: task await done is_serving()=",self.server.is_serving())
                 except asyncio.CancelledError:                    
                     print("ppk_query:stopping q done - CancelledError")
                     return
@@ -358,6 +380,7 @@ class QueryTcp:
     # присоединился новый клиент
     async def on_connected(self,reader, writer):
         #print("connected",dir(reader))
+        self.remote_clients.add(writer)
 
         while True:
             try:
@@ -366,16 +389,20 @@ class QueryTcp:
                 data2 = await reader.readexactly(4)
                 data3 = await reader.readexactly(4)
             except Exception as ex:
+                self.remote_clients.discard(reader)
                 if not reader.at_eof():
                     print("error reading reader. at eof=",reader.at_eof(),"err=",ex)
                 return
             except GeneratorExit as ex:
+                self.remote_clients.discard(reader)
                 #print("GeneratorExit")
                 return
             except asyncio.CancelledError:
+                self.remote_clients.discard(reader)
                 #print("Got CancelledError")
                 return
             except:
+                self.remote_clients.discard(reader)
                 #print("Caught it!")
                 #print("Unexpected error:", sys.exc_info()[0])
                 return

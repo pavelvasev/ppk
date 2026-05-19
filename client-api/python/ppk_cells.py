@@ -136,13 +136,22 @@ class Channel:
           #F-CHANNEL-REQUEST-HACK возможность в каналы передавать запросы (request)
           # т.е. если послали не value а скажем arg то сообщение проползает целиком
           # и там есть reply_id
-          v = msg["value"] if "value" in msg else msg
+          #print("cba, value before magic=",msg)
+          if "reply_msg" in msg:
+            v = msg # если это запрос то оставляем как есть
+          else:
+            v = msg["value"] if "value" in msg else msg
           
           # #F-PAYLOAD-PASS галиматья на тему пейлоадов и каналов
           # кстати также см grafix utils.js
           if "payload" in msg:
             if v is None:
                 v = {}
+            # важно это тут скопировать потому что иначе это может повлиять
+            # на отправляемое сообщение которое еще не отправлено, а нами локально
+            # здесь уже получено
+            # вообще это дурдом и его надо пресечь переделкой пейлоадов
+            v = v.copy()
             v["payload"] = msg["payload"]
 
           self.value = v
@@ -166,6 +175,8 @@ class Channel:
     # F-PYTHON-SYNC
     def put( self, value ):
         value_as_message = self.value_to_message(value)         
+        #print("~~~")
+        #print(value_as_message)
         t = self.submit_prepared( value_as_message )
         self.rapi.add_async_item( t )
         return self
