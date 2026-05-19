@@ -119,4 +119,4 @@ class RequestReplyFeature:
     # синхронный запрос
     def put_request( self, value, callback ):
         t = self.request( value, callback )
-        self.rapi.add_async_item( t )        
+        self.rapi.add_async_item( t )

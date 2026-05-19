@@ -495,6 +495,7 @@ class ReadingWritingCell:
 # channels есть объекты
 # а это точно whenall а не when-any? ))))
 # all то это подразумевает синхронность подачи а у нас нет модели времени тут
+# todo т.е. если 2 раза кто-то пришлет то эта штука значение потеряет
 class WhenAll():
     def __init__( self, rapi, id, *channels ):
         #self.rapi = rapi
