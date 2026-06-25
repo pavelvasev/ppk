@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
+requires = ["setuptools<69", "wheel", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -16,14 +16,8 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["ppk", "ppk.js", "ppk.genesis", "ppk.http_bridge", "ppk.main","ppk.utils","ppk.web","ppk.ws_repr"]
+packages = ["ppk", "ppk.js"]
 
 [tool.setuptools.package-dir]
 "ppk"="client-api/python"
 "ppk.js"="client-api/js"
-"ppk.genesis"="client-api/python/genesis"
-"ppk.http_bridge"="client-api/python/genesis"
-"ppk.main"="client-api/python/main"
-"ppk.utils"="client-api/python/utils"
-"ppk.web"="client-api/python/web"
-"ppk.ws_repr"="client-api/python/ws_repr"
