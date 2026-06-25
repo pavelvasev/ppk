@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name="ppk"
-version = "2024.10.a"
+version = "2026.06"
 dependencies = [
 'websockets',
 'numpy',
