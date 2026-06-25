@@ -18,6 +18,7 @@ dependencies = [
 
 [tool.setuptools]
 packages = ["ppk", "ppk.js"]
+include-package-data = true
 
 [tool.setuptools.package-dir]
 "ppk"="client-api/python"
