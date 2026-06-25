@@ -119,7 +119,7 @@ def ch_bind_in_links(rapi, obj, links_in):
         if local_channel:  # todo проверить что это канал
             for ch_name in sources:
                 #print("ch_bind_in_links: query ", ch_name, "to local_name=", local_name)
-                print("ch_bind_in_links: see local channel(or cell), adding subscribers listen. local_name=",local_name,"ch_name=",ch_name)
+                #print("ch_bind_in_links: see local channel(or cell), adding subscribers listen. local_name=",local_name,"ch_name=",ch_name)
 
                 def mk_cb( local_channel, local_name ):
                     # todo 1 а почему тут не bind вообще?
@@ -150,7 +150,7 @@ def ch_bind_out_links(rapi, obj, links):
     for local_name, global_channel_ids in links.items():
         local_channel = getattr(obj,local_name)
         if local_channel:
-            print("ch_bind_out_links: see local channel(or cell), adding subscribers listen. local_name=",local_name)
+            #print("ch_bind_out_links: see local channel(or cell), adding subscribers listen. local_name=",local_name)
 
             def mk_cb( global_channel_ids ):
                 global_channels = []
