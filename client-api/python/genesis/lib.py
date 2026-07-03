@@ -27,6 +27,8 @@ def get_object_by_id( id ):
     return None
 
 def apply_description( rapi, obj, description ):
+    obj.stop_functions = []
+    
     if "params" in description:
         ch_assign_attrs( obj, description["params"] )
     if "links_out" in description:
@@ -49,6 +51,18 @@ def register_object_tags(tags,value):
             created_objects_tags[tag].append(value)
         else:
             created_objects_tags[tag] = [value]
+
+def unregister_object(value):
+    id = value.external_id
+    global created_objects_ids
+    del created_objects_ids[id]
+
+def unregister_object_tags(tags,value):
+    global created_objects_tags
+    for tag in tags:
+        if tag in created_objects_tags:
+            created_objects_tags[tag].remove(value)
+
 
 def create_objects(rapi, description, parent_id):
     if isinstance(description,list):
@@ -86,6 +100,12 @@ def create_object(rapi, description, parent_id):
         obj.tags = description["tags"]
 
     return obj
+
+def delete_object( obj ):
+    unregister_object_tags( obj.tags, obj )
+    unregister_object( obj )
+    for x in obj.stop_functions:
+        x()
 
 # obj - родительский объект, items - список описаний объектов
 def create_children( rapi, obj, items ):
@@ -138,7 +158,9 @@ def ch_bind_in_links(rapi, obj, links_in):
                 callback = mk_cb( local_channel, local_name )
                 rapi.channel(ch_name).react( callback )
 
-                rapi.channel(ch_name+":initial_value").react( callback, 1 )
+                stop_fn = rapi.channel(ch_name+":initial_value").react( callback, 1 )
+
+                obj.stop_functions.append( stop_fn )
                 #rapi.channel(ch_name+":subscribed").put("new_subscriber_id")
 
                 #print("ch_bind_in_links: bound channel",ch_name,"to prop",local_name)
@@ -166,7 +188,8 @@ def ch_bind_out_links(rapi, obj, links):
 
             callback = mk_cb( global_channel_ids )
             
-            unsub = local_channel.react(callback)
+            stop_fn = local_channel.react(callback)
+            obj.stop_functions.append( stop_fn )
 
             if hasattr(local_channel,"is_cell"):                
                 #def s_callback(new_subscriber):
