@@ -41,8 +41,7 @@ def apply_description( rapi, obj, description ):
 def register_object(id,value):
     global created_objects_ids
     created_objects_ids[id] = value
-    # hm
-    value.external_id = id
+
 
 def register_object_tags(tags,value):
     global created_objects_tags
@@ -52,8 +51,7 @@ def register_object_tags(tags,value):
         else:
             created_objects_tags[tag] = [value]
 
-def unregister_object(value):
-    id = value.external_id
+def unregister_object(id,value):    
     global created_objects_ids
     del created_objects_ids[id]
 
@@ -93,6 +91,7 @@ def create_object(rapi, description, parent_id):
 
     if "id" in description:
         register_object( description["id"], obj )
+        obj.external_id = description["id"]
     if "tags" in description:
         register_object_tags( description["tags"], obj )
         # вот так объект мог бы узнать о тегах. да и об id тоже. но пока не надо
@@ -102,10 +101,14 @@ def create_object(rapi, description, parent_id):
     return obj
 
 def delete_object( obj ):
-    unregister_object_tags( obj.tags, obj )
-    unregister_object( obj )
+    if hasattr(obj,"tags"):
+        unregister_object_tags( obj.tags, obj )
+    if hasattr(obj,"external_id"):
+        unregister_object( obj.external_id,obj )
     for x in obj.stop_functions:
         x()
+    if hasattr(obj,"delete_object"):
+        obj.delete_object()
 
 # obj - родительский объект, items - список описаний объектов
 def create_children( rapi, obj, items ):
