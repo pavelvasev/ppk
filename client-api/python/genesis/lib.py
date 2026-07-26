@@ -98,22 +98,43 @@ def create_object(rapi, description, parent_id):
         # да вроде уже надо
         obj.tags = description["tags"]
 
+    if parent:
+        if not hasattr(parent,"genesis_children"):
+            parent.genesis_children = []
+        parent.genesis_children.append(obj)
+
     return obj
 
 def delete_object( obj ):
+    #print("GEN: delete_object",obj)
+    if hasattr(obj,"genesis_deleted"):
+        return
+
     if hasattr(obj,"tags"):
         unregister_object_tags( obj.tags, obj )
     if hasattr(obj,"external_id"):
         unregister_object( obj.external_id,obj )
-    for x in obj.stop_functions:
-        x()
+    if hasattr(obj,"stop_functions"):
+        for x in obj.stop_functions:
+            x()
     if hasattr(obj,"delete_object"):
         obj.delete_object()
 
+    if hasattr(obj,"genesis_children"):
+        cc = obj.genesis_children.copy()
+        for o in cc:
+            delete_object( o )
+        obj.genesis_children = []
+
+    if hasattr(obj,"parent") and hasattr(obj.parent,"genesis_children"):
+        obj.parent.genesis_children.remove(obj)
+
+    obj.genesis_deleted = True
+
 # obj - родительский объект, items - список описаний объектов
-def create_children( rapi, obj, items ):
+def create_children( rapi, obj, items ):    
     for x in items:
-        create_object( rapi, x, obj )
+        o = create_object( rapi, x, obj )
 
 def ch_assign_attrs( obj, params):
     #print("params=",params)
