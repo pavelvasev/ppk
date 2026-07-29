@@ -125,7 +125,9 @@ class WebsocketReprSrv:
         print("ws_repr: server start.., port=",port)        
         # todo выяснить по таймаутам
         # max_size = None убираем ограничения на размер входящих соощений
-        async with serve(self.echo, "0.0.0.0", port, max_size=None) as s:
+        # ping_timeout ping_interval задраны потому что иначе там бывает зависает и исключения возникают
+        # а так работает с задранными
+        async with serve(self.echo, "0.0.0.0", port, max_size=None, ping_interval=10000, ping_timeout=10000) as s:
             if urls_future is not None:
                 urls = []
                 for x in s.sockets:
