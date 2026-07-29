@@ -13,12 +13,18 @@ import inspect
 import numpy as np
 import sys
 import time
-import tracemalloc
 from weakref import WeakSet
+
+#try:
+#    import tracemalloc
+#except (ImportError, ModuleNotFoundError):
+#    tracemalloc = None
 
 #tracemalloc.start()
 def show_biggest_objects(limit=10):
     return
+    if tracemalloc is None:
+        return
     # Get current memory usage statistics
     print("getting snapchot",flush=True)
     snapshot = tracemalloc.take_snapshot()
