@@ -1,6 +1,7 @@
 # создание объектов в нашем стиле (используется для yaml-описания)
 
 import ppk
+import ppk.utils
 
 types = {}
 
@@ -201,11 +202,26 @@ def ch_bind_out_links(rapi, obj, links):
             def mk_cb( global_channel_ids ):
                 global_channels = []
                 for ch_name in global_channel_ids:
-                    global_channels.append( rapi.channel(ch_name) )
+                    cc = None
+                    if isinstance(ch_name,list):
+                        # todo систематизировать это все, сделать прямо методы питона
+                        method = ch_name[0]
+                        if method == "delay":
+                            if len(ch_name) >= 3:
+                                delay = float( ch_name[2] )
+                            else:
+                                delay = 0.1
+                            dpass = ppk.utils.DelayedPass(delay=delay)
+                            ctgt = rapi.channel(ch_name[1])
+                            ppk.local.bind( dpass.output, ctgt )
+                            cc = dpass.input
+                    else:
+                        cc = rapi.channel(ch_name)
+                    global_channels.append( cc )
 
                 def callback(value):              
                     for ch in global_channels:
-                        #print("   cb of ch_bind_out_links: sending local channel ",local_name,"value to global",ch_name,"object_id=",obj.external_id)
+                        #print("   cb of ch_bind_out_links: sending local channel ",local_name,"value to global",ch.id )#,"object_id=",obj.external_id)
                         #rapi.msg({"label": ch_name, "value": value})
                         ch.put( value )
                 return callback
@@ -219,10 +235,21 @@ def ch_bind_out_links(rapi, obj, links):
                 #def s_callback(new_subscriber):
                 #    print("ch_bind_out_links: see new subscriber",new_subscriber)
                 for ch_name in global_channel_ids:
+                    #print("---->",ch_name)
+                    if isinstance(ch_name,list):                        
+                        print(1)
+                        method = ch_name[0]
+                        if method == "delay":
+                            ch_name = ch_name[1]
+                    #print("!!!!---->",ch_name)        
                     c = rapi.channel(ch_name+":initial_value").cell()
                     ppk.local.bind( local_channel, c )
                     # типа раз он уже и так ячейка. ничего плохого не будет если мы
                     # будем хранить ссылку на значение еще раз
+                    # todo разобраться что все это значит, :initial_value
+                    # но похоже это как раз вывод локальных каналов в глобальную форму
+                    # для посылки значений вновь подключающимся (локальные это делать не умеют,
+                    # только на уровне react)
 
             #print("ch_bind_out_links: bound local channel",local_name,"to global channels:",globals)
         else:

@@ -33,6 +33,9 @@ class RequestReplyFeature:
         rapi.put_reply = self.put_reply            
 
     # версия с callback
+    # todo сделать возможность ожидания ответов всех абонентов
+    # например request возвращал бы их число
+    # и кстати он же может использовать это число для очистки reply_callbacks
     async def request( self, msg, callback ):
         self.request_counter = self.request_counter + 1
         request_id = self.request_counter

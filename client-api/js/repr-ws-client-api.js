@@ -240,6 +240,12 @@ function parseNumpyArray(buffer, etype) {
   else if (dtype == 'uint32') {
     return new Uint32Array(buffer);
   } 
+  else if (dtype == 'int64') {
+    return new BigInt64Array(buffer);
+  } 
+  else if (dtype == 'uint64') {
+    return new BigUint64Array(buffer);
+  }   
   else if (dtype == 'bool') {
     return Array.from(new Uint8Array(buffer)).map(Boolean);
   } 
@@ -249,7 +255,7 @@ function parseNumpyArray(buffer, etype) {
       .map(code => String.fromCharCode(code));
   } 
   else {
-    console.warn("ppk: parseNumpyArray: Неизвестный тип данных: ${dtype}");
+    console.warn("ppk: parseNumpyArray: Неизвестный тип данных:",dtype);
     return new Uint8Array(buffer);
   }
 }

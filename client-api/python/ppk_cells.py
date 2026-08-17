@@ -292,6 +292,12 @@ class ReadingCell:
         return self
 
     def react(self,fn):
+        # логика вызываем fn только если значения отличаются
+        # важно что это работает только для простых
+        #def f(val):
+        #    if self.has_value and self.value != val:
+        #        fn(val)
+        #return self.channel.react(f)
         return self.channel.react(fn)
 
 # ячейка для записи

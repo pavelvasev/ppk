@@ -12,6 +12,14 @@ class Channel:
             fn(value)
         return self
 
+    # put со сбором результатов
+    def put_all(self,value):
+        results = []
+        for fn in self.reactions.values():
+            r = fn(value)
+            results.append(r)
+        return results
+
     def react(self, fn ):
         myid = self.rcnt
         self.rcnt = self.rcnt + 1
@@ -76,7 +84,7 @@ class Cell1():
     def put(self,value):
         self.value = value
         self.is_set = True
-        self.channel.put( value )        
+        self.channel.put( value )
         return self
 
     def react(self, fn ):
@@ -117,14 +125,6 @@ def as_cell( channel, initial_value=None ):
     channel.react( set_value )
     # todo маловато будет.. надо еще при новых react рассылать значения..
     return channel
-    
-def reader( channel, initial_value=None ):
-    channel.value = initial_value
-    def set_value(x):
-        channel.value = x
-    channel.react( set_value )
-    # todo маловато будет.. надо еще при новых react рассылать значения..
-    return channel    
 
 # эксперимент в поисках нужных абстракций. as_cell выше по смыслу это ну процесс чтения
 def reader( channel, initial_value=None ):
@@ -133,7 +133,7 @@ def reader( channel, initial_value=None ):
         channel.value = x
     channel.react( set_value )
     # todo маловато будет.. надо еще при новых react рассылать значения..
-    return channel    
+    return channel
 
 
 class WhenAll():
