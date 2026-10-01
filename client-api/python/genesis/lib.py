@@ -197,7 +197,7 @@ def ch_bind_out_links(rapi, obj, links):
     for local_name, global_channel_ids in links.items():
         local_channel = getattr(obj,local_name)
         if local_channel:
-            #print("ch_bind_out_links: see local channel(or cell), adding subscribers listen. local_name=",local_name)
+            #print("~~~~~~~~~~ ch_bind_out_links: see local channel(or cell), adding subscribers listen. local_name=",local_name,"global_channel_ids=",global_channel_ids)
 
             def mk_cb( global_channel_ids ):
                 global_channels = []
@@ -221,8 +221,10 @@ def ch_bind_out_links(rapi, obj, links):
 
                 def callback(value):              
                     for ch in global_channels:
-                        #print("   cb of ch_bind_out_links: sending local channel ",local_name,"value to global",ch.id )#,"object_id=",obj.external_id)
+                        #print("   ~~~~~~~~~~ cb of ch_bind_out_links: sending local channel ",local_name,"value to global",ch.id )#,"object_id=",obj.external_id)
                         #rapi.msg({"label": ch_name, "value": value})
+                        #rapi.verbose=True
+                        #ch.debug=True
                         ch.put( value )
                 return callback
 
