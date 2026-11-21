@@ -181,7 +181,9 @@ def ch_bind_in_links(rapi, obj, links_in):
                     return callback
 
                 callback = mk_cb( local_channel, local_name )
-                rapi.channel(ch_name).react( callback )
+                stop_fn = rapi.channel(ch_name).react( callback )
+                
+                obj.stop_functions.append( stop_fn )
 
                 stop_fn = rapi.channel(ch_name+":initial_value").react( callback, 1 )
 
